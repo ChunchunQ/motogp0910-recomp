@@ -1,6 +1,6 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. Güncel Windows executable paketi hazırlanıyor. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-startup-fix.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 **Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** İlk executable ZIP'i güncel başlangıç düzeltmelerini içermez. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
 
@@ -15,21 +15,21 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Linux entegrasyon probunda **47/47 davranış kontrolü geçti**: 10 asin/acos, 5 CRT callback, 24 kayıt initializer, 6 kaynak karşılaştırıcısı ve 2 arayüz getter vakası. Gerçek XEX içindeki 7144 CRT initializer hedefinin tamamı kayıtlıdır. Bu probe tek başına menü/yarış doğrulaması değildir.
 - SDK PowerPC altkümesinde **27/27 test, 79 assertion geçti**. Ek chrono testlerinde **12/16 geçti, 4 başarısız**: 1601 epoch'unun Linux nanosecond clock türüne dönüşümünde signed int64 taşması, bağımsız UBSan probuyla doğrulandı. SDK kaynakları değiştirilmedi.
 - Linux GUI için Xvfb + Mesa lavapipe Vulkan kuruldu. Tam disk verileriyle açılış videosu, başlık ekranı, ilk profil/zorluk ayarları geçildi ve **gerçek ana menüye ulaşıldı**. [Ekran görüntüsü](docs/screenshots/linux-main-menu.png) doğrudan Xvfb'den alındı. ALSA null endpoint ses backend'ini açar; duyulabilir ses kalitesi sınanmadı.
-- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Önceki Windows CPU regresyonunda Wine altında 10 asin/acos, 5 callback ve 24 initializer kontrolü geçti; güncel Linux kontrolü ek karşılaştırıcı/getter vakalarını da kapsar. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
+- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Güncel Windows PE regresyonunda Wine altında Linux ile aynı **47/47 kontrol geçti**; gerçek XEX 0.0.1.1 ve 7144 initializer hedefi doğrulandı. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
 
 ## Hazır Windows paketi
 
-Bu bölümdeki ilk paket güncel açılış düzeltmelerini içermez. Güncel kaynaklar için yukarıdaki yerel derleme rehberini kullan.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-startup-fix.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
-[Windows x64 executable paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-preview.zip). Özel depoda GitHub hesabına giriş gerekir. Dosya sayfasındaki **Download raw file** düğmesiyle indir. Alternatif olarak “Code → Download ZIP” ile depoyu indir; hazır executable paketi `downloads/MotoGP0910-Windows-x64-preview.zip` içindedir.
+1. ZIP'i tam oyun klasörüne, stok `default.xex` dosyasının yanına çıkar; eski EXE/DLL dosyalarının yerine yeni paket dosyalarını kullan.
+2. `xenondata/`, `nxeart/` ve kendi `TU_11K61VG_0000004000000.0000000000081` dosyan aynı oyun kökünde kalsın.
+3. `motogp0910.exe` dosyasını aç. Klavye için **`BASLAT-KLAVYE.cmd`** kullan: Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
 
-1. ZIP içindeki `.exe` ve DLL dosyalarını tam oyun klasöründe, `default.xex` dosyasının yanına çıkar.
-2. Elindeki `TU_11K61VG_0000004000000.0000000000081` title update dosyasını da aynı klasöre koy.
-3. `motogp0910.exe` dosyasını aç. Derleme araçlarını kurmak gerekmez.
+İlk çalıştırmada uygulama title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kullanıcı kayıt/cache/log konumu SDK'nın kullanıcı klasörüdür. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
 
-Uygulama ilk açılışta title update'ten `default.xexp` dosyasını çıkarır; orijinal XEX'i değiştirmez, mevcut patch'i yeniden yazmaz. Üretilen kodun hedeflediği 0.0.1.1 sürümü yüklenmezse uygulama oyunu başlatmayı reddeder. Tam oyun, writable klasörde ve orijinal dizin yapısıyla kalmalıdır. Kayıt/cache konumu SDK'nın kullanıcı klasörüdür. Oyun ikilileri, patch ve 3 GB oyun verisi dağıtım paketinde bulunmaz.
+Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 47 kontrol geçti; **güncel Windows GPU davranışı, yarış ve duyulabilir ses kalitesi henüz doğrulanmadı**. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Bu eski paket bir prototiptir; güncel kaynaklardan tekrar derlemek gerekir. Windows üzerindeki güncel menü, yarış ve ses doğrulaması bekliyor. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
+Paket SHA-256: `5161a579212c69c6e76255f8e8a0b1f2ca58e0a8b38d90875a7beedfb534a554`.
 
 ## Windows'ta kaynaktan derleme
 
@@ -120,4 +120,4 @@ python3 scripts/package-windows.py
 
 Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
 
-Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-preview.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-startup-fix.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
