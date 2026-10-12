@@ -1,6 +1,6 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Henüz oynanabilirlik doğrulanmadı. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable artık derlendi; henüz oynanabilirlik doğrulanmadı. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 ## Doğrulananlar
 
@@ -12,9 +12,21 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Grafik gerektirmeyen entegrasyon probu gerçek güncellenmiş XEX'i, native fonksiyon tablosunu ve oyun verilerini yükledi; oyunun asin/acos rutininde **10/10 sayısal kontrol geçti**. Bu, oyunun açıldığı veya yarışın çalıştığı anlamına gelmez.
 - SDK PowerPC altkümesinde **27/27 test, 79 assertion geçti**. Ek chrono testlerinde **12/16 geçti, 4 başarısız**: 1601 epoch'unun Linux nanosecond clock türüne dönüşümünde signed int64 taşması, bağımsız UBSan probuyla doğrulandı. SDK kaynakları değiştirilmedi.
 - Linux GUI başlatma denemesi `SDL_INIT_VIDEO ... dummy not available` ile durdu. Bu ortamda ekran/GPU erişimi yok; oynanış sınanamadı.
-- Windows PowerShell betikleri PowerShell parser ile sözdizimi kontrolünden geçti. Windows derlemesi ve çalıştırması bu Linux makinesinde yapılmadı.
+- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Wine altında gerçek güncellenmiş XEX yüklendi; native fonksiyon tablosu ve 10 asin/acos kontrolü geçti. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
 
-## Windows'ta derleme
+## Hazır Windows paketi
+
+[Windows x64 executable paketini indir](https://github.com/inflamesgo/motogp0910-recomp/releases/tag/v0.1.0-preview). Özel depoda GitHub hesabına giriş gerekir. Releases içindeki `MotoGP0910-Windows-x64-preview.zip` dosyasını kullan; “Code → Download ZIP” kaynak kod paketidir.
+
+1. ZIP içindeki `.exe` ve DLL dosyalarını tam oyun klasöründe, `default.xex` dosyasının yanına çıkar.
+2. Elindeki `TU_11K61VG_0000004000000.0000000000081` title update dosyasını da aynı klasöre koy.
+3. `motogp0910.exe` dosyasını aç. Derleme araçlarını kurmak gerekmez.
+
+Uygulama ilk açılışta title update'ten `default.xexp` dosyasını çıkarır; orijinal XEX'i değiştirmez, mevcut patch'i yeniden yazmaz. Üretilen kodun hedeflediği 0.0.1.1 sürümü yüklenmezse uygulama oyunu başlatmayı reddeder. Tam oyun, writable klasörde ve orijinal dizin yapısıyla kalmalıdır. Kayıt/cache konumu SDK'nın kullanıcı klasörüdür. Oyun ikilileri, patch ve 3 GB oyun verisi dağıtım paketinde bulunmaz.
+
+Bu paket bir prototiptir: Windows ikilisi ve veri/kod yükleme zinciri doğrulandı; menü, yarış, ses ve kontrolcü henüz sınanmadı. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
+
+## Windows'ta kaynaktan derleme
 
 3 GB'lık oyun verisini buluta yüklemek gerekmez. Proje paketini kendi bilgisayarında açıp tam çıkarılmış oyun klasörünü orada kullanabilirsin. Oyun verisi bu proje paketinde bulunmaz.
 
@@ -31,7 +43,7 @@ Proje klasöründe şu komutu kendi dosya yollarınla çalıştır:
 
 Betik resmi Windows AMD64 SDK **0.10.0** paketini indirip GitHub yayınındaki SHA-256 ile doğrular. Verilen XEX/TU hash'lerini kontrol eder; STFS çıkarma aracını derler, patch'i çıkarır, yalnızca XEX/patch'i yerel `assets/game-tu` altına hazırlar. Tam oyun klasörünü kopyalamaz. Kod üretimini, Release derlemesini ve headless entegrasyon probunu çalıştırır. Native komutların hataları saklanmaz.
 
-Başarılı yerel derlemenin çıktısı: `out/build/win-amd64-release/motogp0910.exe`. SDK runtime DLL'leri ve Xenos GPU plugin'i yanında hazırlanır. Bu `.exe` burada henüz üretilmedi; yerel Windows derlemesi gerekir.
+Başarılı yerel derlemenin çıktısı: `out/build/win-amd64-release/motogp0910.exe`. SDK runtime DLL'leri ve Xenos GPU plugin'i yanında hazırlanır. Aynı hedef için bulutta ayrıca Windows çapraz derlemesi yapıldı; yerel betik kendi Windows makinesinde tekrar derlemek içindir.
 
 Tam oyun klasörüyle çalıştırma denemesi:
 
@@ -89,3 +101,16 @@ SDK'nın kod üretimi fingerprint'inin patch dosyasını izlediğini varsayma. X
 `tools/motogp_inspect` SDK loader'larıyla XEX section dump ve STFS çıkarma sağlar; var olan çıktı dizinini/dosyaları değiştirmeyi reddeder. Analiz notları `docs/analysis.md`, bu ortamın ham raporları `out/analysis/` altındadır.
 
 Resmi SDK: https://github.com/rexglue/rexglue-sdk/tree/v0.10.0
+
+## Linux bulutundan Windows derlemesi
+
+```bash
+cd /workspace/motogp0910-recomp
+bash scripts/install-windows-cross.sh
+bash scripts/build-windows-cross.sh
+python3 scripts/package-windows.py
+```
+
+Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
+
+Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-preview.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.

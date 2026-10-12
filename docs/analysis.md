@@ -14,3 +14,7 @@ TU uygulandıktan sonra eski adres kuralı taşınmadı. Yeni analizde `0x8270A0
 Title update LIVE/STFS paketinde yalnızca `default.xexp` bulundu. SDK sibling-patch yolu ile yükler: aynı game root altında `default.xex` ve `default.xexp`. Uygulama kaynak imza hash'i, image-key ve patch-block hash kontrollerinden geçti. Kaynak XEX değiştirilmedi.
 
 Doğrulanan sınırlar fonksiyonları stub'lamaz ve davranışlarını değiştirmez; yalnızca otomatik keşfin atladığı başlangıç/bitişi bildirir. `--force` kullanılmadı. Tüm oyunun işlevsel olarak doğru çevrildiği henüz doğrulanmadı.
+
+Windows x64 uygulama ve headless probe, resmi Windows SDK/MSVC CRT ile Clang 20 MSVC ABI'sine çapraz derlendi. Aynı probe'un Windows PE çıktısı Wine altında gerçek TU sürümünü ve native mapping'i yükledi; 10/10 kontrol geçti. Ayrı Windows STFS aracı da patch'i doğru SHA-256 ile çıkardı.
+
+Dağıtım ZIP'i ayrı bir klasöre çıkarıldı; yalnızca orijinal XEX ve TU eklendi, patch önceden bulunmuyordu. Uygulama farklı bir çalışma dizininden, argümansız başlatıldı. Executable'ın yanındaki oyun kökünü buldu ve `default.xexp` dosyasını beklenen `0419205ba10dc65eaa7b0bb62abc64cada46119ece5ed749e4ba20c06a6bc079` hash'iyle oluşturdu. Ardından GUI başlatma Direct3D 12 initialization aşamasında exit 3 ile durdu; bu host'ta ekran/GPU erişimi yok. Bu sonuç otomatik patch hazırlığını doğrular, grafik veya oynanışı doğrulamaz.

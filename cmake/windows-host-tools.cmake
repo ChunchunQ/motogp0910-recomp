@@ -1,0 +1,10 @@
+# Keep libraries in the Windows SDK; codegen runs with the matching host SDK.
+function(motogp_host_tools)
+  if(TARGET rex::rexglue)
+    set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION "/workspace/shared/rexglue-install/linux-amd64/bin/rexglue")
+    foreach(config RELEASE DEBUG RELWITHDEBINFO)
+      set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION_${config} "/workspace/shared/rexglue-install/linux-amd64/bin/rexglue")
+    endforeach()
+  endif()
+endfunction()
+cmake_language(DEFER CALL motogp_host_tools)
