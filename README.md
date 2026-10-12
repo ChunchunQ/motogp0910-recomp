@@ -16,7 +16,7 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 ## Hazır Windows paketi
 
-[Windows x64 executable paketini indir](https://github.com/inflamesgo/motogp0910-recomp/releases/tag/v0.1.0-preview). Özel depoda GitHub hesabına giriş gerekir. Releases içindeki `MotoGP0910-Windows-x64-preview.zip` dosyasını kullan; “Code → Download ZIP” kaynak kod paketidir.
+[Windows x64 executable paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-preview.zip). Özel depoda GitHub hesabına giriş gerekir. Dosya sayfasındaki **Download raw file** düğmesiyle indir. Alternatif olarak “Code → Download ZIP” ile depoyu indir; hazır executable paketi `downloads/MotoGP0910-Windows-x64-preview.zip` içindedir.
 
 1. ZIP içindeki `.exe` ve DLL dosyalarını tam oyun klasöründe, `default.xex` dosyasının yanına çıkar.
 2. Elindeki `TU_11K61VG_0000004000000.0000000000081` title update dosyasını da aynı klasöre koy.
