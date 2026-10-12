@@ -1,0 +1,124 @@
+# MotoGP 09/10 geliştirme notları
+
+13 Ekim 2026 kullanıcı talepleri. Ana platform **Windows 10/11**, SDK
+**ReXGlue v0.10.0**. Kullanıcı yarış başlangıcı düzeltmesinin ardından oyunun
+düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
+tamamlandığı anlamına gelmez.
+
+Bu belge kapsam ve uygulanabilirlik kaydıdır; launcher ve LAN henüz uygulanmadı.
+
+| İstek | Durum / uygulanabilirlik | Öncelik |
+|---|---|---|
+| EXE yanında `game/` veri klasörü | Mevcut uygulama zaten otomatik arıyor; kullanım ve dağıtım düzeni hazırlanabilir. | 1 |
+| Windows launcher | Yapılabilir; mevcut SDK ayarları ve oyun başlatma yolu kullanılabilir. | 1 |
+| Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
+| Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
+
+## Launcher
+
+Hedef: Windows üzerinde ayarları kaydeden, oyun dosyalarını denetleyen ve oyunu
+başlatan ayrı bir uygulama. Ayarlar için SDK'nın mevcut CLI/TOML yapılandırmasını
+kullanmak mümkün; örneğin çözünürlük, pencere/tam ekran, VSync, render ölçeği,
+SDL/XInput seçimi, klavye eşlemesi ve sesi kapatma seçenekleri mevcut. Her seçenek
+ilgili backend üzerinde doğrulanmalıdır. Yeni grafik/FPS seçenekleri ayrıca
+oyun hızı ve fizik üzerindeki etkileriyle sınanmalıdır.
+
+İlk sürüm hedefleri:
+
+- Oyun klasörünü bulma/seçme; XEX, veri dizinleri ve gerekli title update kontrolü.
+- Ayarları saklama, tekrar açıldığında geri yükleme ve varsayılanlara dönüş.
+- Oyunu başlatma ve mevcut kullanıcı kayıt/cache konumunu koruma.
+- Log klasörüne erişim ve hata raporu hazırlama.
+- Türkçe arayüz, EXE ile birlikte dağıtım; son kullanıcıda derleme gerektirmeme.
+
+Kabul ölçütü: boşluk/Türkçe karakter içeren yollardan oyun açılır, ayarlar kalıcı
+olur, mevcut kayıtlar korunur, eksik veri durumunda anlaşılır hata gösterilir.
+
+## Oyun dosya düzeni
+
+Mevcut `Motogp0910App::OnConfigurePaths`, açık bir `game_data_root` verilmemişse
+önce EXE klasöründe, ardından EXE yanındaki `game/` içinde `default.xex` arar.
+Bu nedenle mevcut race-start-fix EXE ile de aşağıdaki düzen kullanılabilir:
+
+```text
+MotoGP0910/
+├── motogp0910.exe
+├── rexruntime.dll
+├── rexgpu-xenos.dll
+├── diğer paket DLL'leri
+├── BASLAT-KLAVYE.cmd
+└── game/
+    ├── default.xex
+    ├── default.xexp
+    ├── TU_11K61VG_0000004000000.0000000000081
+    ├── xenondata/
+    ├── nxeart/
+    └── diğer orijinal disk dosyaları/dizinleri
+```
+
+Tüm orijinal oyun dosyaları ve patch birlikte `game/` altında bulunmalı;
+EXE/DLL'ler üst dizinde kalır. Ana dizindeki eski `default.xex` bırakılırsa ilk
+aday olarak o seçilir. `--game_data_root` veya `run-windows.ps1 -GameRoot`
+kullanıldığında yol yeni `game/` dizinine işaret etmelidir. Kayıt ve cache
+klasörleri oyun verisinden ayrı korunmalıdır; taşımaya gerek yoktur.
+
+Paketleme rehberi ve launcher bu düzeni standart hale getirecek. Kabul ölçütü:
+farklı çalışma dizininden çift tıklamayla açılış, title-update yükleme ve kayıt
+koruma doğrulanır; eski düzende açılış da desteklenir.
+
+## LAN multiplayer
+
+Kullanıcının tercihi: **aynı yerel ağda, ayrı bir merkezi/dedicated sunucu
+zorunluluğu olmadan** oynama. Bir oyuncunun oda açması ve diğerlerinin ona
+bağlanması hedeflenir. Uzak internet üzerinden bağlantı ayrı bir aşamadır;
+LAN çalışması tek başına NAT veya internet eşleştirme desteğini kanıtlamaz.
+
+İlk incelemede oyunun üretilmiş kodunda socket, XNet bağlantı/adres dönüşümü ve
+XAM oturum çağrıları bulundu. SDK v0.10.0'da temel socket altyapısı mevcut,
+ancak örneğin `XNetConnect` ve bazı key/QoS işlevleri stub; XNet adres dönüşümleri
+başarısız dönüyor ve oturum oluşturma/arama/join akışlarının bazıları gerçek
+oturum verisi üretmeden başarı döndürüyor. LAN için yalnızca launcher'a bir
+seçenek eklemek yeterli değildir.
+
+Araştırma sırası:
+
+1. Oyundaki multiplayer ekranlarının Live oturumu ve varsa System Link akışını
+   incele; yerleşik System Link desteğini henüz doğrulanmış kabul etme.
+2. Gerekli profil, oyuncu kimliği, oturum, adres ve paket çağrılarını belirle.
+3. Doğrudan IP veya yerel oda keşfiyle iki oyun örneğinin lobby bağlantısını dene.
+4. Yarış başlatma, oyuncu durumu senkronizasyonu, bağlantı kopması ve yeniden
+   bağlanmayı iki ayrı Windows cihazında sınayarak uygulanabilirliği doğrula.
+
+Bu hedef orijinal Xbox Live hizmetine bağlanmak değil, oyunun multiplayer
+akışını yerel ağ backend'iyle çalıştırmaktır. Orijinal Live matchmaking,
+leaderboard ve arkadaş/davet özellikleri bu ilk hedefe dahil değildir.
+Dedicated sunucu ancak araştırma bunu gerekli gösterirse ayrı bir tasarım
+seçeneği olarak değerlendirilir; şu anda kullanıcı tercihi değildir.
+
+## Stabilite ve kalite kontrol
+
+İşler tekrar üretilebilen hatalar ve etkilerine göre takip edilir:
+
+- Önce çökme, takılma, kayıt bozulması ve eksik fonksiyon/kernel davranışları.
+- Ardından tüm yarış modları, motor sınıfları, pistler, AI, yeniden başlatma,
+  menüye dönme ve uzun oyun oturumları.
+- Kayıt/profil: oluşturma, yeniden yükleme, ayarların ve kariyer ilerlemesinin
+  korunması; paket güncellemesi ve `game/` düzenine geçiş.
+- Grafik: hatalı/eksik dokular, ışık, gölge, HUD, shader/texture-fetch uyarıları
+  ve farklı Windows GPU'larında çizim.
+- Ses: kanal dengesi, müzik/motor sesleri ve senkronizasyon.
+- Giriş: SDL/XInput gamepad, klavye eşlemesi, cihaz takıp çıkarma, odak kaybı.
+- Performans: frame süreleri, yükleme, shader cache ve bellek kullanımı.
+
+Her düzeltmenin kapsamı, tekrar üretme adımları, test sonucu ve kalan sorunları
+kaydedilir. Gerçek Windows yarış denemeleri kullanıcı cihazından gelen log ve
+gözlemlerle desteklenir; headless probe tek başına oynanış doğrulaması sayılmaz.
+
+## Title update durumu
+
+**Aktif: kullanıcının verdiği TU, stok 0.0.0.1 oyununu 0.0.1.1'e güncelliyor.**
+Windows logunda `XEX patch applied successfully: base version: 0.0.0.1,
+new version: 0.0.1.1` satırı bulunuyor. Uygulama bu sürümü kontrol edip diğer
+sürümlerde başlatmayı reddediyor. Patch çalışma sırasında uygulanır; orijinal
+stok XEX dosyası değiştirilmez. Bu bilgi, verilen TU'nun uygulandığını gösterir;
+en son yayımlanmış TU olduğu ayrıca araştırılmadı.
