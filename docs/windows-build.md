@@ -4,9 +4,9 @@ Güncel `main` kaynakları, ilk deneme paketindeki `0x8270DF08` startup callback
 
 ## Bir kez kurulacak araçlar
 
-1. [Visual Studio 2022 Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe) kur. **Desktop development with C++ / C++ ile masaüstü geliştirme** iş yükünü seç. MSVC v143 x64/x86 araçları ve Windows 10/11 SDK bileşenleri seçili olsun. Tam Visual Studio 2022 zaten varsa aynı bileşenleri Visual Studio Installer'dan eklemek yeterli.
-2. [Resmi LLVM 20.1.8 Windows x64 installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-win64.exe) kur. PATH'e ekleme seçeneğini aç. Betik varsayılan `C:\Program Files\LLVM` kurulumunu ayrıca bulur. MSVC hedefli Windows LLVM gerekir.
-3. **CMake 3.25+** ve **Ninja** kur. Windows Terminal/PowerShell'de winget varsa:
+1. **Visual Studio 2022 veya daha yeni** bir sürüm kullan; **VS Community 2026 da uygundur**. **Desktop development with C++ / C++ ile masaüstü geliştirme**, MSVC x64/x86 araçları ve Windows 10/11 SDK seçili olsun. Mevcut VS 2026 kurulumuna ayrıca VS 2022 kurmak gerekmez. VS yoksa [2022 Build Tools installer](https://aka.ms/vs/17/release/vs_BuildTools.exe) bir seçenektir.
+2. Individual components altında **C++ Clang Compiler for Windows** seçili olsun; **Clang 20+** gerekir. VS 2026'daki **22.1.3** bu gereksinimi karşılar. Betik VS içindeki uygun Clang'ı otomatik bulur. Uygun Clang yoksa alternatif olarak [resmi LLVM 20.1.8 Windows x64 installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-win64.exe) kullanılabilir. MSVC hedefli Windows LLVM gerekir.
+3. **C++ CMake tools for Windows** seçili olsun; bu bileşen CMake ve Ninja sağlar. Betik VS içindeki araçları otomatik bulur ve Ninja yolunu CMake'e açıkça verir. CMake **3.25+** olmalı. Bu araçlar yoksa ayrı kurulum alternatifi:
 
    ```powershell
    winget install --exact --id Kitware.CMake
@@ -15,7 +15,7 @@ Güncel `main` kaynakları, ilk deneme paketindeki `0x8270DF08` startup callback
 
    Winget yoksa [CMake installer](https://cmake.org/download/) ve [Ninja Windows ZIP](https://github.com/ninja-build/ninja/releases) kullan; `cmake.exe` ve `ninja.exe` PATH'te olmalı.
 
-Araç kurulumlarından sonra **yeni bir PowerShell penceresi** aç. Betik VS 2022'nin x64 ortamını kendisi açar; özel Developer PowerShell penceresi bulmak zorunda değilsin. LLVM'nin Windows x64 sürümünü kullan; MinGW GCC/Clang bu SDK ile uyumlu değildir.
+Araç kurulumlarından sonra **yeni bir PowerShell penceresi** aç. Betik VS 2022 veya daha yeni sürümün x64 ortamını kendisi açar; özel Developer PowerShell penceresi bulmak zorunda değilsin. İlk satırlarda kullanılan Clang, CMake ve Ninja yolları yazılır. LLVM'nin Windows x64 sürümünü kullan; MinGW GCC/Clang bu SDK ile uyumlu değildir. VS 2026 ile tam derleme bu bulut makinesinde çalıştırılmadı; burada araç keşfi hedefli testlerle doğrulanır.
 
 SDK programı eksik `MSVCP140` / `VCRUNTIME140` DLL hatası verirse [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) kur.
 

@@ -28,33 +28,63 @@ function Stage-File {
     Assert-Hash -Path $Destination -Expected $Expected
 }
 
-# Initialize the installed VS 2022 x64 tools when opened from ordinary PowerShell.
+# Initialize installed VS 2022 or newer x64 tools from ordinary PowerShell.
+$VsInstall = $env:VSINSTALLDIR
 if (!$env:VCToolsInstallDir -or !$env:WindowsSdkDir -or $env:VSCMD_ARG_TGT_ARCH -ne 'x64') {
     $VsWhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
     if (!(Test-Path -LiteralPath $VsWhere -PathType Leaf)) {
-        throw 'Install Visual Studio 2022 Build Tools with Desktop development with C++ and Windows SDK. See docs/windows-build.md.'
+        throw 'Install Visual Studio 2022 or newer with Desktop development with C++ and Windows SDK. See docs/windows-build.md.'
     }
-    $VsInstall = & $VsWhere -latest -products '*' -version '[17.0,18.0)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    $VsInstall = & $VsWhere -latest -products '*' -version '[17.0,)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
     if ($LASTEXITCODE -ne 0 -or !$VsInstall) {
-        throw 'VS 2022 x64 C++ tools were not found. See docs/windows-build.md.'
+        throw 'Visual Studio 2022 or newer x64 C++ tools were not found. See docs/windows-build.md.'
     }
     & (Join-Path $VsInstall 'Common7/Tools/Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
 }
-# Prefer the official LLVM installation over the older Clang bundled with VS.
-$LlvmClang = Join-Path $env:ProgramFiles 'LLVM/bin/clang++.exe'
-$Clang = if (Test-Path -LiteralPath $LlvmClang -PathType Leaf) { $LlvmClang } else { (Get-Command clang++ -ErrorAction Stop).Source }
-$CMake = (Get-Command cmake -ErrorAction Stop).Source
-$null = Get-Command ninja -ErrorAction Stop
 if (!$env:VCToolsInstallDir -or !$env:WindowsSdkDir) {
-    throw 'Use VS 2022 Developer PowerShell for x64 with Desktop C++ and Clang 20+ installed.'
+    throw 'Visual Studio x64 C++ tools and Windows SDK must be installed.'
 }
-$VersionText = (& $Clang --version) -join "`n"
-if ($VersionText -notmatch 'clang version (\d+)' -or [int]$Matches[1] -lt 20) {
-    throw 'Windows builds require Clang 20+.'
+
+# VS 2026 can provide Clang 22, CMake and Ninja without separate installers.
+$ClangCandidates = @()
+if ($VsInstall) {
+    $ClangCandidates += Join-Path $VsInstall 'VC/Tools/Llvm/x64/bin/clang++.exe'
+    $ClangCandidates += Join-Path $VsInstall 'VC/Tools/Llvm/bin/clang++.exe'
 }
-if ($VersionText -notmatch 'Target:\s*x86_64-.*windows-msvc') {
-    throw 'Use LLVM for Windows x64 with an MSVC target, not a MinGW/ARM compiler.'
+$ClangCandidates += Join-Path $env:ProgramFiles 'LLVM/bin/clang++.exe'
+$PathClang = Get-Command clang++ -ErrorAction SilentlyContinue
+if ($PathClang) { $ClangCandidates += $PathClang.Source }
+$Clang = $null
+foreach ($Candidate in $ClangCandidates | Select-Object -Unique) {
+    if (!(Test-Path -LiteralPath $Candidate -PathType Leaf)) { continue }
+    $VersionText = (& $Candidate --version) -join "`n"
+    if ($LASTEXITCODE -eq 0 -and $VersionText -match 'clang version (\d+)' -and [int]$Matches[1] -ge 20 -and $VersionText -match 'Target:\s*x86_64-.*windows-msvc') {
+        $Clang = $Candidate
+        break
+    }
 }
+if (!$Clang) {
+    throw 'Install C++ Clang Compiler for Windows (20+) in Visual Studio, or LLVM for Windows x64 with an MSVC target. See docs/windows-build.md.'
+}
+function Find-BuildTool {
+    param([string]$Name, [string]$VsRelativePath)
+    if ($VsInstall) {
+        $Bundled = Join-Path $VsInstall $VsRelativePath
+        if (Test-Path -LiteralPath $Bundled -PathType Leaf) { return $Bundled }
+    }
+    $Tool = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($Tool) { return $Tool.Source }
+    throw "$Name was not found. Install C++ CMake tools for Windows in Visual Studio, or install $Name separately."
+}
+$CMake = Find-BuildTool -Name 'cmake' -VsRelativePath 'Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe'
+$Ninja = Find-BuildTool -Name 'ninja' -VsRelativePath 'Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe'
+$CMakeVersion = (& $CMake --version) -join "`n"
+if ($LASTEXITCODE -ne 0 -or $CMakeVersion -notmatch 'cmake version (\d+\.\d+\.\d+)' -or [version]$Matches[1] -lt [version]'3.25.0') {
+    throw 'CMake 3.25+ is required. Update the VS CMake tools or install a newer CMake.'
+}
+Write-Host "Clang: $Clang"
+Write-Host "CMake: $CMake"
+Write-Host "Ninja: $Ninja"
 $GameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $TitleUpdatePath = (Resolve-Path -LiteralPath $TitleUpdatePath).Path
 $Xex = Join-Path $GameRoot 'default.xex'
@@ -84,7 +114,7 @@ if ((& $RexGlue --version) -ne '0.10.0' -or $LASTEXITCODE -ne 0) {
 Push-Location $ProjectRoot
 try {
     $ToolsBuild = Join-Path $ProjectRoot 'out/tools-win'
-    Invoke-Native -Command $CMake -Arguments @('-S', 'tools', '-B', $ToolsBuild, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_PREFIX_PATH=$Sdk")
+    Invoke-Native -Command $CMake -Arguments @('-S', 'tools', '-B', $ToolsBuild, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk")
     Invoke-Native -Command $CMake -Arguments @('--build', $ToolsBuild, '--parallel', "$Jobs")
     $Extracted = Join-Path $ProjectRoot 'assets/updates/extracted'
     if (!(Test-Path -LiteralPath $Extracted)) {
@@ -95,7 +125,7 @@ try {
     Stage-File -Source $Xex -Destination (Join-Path $Staged 'default.xex') -Expected $XexHash
     Stage-File -Source (Join-Path $Extracted 'default.xexp') -Destination (Join-Path $Staged 'default.xexp') -Expected $PatchHash
     Invoke-Native -Command $RexGlue -Arguments @('codegen', '--ignore-stamp', 'motogp0910_manifest.toml')
-    Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_PREFIX_PATH=$Sdk")
+    Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk")
     Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--parallel', "$Jobs")
     $ExeDirectory = Join-Path $ProjectRoot 'out/build/win-amd64-release'
     # Ship the SDK's auxiliary runtime DLLs as well as the plugin CMake stages.

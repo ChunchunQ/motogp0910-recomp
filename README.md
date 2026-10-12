@@ -34,9 +34,9 @@ Bu paket bir prototiptir: Windows ikilisi ve veri/kod yükleme zinciri doğrulan
 
 3 GB'lık oyun verisini buluta yüklemek gerekmez. Proje paketini kendi bilgisayarında açıp tam çıkarılmış oyun klasörünü orada kullanabilirsin. Oyun verisi bu proje paketinde bulunmaz.
 
-Gerekli araçlar: Visual Studio 2022'nin Desktop development with C++ bileşenleri, Windows SDK, **Clang 20+**, CMake 3.25+ ve Ninja. x64 VS Developer PowerShell aç; `clang++`, `cmake`, `ninja` PATH'te olmalı.
+Gerekli araçlar: Visual Studio **2022 veya daha yeni (2026 dahil)** Desktop development with C++ bileşenleri, Windows SDK, **Clang 20+**, CMake 3.25+ ve Ninja. VS 2026 içindeki Clang 22 ve C++ CMake araçları bu gereksinimleri karşılar.
 
-Güncel betik normal PowerShell'den VS 2022 x64 ortamını otomatik hazırlar ve varsayılan resmi LLVM kurulumunu bulur. Kurulum bağlantıları, RAM'e göre Jobs önerileri ve log alma komutu [ayrıntılı rehberde](docs/windows-build.md).
+Güncel betik normal PowerShell'den kurulu VS sürümünün x64 ortamını otomatik hazırlar; VS içindeki Clang, CMake ve Ninja'yı bulur. Uygun harici LLVM/PATH araçlarını da kullanabilir. Kurulum bağlantıları, RAM'e göre Jobs önerileri ve log alma komutu [ayrıntılı rehberde](docs/windows-build.md).
 
 Proje klasöründe şu komutu kendi dosya yollarınla çalıştır:
 
