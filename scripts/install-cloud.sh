@@ -25,7 +25,8 @@ export APT_CONFIG="$base/apt/apt.conf"
 /usr/bin/apt-get update
 /usr/bin/apt-get --download-only -y --no-install-recommends install \
   clang-19 lld-19 cmake ninja-build pkg-config libgtk-3-dev \
-  libx11-xcb-dev libxss-dev libvulkan-dev
+  libx11-xcb-dev libxss-dev libvulkan-dev \
+  xvfb mesa-vulkan-drivers vulkan-tools xdotool imagemagick
 for package in "$base/apt/cache/archives/"*.deb; do
   dpkg-deb -x "$package" "$base/sysroot"
 done

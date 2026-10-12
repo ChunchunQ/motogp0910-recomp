@@ -19,3 +19,79 @@ includes = []
 # then called indirectly by 823B1840. No standard prologue: cmpwi cr6,r3,0;
 # bnelr cr6; b 8270EA60. The next independent routine begins at 8270DF14.
 0x8270DF08 = { end = 0x8270DF14 }
+# Indirect list comparator encountered during shader/resource startup. This
+# leaf has no prologue; its equality return is at 825006D0 and its less/greater
+# return is at 825006E4. The next function's pdata entry is 825006E8.
+0x82500660 = { end = 0x825006E8 }
+# Bink's lock-release callback: loads the embedded lock's vtable and tail-calls
+# slot +20. Six instructions, ending in bctr at 825F9BF4, before pdata 825F9BF8.
+0x825F9BE0 = { end = 0x825F9BF8 }
+
+# Missing entries from the TU CRT initializer table at 82874614..8287B5B4.
+# Each routine loads a static registry node/name/payload/size and tail-calls
+# 82384B98. End boundaries are taken from the actual terminal branch, not padding.
+0x82826D90 = { end = 0x82826DB0 }
+0x82826DB0 = { end = 0x82826DD0 }
+0x82826DD0 = { end = 0x82826DF0 }
+0x82826DF0 = { end = 0x82826E10 }
+0x82826E10 = { end = 0x82826E30 }
+0x82826E30 = { end = 0x82826E54 }
+0x82826E78 = { end = 0x82826E98 }
+0x82826E98 = { end = 0x82826EB8 }
+0x82826EB8 = { end = 0x82826ED8 }
+0x82826ED8 = { end = 0x82826EF8 }
+0x82826EF8 = { end = 0x82826F18 }
+0x82826F18 = { end = 0x82826F38 }
+0x82826F38 = { end = 0x82826F58 }
+0x82826F58 = { end = 0x82826F78 }
+0x82826F78 = { end = 0x82826F98 }
+0x82826F98 = { end = 0x82826FB8 }
+0x82826FB8 = { end = 0x82826FD8 }
+0x82826FD8 = { end = 0x82826FF8 }
+0x82826FF8 = { end = 0x82827018 }
+0x82827018 = { end = 0x82827038 }
+0x82827038 = { end = 0x82827058 }
+0x82827058 = { end = 0x82827078 }
+0x82827078 = { end = 0x82827098 }
+0x82827098 = { end = 0x828270B8 }
+
+# Remaining indirect Bink/stream-interface this-adjustment thunks in .rdata
+# vtables. Each is exactly addi r3,r3,offset; b <registered target> (8 bytes).
+0x825F10F8 = { end = 0x825F1100 } # tail target 825EF010
+0x825F34B0 = { end = 0x825F34B8 } # tail target 825F92F8
+0x825F34B8 = { end = 0x825F34C0 } # tail target 825F9330
+0x825F34C0 = { end = 0x825F34C8 } # tail target 825F33F0
+0x825F34C8 = { end = 0x825F34D0 } # tail target 825F9308
+0x825F34D0 = { end = 0x825F34D8 } # tail target 825F3568
+0x825F34E0 = { end = 0x825F34E8 } # tail target 825F3408
+0x825F34E8 = { end = 0x825F34F0 } # tail target 825F23B0
+0x825F9350 = { end = 0x825F9358 } # tail target 825F92E8
+0x825F9358 = { end = 0x825F9360 } # tail target 825F93D0
+0x825F9368 = { end = 0x825F9370 } # tail target 825F9328
+0x825F9370 = { end = 0x825F9378 } # tail target 825F33F8
+0x825F9378 = { end = 0x825F9380 } # tail target 825F9300
+0x825F95E0 = { end = 0x825F95E8 } # tail target 825F9660
+0x825F95F0 = { end = 0x825F95F8 } # tail target 825F3410
+0x825F95F8 = { end = 0x825F9600 } # tail target 825F9318
+0x825F9600 = { end = 0x825F9608 } # tail target 825F92D8
+0x825F9608 = { end = 0x825F9610 } # tail target 825F92F0
+0x825FA820 = { end = 0x825FA828 } # tail target 825F99B0
+0x825FB570 = { end = 0x825FB578 } # tail target 825FB3A8
+0x8260D2F0 = { end = 0x8260D2F8 } # tail target 8260D310
+
+# Remaining executable entries in the actual .rdata interface tables before
+# the exception-handler metadata. Verified leaf/wrapper boundaries; conditional
+# routines include BOTH return paths, even if discovery split off their suffix.
+0x8242ABF8 = { end = 0x8242AC08 }
+0x8242ACD8 = { end = 0x8242AD00 }
+0x8242AD00 = { end = 0x8242AD28 }
+0x8242AD28 = { end = 0x8242AD50 }
+0x8242AD50 = { end = 0x8242AD78 }
+0x8242B168 = { end = 0x8242B188 }
+0x8242B188 = { end = 0x8242B18C }
+0x8258C9D0 = { end = 0x8258CA20 }
+0x8258CA20 = { end = 0x8258CA40 }
+0x825BD8B0 = { end = 0x825BD8C0 }
+0x825C89F0 = { end = 0x825C8A1C }
+0x825FE308 = { end = 0x825FE33C }
+0x826543E8 = { end = 0x82654408 }

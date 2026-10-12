@@ -1,8 +1,9 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable artık derlendi; henüz oynanabilirlik doğrulanmadı. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. Güncel Windows executable paketi hazırlanıyor. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
-**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** İlk `v0.1.0-preview` paketi gerçek Windows denemesinde `0x8270DF08` adresindeki kayıt dışı callback yüzünden durdu. Güncel manifest bu 12 baytlık orijinal rutini kod üretimine ekler. Eski executable ZIP'i bu düzeltmeyi içermez; güncel kaynakları derle. Yeni Windows regresyon probu Wine altında 10 matematik ve 5 callback kontrolünü geçti.
+**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** İlk executable ZIP'i güncel başlangıç düzeltmelerini içermez. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
+
 
 ## Doğrulananlar
 
@@ -10,15 +11,15 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Verilen XEX ve LIVE/STFS title update: Title ID `434307F0`, Media ID `321F4634`.
 - Title update SDK'nın STFS okuyucusuyla açıldı; `default.xexp` çıkarıldı. SDK'nın hash/anahtar kontrolleri korunarak patch uygulandı: `0.0.0.1` → `0.0.1.1`.
 - Stok ve TU analizlerindeki birer eksik fonksiyon sınırı gerçek disassembly ile belirlendi. TU manifesti sıfır çözülemeyen çağrıyla kod üretti; `--force` kullanılmadı.
-- TU sürümü için 113 C++ translation unit, 30.568 fonksiyon mapping girdisi üretildi. Linux Release executable derlendi.
-- Grafik gerektirmeyen entegrasyon probu gerçek güncellenmiş XEX'i, native fonksiyon tablosunu ve oyun verilerini yükledi; oyunun asin/acos rutininde **10/10 sayısal kontrol geçti**. Bu, oyunun açıldığı veya yarışın çalıştığı anlamına gelmez.
+- TU sürümü için 113 C++ translation unit, 30.625 fonksiyon mapping girdisi üretildi; manifestte 62 doğrulanmış fonksiyon sınırı bulunur. Linux Release executable derlendi.
+- Linux entegrasyon probunda **47/47 davranış kontrolü geçti**: 10 asin/acos, 5 CRT callback, 24 kayıt initializer, 6 kaynak karşılaştırıcısı ve 2 arayüz getter vakası. Gerçek XEX içindeki 7144 CRT initializer hedefinin tamamı kayıtlıdır. Bu probe tek başına menü/yarış doğrulaması değildir.
 - SDK PowerPC altkümesinde **27/27 test, 79 assertion geçti**. Ek chrono testlerinde **12/16 geçti, 4 başarısız**: 1601 epoch'unun Linux nanosecond clock türüne dönüşümünde signed int64 taşması, bağımsız UBSan probuyla doğrulandı. SDK kaynakları değiştirilmedi.
-- Linux GUI başlatma denemesi `SDL_INIT_VIDEO ... dummy not available` ile durdu. Bu ortamda ekran/GPU erişimi yok; oynanış sınanamadı.
-- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Wine altında gerçek güncellenmiş XEX yüklendi; native fonksiyon tablosu ve 10 asin/acos kontrolü geçti. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
+- Linux GUI için Xvfb + Mesa lavapipe Vulkan kuruldu. Tam disk verileriyle açılış videosu, başlık ekranı, ilk profil/zorluk ayarları geçildi ve **gerçek ana menüye ulaşıldı**. [Ekran görüntüsü](docs/screenshots/linux-main-menu.png) doğrudan Xvfb'den alındı. ALSA null endpoint ses backend'ini açar; duyulabilir ses kalitesi sınanmadı.
+- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Önceki Windows CPU regresyonunda Wine altında 10 asin/acos, 5 callback ve 24 initializer kontrolü geçti; güncel Linux kontrolü ek karşılaştırıcı/getter vakalarını da kapsar. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
 
 ## Hazır Windows paketi
 
-Bu bölümdeki ilk paket `0x8270DF08` düzeltmesini içermez. Güncel kaynaklar için yukarıdaki yerel derleme rehberini kullan.
+Bu bölümdeki ilk paket güncel açılış düzeltmelerini içermez. Güncel kaynaklar için yukarıdaki yerel derleme rehberini kullan.
 
 [Windows x64 executable paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-preview.zip). Özel depoda GitHub hesabına giriş gerekir. Dosya sayfasındaki **Download raw file** düğmesiyle indir. Alternatif olarak “Code → Download ZIP” ile depoyu indir; hazır executable paketi `downloads/MotoGP0910-Windows-x64-preview.zip` içindedir.
 
@@ -28,7 +29,7 @@ Bu bölümdeki ilk paket `0x8270DF08` düzeltmesini içermez. Güncel kaynaklar 
 
 Uygulama ilk açılışta title update'ten `default.xexp` dosyasını çıkarır; orijinal XEX'i değiştirmez, mevcut patch'i yeniden yazmaz. Üretilen kodun hedeflediği 0.0.1.1 sürümü yüklenmezse uygulama oyunu başlatmayı reddeder. Tam oyun, writable klasörde ve orijinal dizin yapısıyla kalmalıdır. Kayıt/cache konumu SDK'nın kullanıcı klasörüdür. Oyun ikilileri, patch ve 3 GB oyun verisi dağıtım paketinde bulunmaz.
 
-Bu paket bir prototiptir: Windows ikilisi ve veri/kod yükleme zinciri doğrulandı; menü, yarış, ses ve kontrolcü henüz sınanmadı. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
+Bu eski paket bir prototiptir; güncel kaynaklardan tekrar derlemek gerekir. Windows üzerindeki güncel menü, yarış ve ses doğrulaması bekliyor. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
 
 ## Windows'ta kaynaktan derleme
 
@@ -59,7 +60,7 @@ Tam oyun klasörüyle çalıştırma denemesi:
 
 Çalıştırma betiği orijinal XEX hash'ini kontrol eder. Çıkarılan/doğrulanan `default.xexp` dosyasını tam oyun klasörüne yalnızca yoksa ekler; var olan farklı patch'i değiştirmez. Orijinal `default.xex` ve oyun veri dosyaları korunur. SDK patch'i çalışma sırasında tekrar uygular; üretilmiş fonksiyon tablosu bu sürümle eşleşir. Kayıtlar `out/userdata`, log `out/motogp-windows.log` altına gider.
 
-İlk Windows çalıştırmasının loguna göre grafik, input, ses, oyun verisi erişimi ve varsa eksik kernel davranışları ayrıca incelenmelidir. Oynanabilirlik iddiası için menü ve gerçek yarış doğrulaması gerekir.
+GTX 1650 SUPER üzerindeki gerçek Windows logları grafik/input başlangıcını doğruladı ve eksik fonksiyonları gösterdi. Güncel kaynaklarla Windows menü/yarış doğrulaması ayrıca yapılmalıdır.
 
 ## Bulut ortamında devam
 

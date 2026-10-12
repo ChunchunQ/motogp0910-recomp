@@ -5,6 +5,8 @@ ReXGlue v0.10.0, tam MotoGP 09/10 disk verileri ve 0.0.1.1 title update kullanı
 
 - [Açılış videosundan kare](linux-intro.png)
 - [MotoGP 09/10 başlık görüntüsü](linux-title.png)
+- [Ana menü, ilk açılış ayarlarından sonra](linux-main-menu.png)
 
-Bu iki kare tek başına ana menü veya yarış doğrulaması değildir. Açılış düzeltmelerinin
-son durumu için proje README'sine bak.
+Ana menü görüntüsü tam disk verileriyle gerçek oyun penceresinden alınmıştır.
+Bu, yarış veya gerçek Windows GPU doğrulaması değildir; test kapsamı için proje
+README'sine bak.
