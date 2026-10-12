@@ -1,6 +1,6 @@
 # Windows 10/11 x64 üzerinde derleme
 
-Güncel kaynaklar, `0x8270DF08` callback, `0x82826D90` ile başlayan 24 CRT initializer, `0x82500660` kaynak karşılaştırıcısı ve açılış videosundaki eksik Bink callback/thunk keşiflerini düzeltir. `downloads/` içindeki eski `v0.1.0-preview` executable bu düzeltmeleri içermez. Aşağıdaki betikler güncel kaynaklardan yeni executable üretir. ReXGlue **v0.10.0** kullanılır.
+Güncel kaynaklar, `0x8270DF08` callback, `0x82826D90` ile başlayan 24 CRT initializer, `0x82500660` kaynak karşılaştırıcısı ve açılış videosundaki eksik Bink callback/thunk keşiflerini ve yarışa geçişteki `0x82271650` callback kaydını düzeltir. `downloads/` içindeki eski `v0.1.0-preview` executable bu düzeltmeleri içermez. Aşağıdaki betikler güncel kaynaklardan yeni executable üretir. ReXGlue **v0.10.0** kullanılır.
 
 ## Bir kez kurulacak araçlar
 
@@ -62,7 +62,7 @@ Betik orijinal dosyaların hash'lerini kontrol eder, title update'i çıkarır, 
 Beklenen test çıktısı:
 
 ```text
-Patched XEX 0.0.1.1 loaded; native function mapping verified; 10 asin/acos and 5 startup callback checks passed; 7144 CRT initializer targets registered; 24 registry initializers executed and checked; 6 resource comparator checks passed; 2 interface getter checks passed. Gameplay was not exercised.
+Patched XEX 0.0.1.1 loaded; native function mapping verified; 10 asin/acos and 5 startup callback checks passed; 7144 CRT initializer targets registered; 24 registry initializers executed and checked; 6 resource comparator checks passed; 2 interface getter checks passed; 3 race-start callback checks passed. Gameplay was not exercised.
 ```
 
 Yeni executable: **`out\build\win-amd64-release\motogp0910.exe`**. Runtime DLL'leri ve Xenos plugin'i aynı yerde hazırlanır. Derleme tamamlanmadan eski paketteki executable'ı çalıştırmak bu düzeltmeyi denemez.

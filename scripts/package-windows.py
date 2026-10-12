@@ -31,7 +31,7 @@ def main():
         shutil.copytree(licenses, STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2("/workspace/shared/rexglue-sdk/LICENSE", STAGE / "licenses/ReXGlue-LICENSE.txt")
     (STAGE / "BASLA.txt").write_text(
-        "MotoGP 09/10 - Windows x64 acilis duzeltmeleri - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 yaris baslangici duzeltmesi - ReXGlue v0.10.0\n\n"
         "1. ZIP'teki dosyalari tam oyun klasorune, default.xex dosyasinin yanina cikart.\n"
         "2. Kendi title update dosyan TU_11K61VG_0000004000000.0000000000081 de ayni klasorde olsun.\n"
         "3. motogp0910.exe dosyasini ac. Derleme veya Visual Studio kurulumu gerekmez.\n\n"
@@ -43,6 +43,8 @@ def main():
         "Bu paket orijinal oyun dosyalarini veya title update'i icermiyor.\n"
         "Bu paket eksik CRT callback/initializer, kaynak karsilastiricisi ve Bink/arayuz\n"
         "fonksiyon kesiflerini duzeltir. Gercek oyun kodu uretilir; oyun rutinleri stub degildir.\n"
+        "Start sonrasi logdaki 0x82271650 kayit disi callback de bu surumde uretilmistir.\n"
+        "Windows PE probunda Wine altinda 50 davranis kontrolu gecti. Tam yaris testi bekliyor.\n"
         "Linux'ta tam oyun verileriyle grafik acilisi ve native regresyon kontrolleri sinandi.\n"
         "Guncel Windows GPU davranisi kendi bilgisayarinda ayrica dogrulanmalidir.\n"
         "Yaris ve duyulabilir ses kalitesi henuz dogrulanmadi.\n"
@@ -58,7 +60,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-startup-fix.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-race-start-fix.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

@@ -1,8 +1,8 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-startup-fix.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-race-start-fix.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
-**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** İlk executable ZIP'i güncel başlangıç düzeltmelerini içermez. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
+**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
 
 
 ## Doğrulananlar
@@ -11,15 +11,15 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Verilen XEX ve LIVE/STFS title update: Title ID `434307F0`, Media ID `321F4634`.
 - Title update SDK'nın STFS okuyucusuyla açıldı; `default.xexp` çıkarıldı. SDK'nın hash/anahtar kontrolleri korunarak patch uygulandı: `0.0.0.1` → `0.0.1.1`.
 - Stok ve TU analizlerindeki birer eksik fonksiyon sınırı gerçek disassembly ile belirlendi. TU manifesti sıfır çözülemeyen çağrıyla kod üretti; `--force` kullanılmadı.
-- TU sürümü için 113 C++ translation unit, 30.625 fonksiyon mapping girdisi üretildi; manifestte 62 doğrulanmış fonksiyon sınırı bulunur. Linux Release executable derlendi.
-- Linux entegrasyon probunda **47/47 davranış kontrolü geçti**: 10 asin/acos, 5 CRT callback, 24 kayıt initializer, 6 kaynak karşılaştırıcısı ve 2 arayüz getter vakası. Gerçek XEX içindeki 7144 CRT initializer hedefinin tamamı kayıtlıdır. Bu probe tek başına menü/yarış doğrulaması değildir.
+- TU sürümü için 113 C++ translation unit, 30.626 fonksiyon mapping girdisi üretildi; manifestte 63 doğrulanmış fonksiyon sınırı bulunur. Güncel Windows Release executable derlendi.
+- Önceki menü düzeltmesinin Linux entegrasyon probunda **47/47 davranış kontrolü geçti**: 10 asin/acos, 5 CRT callback, 24 kayıt initializer, 6 kaynak karşılaştırıcısı ve 2 arayüz getter vakası. Gerçek XEX içindeki 7144 CRT initializer hedefinin tamamı kayıtlıdır. Bu probe tek başına menü/yarış doğrulaması değildir.
 - SDK PowerPC altkümesinde **27/27 test, 79 assertion geçti**. Ek chrono testlerinde **12/16 geçti, 4 başarısız**: 1601 epoch'unun Linux nanosecond clock türüne dönüşümünde signed int64 taşması, bağımsız UBSan probuyla doğrulandı. SDK kaynakları değiştirilmedi.
 - Linux GUI için Xvfb + Mesa lavapipe Vulkan kuruldu. Tam disk verileriyle açılış videosu, başlık ekranı, ilk profil/zorluk ayarları geçildi ve **gerçek ana menüye ulaşıldı**. [Ekran görüntüsü](docs/screenshots/linux-main-menu.png) doğrudan Xvfb'den alındı. ALSA null endpoint ses backend'ini açar; duyulabilir ses kalitesi sınanmadı.
-- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Güncel Windows PE regresyonunda Wine altında Linux ile aynı **47/47 kontrol geçti**; gerçek XEX 0.0.1.1 ve 7144 initializer hedefi doğrulandı. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
+- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Güncel Windows PE regresyonunda Wine altında **50/50 kontrol geçti** (önceki 47 vaka ve yarış başlangıcındaki callback için 3 ek vaka); gerçek XEX 0.0.1.1 ve 7144 initializer hedefi doğrulandı. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Kullanıcı GTX 1650 SUPER üzerinde Windows ana menüsünü, motorcu/pist seçimini ve Time Trial hazırlık ekranını doğruladı. Start sonrasında bildirilen `0x82271650` kayıt dışı callback güncel pakette düzeltildi; gerçek yarış testi kullanıcı cihazında bekliyor.
 
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-startup-fix.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-race-start-fix.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
 1. ZIP'i tam oyun klasörüne, stok `default.xex` dosyasının yanına çıkar; eski EXE/DLL dosyalarının yerine yeni paket dosyalarını kullan.
 2. `xenondata/`, `nxeart/` ve kendi `TU_11K61VG_0000004000000.0000000000081` dosyan aynı oyun kökünde kalsın.
@@ -27,9 +27,9 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 İlk çalıştırmada uygulama title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kullanıcı kayıt/cache/log konumu SDK'nın kullanıcı klasörüdür. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
 
-Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 47 kontrol geçti; **güncel Windows GPU davranışı, yarış ve duyulabilir ses kalitesi henüz doğrulanmadı**. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
+Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki pakette Windows ana menüsünü ve Time Trial hazırlık ekranını doğruladı; **bu yeni paketin gerçek yarış testi ve duyulabilir ses kalitesi henüz doğrulanmadı**. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `5161a579212c69c6e76255f8e8a0b1f2ca58e0a8b38d90875a7beedfb534a554`.
+Paket SHA-256: `c2fb3ba10fb337abe868f51780a28e025d6bbd44ac7b0ecb30d7a03db91ef001`.
 
 ## Windows'ta kaynaktan derleme
 
@@ -60,7 +60,7 @@ Tam oyun klasörüyle çalıştırma denemesi:
 
 Çalıştırma betiği orijinal XEX hash'ini kontrol eder. Çıkarılan/doğrulanan `default.xexp` dosyasını tam oyun klasörüne yalnızca yoksa ekler; var olan farklı patch'i değiştirmez. Orijinal `default.xex` ve oyun veri dosyaları korunur. SDK patch'i çalışma sırasında tekrar uygular; üretilmiş fonksiyon tablosu bu sürümle eşleşir. Kayıtlar `out/userdata`, log `out/motogp-windows.log` altına gider.
 
-GTX 1650 SUPER üzerindeki gerçek Windows logları grafik/input başlangıcını doğruladı ve eksik fonksiyonları gösterdi. Güncel kaynaklarla Windows menü/yarış doğrulaması ayrıca yapılmalıdır.
+GTX 1650 SUPER üzerindeki gerçek Windows denemesi menü ve Time Trial hazırlık ekranını doğruladı. Start sonrasında eksik callback güncel kaynaklarda eklendi; yeni paketle yarış doğrulaması ayrıca yapılmalıdır.
 
 ## Bulut ortamında devam
 
@@ -120,4 +120,4 @@ python3 scripts/package-windows.py
 
 Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
 
-Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-startup-fix.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-race-start-fix.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.

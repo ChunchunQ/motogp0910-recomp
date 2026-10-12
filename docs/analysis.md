@@ -62,3 +62,14 @@ Linux native regresyon probu 47/47 davranış kontrolünü geçti (10 matematik,
 
 
 Güncel kaynakların Windows x64 uygulaması ve headless probe'u tam hedef derlemesiyle yeniden üretildi; uygulama/probe PE AMD64 olarak doğrulandı. Windows probe gerçek 0.0.1.1 XEX'i Wine altında yükledi, Linux ile aynı 47 davranış kontrolünü ve 7144 initializer kaydını geçti (exit 0). Güncel EXE SHA-256: `b6d8c3462515b37ff01f0a6f28396ec24c05a106ea3304bf39d919246b6ffd51`. Hazır paket EXE, eşleşen resmi SDK/CRT DLL'leri, klavye başlatıcısı, notlar ve checksum'ları içerir; oyun/TU/patch içermez. CRC, paket üyelerinin tüm SHA-256 değerleri ve paketteki EXE'nin derleme çıktısıyla aynı olması kontrol edildi. Bu, gerçek Windows GPU menü/yarış doğrulamasının yerini almaz.
+
+
+## Yarışa geçişteki Windows çöküşü: `0x82271650`
+
+Kullanıcının 13 Ekim Windows logunda Direct3D 12, input ve 0.0.1.1 patch başlatması tamamlandı. Kullanıcı ana menü, motorcu/pist seçimi ve Losail Time Trial hazırlık ekranını doğruladı; Start seçilince logun son fatal satırı `Call to invalid or unregistered function at guest address 0x82271650` oldu.
+
+TU `.text` disassembly, `[82271650,8227168C)` aralığında 15 komutluk prologue içermeyen bir wrapper gösterdi. Üç parametre nesnesinin +12 alanındaki float pointer'larını (`82917A44`, `82917A68`, `82917A8C`) yükler, gelen r7'yi r10'a taşır, r6=8 seçer ve `82271688` adresindeki terminal branch ile mevcut `82270FC8` yardımcısına gider. `8227168C` sıfır padding'dir; `82271690` ayrı kısa wrapper, `82271698` sonraki pdata fonksiyonudur. `827A2D38` initializer'ı `lis r8,0x8227; addi r11,r8,0x1650` ile bu callback'i nesnenin 8068, 10244 ve 12420 offsetlerine yazar. Adresin parçalı oluşturulması ve standart prologue olmaması keşfin bunu atlamasını açıklar; `.rdata` statik pointer tablosunda bulunmaz.
+
+Manifest sınırı eklendi; gerçek 15 komut ve native kayıt SDK tarafından üretildi. Fonksiyon, ortak yardımcı, oyun parametreleri ve GPU ayarları değiştirilmedi. Windows uygulaması ve PE probu artımlı derlendi. Regresyon, dormant vehicle guest-memory fixture'ında gerçek indirect callback ve ortak yardımcısını yürütür. Üç farklı işaretli yön değerinde yardımcının clamp sonucu, r6 seçimi, float parametre yükleri, stack/LR/nonvolatile dönüşü ve dormant output'un korunması kontrol edilir. Üç geçici parametre pointer'ı ve ayrılan bellek test sonrasında geri yüklenir. Bu, tam yarış simülasyonu değildir.
+
+Windows PE probu Wine altında 50/50 davranış kontrolünü ve 7144 initializer hedefini doğruladı (exit 0). Güncel Windows race-start-fix paketi orijinal XEX/TU/patch/oyun verisini içermez. CRC, üyelerin SHA-256 değerleri ve EXE'nin derleme çıktısıyla aynı olduğu kontrol edildi. Kullanıcının isteğine uygun olarak gerçek yarış yeniden oynatılmadı; yeni Windows paketinin yarış testi kullanıcı cihazına bırakıldı.

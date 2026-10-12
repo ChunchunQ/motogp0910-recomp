@@ -95,3 +95,8 @@ includes = []
 0x825C89F0 = { end = 0x825C8A1C }
 0x825FE308 = { end = 0x825FE33C }
 0x826543E8 = { end = 0x82654408 }
+
+# Race-start callback stored by 827A2D38 at vehicle object offsets 8068,
+# 10244 and 12420 via lis/addi. Loads three float parameters, selects r6=8
+# and tail-calls 82270FC8. Terminal branch 82271688; exclude zero padding.
+0x82271650 = { end = 0x8227168C }

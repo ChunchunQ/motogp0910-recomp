@@ -14,6 +14,7 @@
 
 #include <cmath>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -215,6 +216,78 @@ int check_interface_getter(rex::Runtime& runtime) {
   return 2;
 }
 
+// Reproduce the reported indirect race-start call with a dormant vehicle.
+// Execute the original wrapper AND shared helper, using real guest memory;
+// temporary parameter pointers are restored before any guest launch.
+int check_race_start_callback(rex::Runtime& runtime) {
+  constexpr uint32_t address = 0x82271650;
+  if (!runtime.function_dispatcher()->GetFunction(address)) {
+    throw std::runtime_error("Race-start callback 0x82271650 is not registered");
+  }
+  auto* memory = runtime.memory();
+  constexpr std::array<uint32_t, 3> slots{0x82917A50, 0x82917A74, 0x82917A98};
+  std::array<uint32_t, 3> original{};
+  for (size_t i = 0; i < slots.size(); ++i) {
+    original[i] = rex::memory::load_and_swap<uint32_t>(memory->TranslateVirtual(slots[i]));
+  }
+  const auto allocation = memory->SystemHeapAlloc(0x8000);
+  if (!allocation) throw std::runtime_error("Could not allocate race callback fixture");
+  auto restore = [&] {
+    for (size_t i = 0; i < slots.size(); ++i) {
+      rex::memory::store_and_swap<uint32_t>(memory->TranslateVirtual(slots[i]), original[i]);
+    }
+    memory->SystemHeapFree(allocation);
+  };
+  int count = 0;
+  try {
+    std::memset(memory->TranslateVirtual(allocation), 0, 0x8000);
+    const auto vehicle = allocation + 0x1000;
+    const auto output = allocation + 0x2000;
+    const auto stack = allocation + 0x7E00;
+    rex::memory::store_and_swap<uint32_t>(memory->TranslateVirtual(vehicle + 1472), allocation + 0x3000);
+    constexpr std::array<float, 3> values{1.25f, 2.5f, 3.75f};
+    for (size_t i = 0; i < slots.size(); ++i) {
+      const auto value_address = allocation + 0x6000 + static_cast<uint32_t>(i) * 4;
+      rex::memory::store_and_swap<uint32_t>(memory->TranslateVirtual(value_address), std::bit_cast<uint32_t>(values[i]));
+      rex::memory::store_and_swap<uint32_t>(memory->TranslateVirtual(slots[i]), value_address);
+    }
+    std::memset(memory->TranslateVirtual(output), 0xA5, 36);
+    for (float direction : {-3.0f, 0.0f, 3.0f}) {
+      // Shared helper 82351160 reads this field and clamps its negation to zero.
+      rex::memory::store_and_swap<uint32_t>(memory->TranslateVirtual(allocation + 0x3000 + 2056 + 588),
+                                          std::bit_cast<uint32_t>(direction));
+      PPCContext context{};
+      context.fpscr.loadFromHost();
+      context.r1.u64 = stack;
+      context.r3.u64 = vehicle;
+      context.r4.u64 = output;
+      context.r6.u64 = 0xCCCCCCCC;
+      context.r7.u64 = 0x12345678;
+      context.r31.u64 = 0x123456789ABCDEF0;
+      context.f31.f64 = 123.5;
+      context.lr = 0xBCBCBCBC;
+      context.ctr.u64 = address;
+      context.last_indirect_target = address;
+      rex::runtime::ResolveIndirectFunction(address)(context, runtime.virtual_membase());
+      std::array<uint8_t, 36> unchanged{};
+      unchanged.fill(0xA5);
+      if (context.r1.u64 != stack || context.lr != 0xBCBCBCBC || context.r6.u32 != 8 ||
+          context.r7.u32 != 0x82917A8C || context.f1.f64 != (direction < 0 ? -direction : 0) ||
+          context.f2.f64 != 2.5 || context.f3.f64 != 3.75 ||
+          context.r31.u64 != 0x123456789ABCDEF0 || context.f31.f64 != 123.5 ||
+          std::memcmp(memory->TranslateVirtual(output), unchanged.data(), unchanged.size()) != 0) {
+        throw std::runtime_error("Race-start callback parameter/return state mismatch");
+      }
+      ++count;
+    }
+  } catch (...) {
+    restore();
+    throw;
+  }
+  restore();
+  return count;
+}
+
 int main(int argc, char** argv) {
   try {
     if (argc != 2 && !(argc == 3 && std::string(argv[2]) == "--launch-cpu")) {
@@ -275,13 +348,15 @@ int main(int argc, char** argv) {
     const auto registry_count = check_registry_initializers(runtime);
     const auto comparator_count = check_resource_comparator(runtime);
     const auto getter_count = check_interface_getter(runtime);
+    const auto race_callback_count = check_race_start_callback(runtime);
     std::cout << "Patched XEX 0.0.1.1 loaded; native function mapping verified; "
               << count << " asin/acos and " << callback_count
               << " startup callback checks passed; " << initializer_table_count
               << " CRT initializer targets registered; " << registry_count
               << " registry initializers executed and checked; " << comparator_count
               << " resource comparator checks passed; " << getter_count
-              << " interface getter checks passed. Gameplay was not exercised.\n";
+              << " interface getter checks passed; " << race_callback_count
+              << " race-start callback checks passed. Gameplay was not exercised.\n";
     if (argc == 3) {
       std::cout << "CPU-only diagnostic: launching the real guest entry point without GPU; SDL audio backend active.\n" << std::flush;
       auto thread = runtime.LaunchModule();
