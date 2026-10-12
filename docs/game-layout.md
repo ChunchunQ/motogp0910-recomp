@@ -11,8 +11,7 @@ D:\x\motogp0910\
 ├── rexruntime.dll
 ├── rexgpu-xenos.dll
 ├── diğer paket DLL'leri
-├── BASLAT-KLAVYE.cmd
-├── BASLA.txt
+├── readme.txt
 └── game\
     ├── default.xex
     ├── default.xexp
@@ -24,13 +23,13 @@ D:\x\motogp0910\
 
 ## Mevcut kurulumdan geçiş
 
-1. Oyunu kapat. [Yeni Windows paketini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-game-layout.zip)
+1. Oyunu kapat. [Yeni Windows paketini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-direct-launch.zip)
    GitHub'da **Download raw file** ile indir ve program klasörüne çıkar.
 2. Kendi oyununun **tüm orijinal disk dosyalarını**, `default.xex`, mevcut
    `default.xexp` ve TU paketiyle birlikte `game` altklasörüne taşı. `xenondata`
    ve `nxeart` içindeki dizin yapısını koru. EXE/DLL dosyaları üstte kalır.
-3. Üst klasördeki `motogp0910.exe`yi aç. Klavye için `BASLAT-KLAVYE.cmd`
-   kullanılabilir. Program doğru oyun dizinini kendisi bulur.
+3. Üst klasördeki `motogp0910.exe`ye çift tıkla. Klavye varsayılan olarak açıktır;
+   `.cmd` gerekmez. Program doğru oyun dizinini kendisi bulur.
 
 ZIP yalnızca program/DLL'leri ve `game` içindeki yerleştirme notunu içerir.
 Oyun verileri, XEX, title update veya patch ZIP'te bulunmaz. Dosyaları otomatik

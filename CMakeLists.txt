@@ -24,6 +24,16 @@ endif()
 
 rexglue_setup_target(motogp0910 GPU_PLUGINS xenos)
 
+# Optional check of direct-launch input defaults against the actual SDK.
+add_executable(input_defaults_probe EXCLUDE_FROM_ALL tools/input_defaults_probe.cpp)
+target_link_libraries(input_defaults_probe PRIVATE rex::runtime)
+rexglue_apply_target_settings(input_defaults_probe)
+if(WIN32)
+    add_custom_command(TARGET input_defaults_probe POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:rex::runtime> $<TARGET_FILE_DIR:input_defaults_probe>)
+endif()
+
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)

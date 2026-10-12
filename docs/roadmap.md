@@ -14,6 +14,14 @@ tamamlandığı anlamına gelmez.
 | Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
 | Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
 
+## Doğrudan EXE açılışı
+
+Launcher öncesindeki ayrı teslimat: klavye emülasyonu yalnızca kullanıcı bir
+`mnk_mode` tercihi belirtmemişse EXE tarafından açılır. TOML, ortam değişkeni
+ve komut satırındaki açık tercihler korunur. Yeni paket CMD içermez;
+yönergeler `readme.txt` ve `game/readme.txt` adlarıyla dağıtılır. Bundan sonraki
+üretilen dosya adları İngilizce olacak.
+
 ## Launcher
 
 Hedef: Windows üzerinde ayarları kaydeden, oyun dosyalarını denetleyen ve oyunu
@@ -46,7 +54,7 @@ MotoGP0910/
 ├── rexruntime.dll
 ├── rexgpu-xenos.dll
 ├── diğer paket DLL'leri
-├── BASLAT-KLAVYE.cmd
+├── readme.txt
 └── game/
     ├── default.xex
     ├── default.xexp

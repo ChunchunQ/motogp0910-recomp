@@ -15,6 +15,8 @@
 #include <fstream>
 #include <vector>
 
+#include "input_defaults.h"
+
 class Motogp0910App : public rex::ReXApp {
  public:
   using rex::ReXApp::ReXApp;
@@ -96,6 +98,7 @@ class Motogp0910App : public rex::ReXApp {
     return false;
   }
   void OnPreSetup(rex::RuntimeConfig& config) override {
+    ApplyMotogpInputDefaults();
     if (config.gpu_plugin.empty()) {
       config.gpu_plugin = "xenos";
     }

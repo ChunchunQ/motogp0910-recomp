@@ -82,3 +82,8 @@ Kullanıcı işleri tek tek görmek istediği için bu teslimatta yalnızca dosy
 Güncel Windows EXE gerçek Wine çalıştırmalarıyla farklı çalışma dizininden denendi. Türkçe karakter/boşluk içeren program klasöründe her iki XEX adayı varken TU yalnızca game/ içindeydi: doğru patch game/default.xexp altında oluşturuldu, ana dizine yazılmadı. Patch SHA-256 beklenen değerle eşleşti. İkinci çalıştırmada mevcut patch byte'ları ve mtime değişmedi. Ayrı denemeler eski düz yerleşim fallback'ini ve açık oyun yolunun game/ adayına göre önceliğini doğruladı; stok XEX hash'leri değişmedi.
 
 Bu GUI yol denemeleri patch hazırlığından sonra bu host'un Direct3D 12 sunumu olmadığı için beklenen exit 3 ile durdu; yeni Windows grafik/yarış çalıştırması olarak sunulmaz. Ayrı Windows PE probu game/ içindeki gerçek XEX/patch'i yükledi ve 50 davranış kontrolünü geçti (exit 0). Paket CRC, üyelerin SHA-256 değerleri, game/ notu ve paketteki EXE'nin güncel derleme çıktısıyla eşleşmesi doğrulandı.
+
+
+## Launcher öncesi ayrı teslimat: doğrudan EXE açılışı
+
+Kullanıcı game/ düzeninin sorunsuz çalıştığını bildirdi ve CMD yerine EXE açılışı istedi. OnPreSetup giriş sistemi kurulmadan önce, yalnızca kaynağı SDK varsayılanı olan mnk_mode değerini true yapar. Açık config/env/CLI/runtime tercihleri ve mevcut backend/tuş eşlemeleri korunur. SDK ve guest oyun kodu değiştirilmedi. Windows EXE artımlı derlendi. Gerçek SDK ile Windows PE giriş probunda beş öncelik senaryosu ve her senaryoda runtime false tercihinin korunması geçti (5/5, exit 0). Grafik veya fiziksel gamepad yeniden denenmedi. Paket CMD içermez; yeni yönerge dosyaları readme.txt ve game/readme.txt adlarıyla İngilizce adlandırıldı. CRC, üye hashleri ve EXE/derleme eşleşmesi kontrol edildi. Launcher geliştirmesine başlanmadı.
