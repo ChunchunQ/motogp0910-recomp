@@ -15,3 +15,7 @@ includes = []
 # Two return paths end at 82709FB4 and 82709FD4. The next routine starts
 # at 82709FD8. Wrapper at 8270A0A0 sets r4=1 and branches here.
 0x82709EE0 = { end = 0x82709FD8 }
+# CRT notification callback registered by 8270EAD0 via lis/addi + stw,
+# then called indirectly by 823B1840. No standard prologue: cmpwi cr6,r3,0;
+# bnelr cr6; b 8270EA60. The next independent routine begins at 8270DF14.
+0x8270DF08 = { end = 0x8270DF14 }

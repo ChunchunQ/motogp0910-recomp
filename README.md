@@ -2,6 +2,8 @@
 
 Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable artık derlendi; henüz oynanabilirlik doğrulanmadı. Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
+**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** İlk `v0.1.0-preview` paketi gerçek Windows denemesinde `0x8270DF08` adresindeki kayıt dışı callback yüzünden durdu. Güncel manifest bu 12 baytlık orijinal rutini kod üretimine ekler. Eski executable ZIP'i bu düzeltmeyi içermez; güncel kaynakları derle. Yeni Windows regresyon probu Wine altında 10 matematik ve 5 callback kontrolünü geçti.
+
 ## Doğrulananlar
 
 - Resmi ReXGlue **v0.10.0**, commit `f5337cdc947ff6d4c4196737e2c807a48f2a1fc2` kullanılıyor. 0.9.0 kurulumu ve çıktıları kaldırıldı.
@@ -15,6 +17,8 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Wine altında gerçek güncellenmiş XEX yüklendi; native fonksiyon tablosu ve 10 asin/acos kontrolü geçti. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Gerçek Windows GPU ve oynanış testi bekliyor.
 
 ## Hazır Windows paketi
+
+Bu bölümdeki ilk paket `0x8270DF08` düzeltmesini içermez. Güncel kaynaklar için yukarıdaki yerel derleme rehberini kullan.
 
 [Windows x64 executable paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-preview.zip). Özel depoda GitHub hesabına giriş gerekir. Dosya sayfasındaki **Download raw file** düğmesiyle indir. Alternatif olarak “Code → Download ZIP” ile depoyu indir; hazır executable paketi `downloads/MotoGP0910-Windows-x64-preview.zip` içindedir.
 
@@ -31,6 +35,8 @@ Bu paket bir prototiptir: Windows ikilisi ve veri/kod yükleme zinciri doğrulan
 3 GB'lık oyun verisini buluta yüklemek gerekmez. Proje paketini kendi bilgisayarında açıp tam çıkarılmış oyun klasörünü orada kullanabilirsin. Oyun verisi bu proje paketinde bulunmaz.
 
 Gerekli araçlar: Visual Studio 2022'nin Desktop development with C++ bileşenleri, Windows SDK, **Clang 20+**, CMake 3.25+ ve Ninja. x64 VS Developer PowerShell aç; `clang++`, `cmake`, `ninja` PATH'te olmalı.
+
+Güncel betik normal PowerShell'den VS 2022 x64 ortamını otomatik hazırlar ve varsayılan resmi LLVM kurulumunu bulur. Kurulum bağlantıları, RAM'e göre Jobs önerileri ve log alma komutu [ayrıntılı rehberde](docs/windows-build.md).
 
 Proje klasöründe şu komutu kendi dosya yollarınla çalıştır:
 

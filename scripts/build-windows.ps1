@@ -28,8 +28,21 @@ function Stage-File {
     Assert-Hash -Path $Destination -Expected $Expected
 }
 
-# Run inside an x64 VS 2022 developer PowerShell so MSVC headers/libs are visible.
-$Clang = (Get-Command clang++ -ErrorAction Stop).Source
+# Initialize the installed VS 2022 x64 tools when opened from ordinary PowerShell.
+if (!$env:VCToolsInstallDir -or !$env:WindowsSdkDir -or $env:VSCMD_ARG_TGT_ARCH -ne 'x64') {
+    $VsWhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+    if (!(Test-Path -LiteralPath $VsWhere -PathType Leaf)) {
+        throw 'Install Visual Studio 2022 Build Tools with Desktop development with C++ and Windows SDK. See docs/windows-build.md.'
+    }
+    $VsInstall = & $VsWhere -latest -products '*' -version '[17.0,18.0)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if ($LASTEXITCODE -ne 0 -or !$VsInstall) {
+        throw 'VS 2022 x64 C++ tools were not found. See docs/windows-build.md.'
+    }
+    & (Join-Path $VsInstall 'Common7/Tools/Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+}
+# Prefer the official LLVM installation over the older Clang bundled with VS.
+$LlvmClang = Join-Path $env:ProgramFiles 'LLVM/bin/clang++.exe'
+$Clang = if (Test-Path -LiteralPath $LlvmClang -PathType Leaf) { $LlvmClang } else { (Get-Command clang++ -ErrorAction Stop).Source }
 $CMake = (Get-Command cmake -ErrorAction Stop).Source
 $null = Get-Command ninja -ErrorAction Stop
 if (!$env:VCToolsInstallDir -or !$env:WindowsSdkDir) {
@@ -38,6 +51,9 @@ if (!$env:VCToolsInstallDir -or !$env:WindowsSdkDir) {
 $VersionText = (& $Clang --version) -join "`n"
 if ($VersionText -notmatch 'clang version (\d+)' -or [int]$Matches[1] -lt 20) {
     throw 'Windows builds require Clang 20+.'
+}
+if ($VersionText -notmatch 'Target:\s*x86_64-.*windows-msvc') {
+    throw 'Use LLVM for Windows x64 with an MSVC target, not a MinGW/ARM compiler.'
 }
 $GameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
 $TitleUpdatePath = (Resolve-Path -LiteralPath $TitleUpdatePath).Path
