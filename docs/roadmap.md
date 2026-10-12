@@ -5,11 +5,11 @@
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
-Bu belge kapsam ve uygulanabilirlik kaydıdır; launcher ve LAN henüz uygulanmadı.
+İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). Launcher ve LAN henüz uygulanmadı.
 
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
-| EXE yanında `game/` veri klasörü | Mevcut uygulama zaten otomatik arıyor; kullanım ve dağıtım düzeni hazırlanabilir. | 1 |
+| EXE yanında `game/` veri klasörü | Tamamlandı: game önceliği, paket klasörü ve Windows yol/TU kontrolleri. | 1 |
 | Windows launcher | Yapılabilir; mevcut SDK ayarları ve oyun başlatma yolu kullanılabilir. | 1 |
 | Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
 | Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
@@ -37,7 +37,7 @@ olur, mevcut kayıtlar korunur, eksik veri durumunda anlaşılır hata gösteril
 ## Oyun dosya düzeni
 
 Mevcut `Motogp0910App::OnConfigurePaths`, açık bir `game_data_root` verilmemişse
-önce EXE klasöründe, ardından EXE yanındaki `game/` içinde `default.xex` arar.
+önce EXE yanındaki `game/` içinde, ardından eski düz yerleşimde `default.xex` arar.
 Bu nedenle mevcut race-start-fix EXE ile de aşağıdaki düzen kullanılabilir:
 
 ```text
@@ -57,12 +57,11 @@ MotoGP0910/
 ```
 
 Tüm orijinal oyun dosyaları ve patch birlikte `game/` altında bulunmalı;
-EXE/DLL'ler üst dizinde kalır. Ana dizindeki eski `default.xex` bırakılırsa ilk
-aday olarak o seçilir. `--game_data_root` veya `run-windows.ps1 -GameRoot`
+EXE/DLL'ler üst dizinde kalır. Her iki yerde XEX varsa yeni EXE `game/` klasörünü seçer. `--game_data_root` veya `run-windows.ps1 -GameRoot`
 kullanıldığında yol yeni `game/` dizinine işaret etmelidir. Kayıt ve cache
 klasörleri oyun verisinden ayrı korunmalıdır; taşımaya gerek yoktur.
 
-Paketleme rehberi ve launcher bu düzeni standart hale getirecek. Kabul ölçütü:
+Paket ve [taşıma rehberi](game-layout.md) bu düzeni standartlaştırır. Launcher ayrı sonraki iştir. Kabul ölçütü:
 farklı çalışma dizininden çift tıklamayla açılış, title-update yükleme ve kayıt
 koruma doğrulanır; eski düzende açılış da desteklenir.
 

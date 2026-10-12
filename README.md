@@ -1,8 +1,8 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-race-start-fix.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-game-layout.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
-[Geliştirme notları ve yol haritası](docs/roadmap.md): Windows launcher, EXE yanında `game/` veri klasörü, stabilite/kalite kontrol ve LAN multiplayer araştırması. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
+[Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); Windows launcher sonraki ayrı iştir. Stabilite/kalite kontrol ve LAN multiplayer araştırması sonraki aşamalardır. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
 
 **Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-callback-fix.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
 
@@ -21,17 +21,17 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-race-start-fix.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-game-layout.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
-1. ZIP'i tam oyun klasörüne, stok `default.xex` dosyasının yanına çıkar; eski EXE/DLL dosyalarının yerine yeni paket dosyalarını kullan.
-2. `xenondata/`, `nxeart/` ve kendi `TU_11K61VG_0000004000000.0000000000081` dosyan aynı oyun kökünde kalsın.
-3. `motogp0910.exe` dosyasını aç. Klavye için **`BASLAT-KLAVYE.cmd`** kullan: Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
+1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
+2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
+3. Üst dizindeki `motogp0910.exe` dosyasını aç. Klavye için **`BASLAT-KLAVYE.cmd`** kullan: Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
 
-İlk çalıştırmada uygulama title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kullanıcı kayıt/cache/log konumu SDK'nın kullanıcı klasörüdür. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
+Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yoksa eski düz yerleşimi kullanır. Her iki yerde XEX varsa `game/` önceliklidir. İlk çalıştırmada uygulama oyun kökündeki title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kullanıcı kayıt/cache/log konumu SDK'nın kullanıcı klasörüdür. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
 
 Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki pakette Windows ana menüsünü ve Time Trial hazırlık ekranını doğruladı; **bu yeni paketin gerçek yarış testi ve duyulabilir ses kalitesi henüz doğrulanmadı**. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `c2fb3ba10fb337abe868f51780a28e025d6bbd44ac7b0ecb30d7a03db91ef001`.
+Paket SHA-256: `b53f59817fa1e629b95ec99a36726633c16a5a19c98ceb0b4ead46c008887eb2`.
 
 ## Windows'ta kaynaktan derleme
 
@@ -122,4 +122,4 @@ python3 scripts/package-windows.py
 
 Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
 
-Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-race-start-fix.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-game-layout.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.

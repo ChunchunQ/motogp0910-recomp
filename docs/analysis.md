@@ -73,3 +73,12 @@ TU `.text` disassembly, `[82271650,8227168C)` aralığında 15 komutluk prologue
 Manifest sınırı eklendi; gerçek 15 komut ve native kayıt SDK tarafından üretildi. Fonksiyon, ortak yardımcı, oyun parametreleri ve GPU ayarları değiştirilmedi. Windows uygulaması ve PE probu artımlı derlendi. Regresyon, dormant vehicle guest-memory fixture'ında gerçek indirect callback ve ortak yardımcısını yürütür. Üç farklı işaretli yön değerinde yardımcının clamp sonucu, r6 seçimi, float parametre yükleri, stack/LR/nonvolatile dönüşü ve dormant output'un korunması kontrol edilir. Üç geçici parametre pointer'ı ve ayrılan bellek test sonrasında geri yüklenir. Bu, tam yarış simülasyonu değildir.
 
 Windows PE probu Wine altında 50/50 davranış kontrolünü ve 7144 initializer hedefini doğruladı (exit 0). Güncel Windows race-start-fix paketi orijinal XEX/TU/patch/oyun verisini içermez. CRC, üyelerin SHA-256 değerleri ve EXE'nin derleme çıktısıyla aynı olduğu kontrol edildi. Kullanıcının isteğine uygun olarak gerçek yarış yeniden oynatılmadı; yeni Windows paketinin yarış testi kullanıcı cihazına bırakıldı.
+
+
+## İlk ayrı teslimat: game/ veri düzeni
+
+Kullanıcı işleri tek tek görmek istediği için bu teslimatta yalnızca dosya düzeni değişti; launcher, genel kalite kontrol aşaması ve LAN geliştirmesine başlanmadı. `OnConfigurePaths` açık `game_data_root` değerini korur, varsayılan seçimde önce EXE yanındaki `game/default.xex`, ardından eski düz yerleşimi arar. Paket, veri yerleştirme notuyla `game/` klasörü içerir; orijinal oyun dosyalarını taşımaz veya dağıtmaz. SDK varsayılan kayıt/cache konumu ve mevcut yarış başlangıcı düzeltmesi korunur.
+
+Güncel Windows EXE gerçek Wine çalıştırmalarıyla farklı çalışma dizininden denendi. Türkçe karakter/boşluk içeren program klasöründe her iki XEX adayı varken TU yalnızca game/ içindeydi: doğru patch game/default.xexp altında oluşturuldu, ana dizine yazılmadı. Patch SHA-256 beklenen değerle eşleşti. İkinci çalıştırmada mevcut patch byte'ları ve mtime değişmedi. Ayrı denemeler eski düz yerleşim fallback'ini ve açık oyun yolunun game/ adayına göre önceliğini doğruladı; stok XEX hash'leri değişmedi.
+
+Bu GUI yol denemeleri patch hazırlığından sonra bu host'un Direct3D 12 sunumu olmadığı için beklenen exit 3 ile durdu; yeni Windows grafik/yarış çalıştırması olarak sunulmaz. Ayrı Windows PE probu game/ içindeki gerçek XEX/patch'i yükledi ve 50 davranış kontrolünü geçti (exit 0). Paket CRC, üyelerin SHA-256 değerleri, game/ notu ve paketteki EXE'nin güncel derleme çıktısıyla eşleşmesi doğrulandı.

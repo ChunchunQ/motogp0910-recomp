@@ -113,9 +113,10 @@ class Motogp0910App : public rex::ReXApp {
       return;
     }
     const auto executable_directory = rex::filesystem::GetExecutableFolder();
-    // Portable layout: put the executable next to the extracted game, or
-    // keep the complete game in a sibling "game" directory.
-    for (const auto& candidate : {executable_directory, executable_directory / "game"}) {
+    // Standard portable layout: executable/DLLs above the complete "game"
+    // directory. Prefer it when both layouts exist; explicit roots still win.
+    // Keep the original flat layout as a fallback for existing installations.
+    for (const auto& candidate : {executable_directory / "game", executable_directory}) {
       if (std::filesystem::is_regular_file(candidate / "default.xex")) {
         paths.game_data_root = candidate;
         return;
