@@ -1,0 +1,17 @@
+# MotoGP 09/10 with supplied title update, version 0.0.1.1.
+# The original XEX and sibling default.xexp are loaded by ReXGlue together.
+[project]
+name = "motogp0910"
+sdk_version = "0.10.0"
+game_root = "assets/game-tu"
+
+[entrypoint]
+file_path = "assets/game-tu/default.xex"
+out_directory_path = "generated/default"
+includes = []
+
+[entrypoint.functions]
+# TU version only: leaf FP routine starts with fabs f13,f1 at 82709EE0.
+# Two return paths end at 82709FB4 and 82709FD4. The next routine starts
+# at 82709FD8. Wrapper at 8270A0A0 sets r4=1 and branches here.
+0x82709EE0 = { end = 0x82709FD8 }

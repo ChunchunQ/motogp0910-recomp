@@ -1,0 +1,8 @@
+# Original game files and generated code stay local.
+/assets/
+/out/
+/generated/*
+!/generated/rexglue.cmake
+/CMakeUserPresets.json
+*.log
+__pycache__/
