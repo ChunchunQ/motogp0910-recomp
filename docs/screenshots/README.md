@@ -13,11 +13,8 @@ README'sine bak.
 
 ## Windows launcher
 
-- [Graphics / English](launcher-graphics-english.png)
-- [Grafik / Türkçe](launcher-graphics-turkish.png)
-- [Controls / English](launcher-controls-english.png)
-- [Kontroller / Türkçe](launcher-controls-turkish.png)
-- [Kompakt kontrol yerleşimi, %75](launcher-controls-turkish-compact.png)
+- [English](launcher-english.png)
+- [Türkçe](launcher-turkish.png)
 
 Windows PE launcher Wine/Xvfb altında gerçek arayüzden yakalandı; Windows oyun
 grafik/yarış testi değildir. [Launcher test kapsamı](../launcher.md).

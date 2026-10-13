@@ -121,17 +121,11 @@ The launcher serializes launch arguments using actual TOML node types. Earlier
 boolean conversion of numeric nodes could turn scale/volume/sharpness values
 into `true`; the new regression checks prevent that.
 
-## Screenshots
+## Local UI inspection
 
-These are captures of the actual Windows launcher under Wine, not mockups.
-
-![Graphics, English](screenshots/launcher-graphics-english.png)
-![Audio, English](screenshots/launcher-audio-english.png)
-![Controls, Turkish](screenshots/launcher-controls-turkish.png)
-
-[Graphics, Turkish](screenshots/launcher-graphics-turkish.png) ·
-[Audio, Turkish](screenshots/launcher-audio-turkish.png) ·
-[Controls, English](screenshots/launcher-controls-english.png)
+`launcher_layout_probe` can save actual Win32 window captures to a local
+output directory supplied on its command line. These optional captures are
+useful for inspecting language and layout changes.
 
 ## Reference projects
 
