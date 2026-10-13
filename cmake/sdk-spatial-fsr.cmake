@@ -7,6 +7,16 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_PROCESSOR MATCHES "AM
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-mssse3>)
 endif()
 
+# Readback is required only while the game builds CPU-copied career liveries.
+# A C ABI backed by an atomic scope counter avoids changing user GPU flags.
+if(PROJECT_NAME STREQUAL "ReXGlue")
+  set(MOTOGP_LIVERY_BRIDGE_SOURCE "${CMAKE_CURRENT_LIST_DIR}/../src/livery_readback_bridge.cpp")
+  function(motogp_add_livery_bridge)
+    target_sources(rexgpu-xenos PRIVATE "${MOTOGP_LIVERY_BRIDGE_SOURCE}")
+  endfunction()
+  cmake_language(DEFER CALL motogp_add_livery_bridge)
+endif()
+
 # Keep input observers in the runtime's own SDL instance on Windows. Adding
 # a C export preserves the existing v0.10.0 SDK/plugin C++ ABI and import lib.
 if(WIN32 AND PROJECT_NAME STREQUAL "ReXGlue")

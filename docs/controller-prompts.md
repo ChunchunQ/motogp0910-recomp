@@ -9,8 +9,8 @@ supplied by the user, replacing the previous drawn symbols.
 Extract the complete Windows ZIP. Replace the EXEs and both runtime DLLs,
 and keep `resources/controller/ps3-prompts.bin` in its supplied subdirectory.
 Keep your existing `game/`, settings and saves. The launcher and Qatar
-collision repair are retained. The career rider/bike texture investigation
-is paused and is **not** included in this build.
+collision repair are retained. The new package also includes the scoped career texture readback repair;
+see [career texture notes](career-textures.md).
 
 Automatic switching follows meaningful input, not idle connection or minor
 stick drift. Use SDL for native Sony detection. XInput wrappers present an

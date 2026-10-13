@@ -11,7 +11,7 @@ in v0.10.0**, using `cmake/sdk-spatial-fsr.cmake`. It does not fetch or enable
 the separate temporal FidelityFX SDK: FSR 2/3, frame generation and vendor
 quality presets are not exposed by the MotoGP launcher.
 
-One small patch, `cmake/sdk-explicit-video-mode.patch`, makes the kernel respect
+The existing patch, `cmake/sdk-explicit-video-mode.patch`, makes the kernel respect
 an explicitly selected guest video mode even if it equals the compiled default.
 Without it, a 1280×720 selection could silently inherit a 1920×1080 host window
 size, defeating the distinction between native rendering and spatial upscaling.
@@ -22,6 +22,13 @@ function table for the runtime’s own SDL instance. This is necessary because
 Windows SDK consumers otherwise link an independent static SDL instance,
 whose event watches cannot observe the game’s controller input. The bridge
 is added by the same CMake include, without changing the existing C++ ABI.
+
+`cmake/sdk-livery-readback.patch` and `src/livery_readback_bridge.cpp` add
+a scoped synchronous resolve readback override. The game enters this scope
+only while generating custom career rider/bike liveries and copying their
+resolved mipmaps on the CPU. It preserves the user's readback flag and
+restores the ordinary GPU path when generation finishes. Both DLLs must
+come from this manifest. See [career texture notes](../../docs/career-textures.md).
 
 The DLLs were cross-compiled with Clang 20.1.8, the MSVC 14.44 / Windows SDK
 10.0.26100 ABI, Release, D3D12 enabled, Vulkan disabled, and Tracy enabled.
@@ -35,8 +42,8 @@ Python 3, CMake, Ninja and Clang 20+ available:
 python scripts/build-spatial-sdk.py --sdk-source out/rexglue-spatial-source --jobs 4
 ```
 
-The script verifies the exact source commit, initializes submodules, applies the
-checked patch idempotently and builds only `rexruntime` and `rexgpu-xenos`.
+The script verifies the exact source commit, initializes submodules, applies both
+checked patches idempotently and builds only `rexruntime` and `rexgpu-xenos`.
 Output is under `out/rexglue-spatial-source/out/win-amd64`. Locally rebuilt
 DLLs can have different hashes with a different compiler; the checked-in
 archive is not silently replaced.

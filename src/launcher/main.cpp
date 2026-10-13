@@ -360,8 +360,6 @@ struct App {
     SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(25),S(138),S(197),S(157)};DrawTextW(dc,T(L"PC RECOMPILATION",L"PC YENİDEN DERLEME"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(26),S(184),S(197),S(204)};DrawTextW(dc,T(L"SETTINGS",L"AYARLAR"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(25),S(429),S(185),S(483)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
-    RECT footer{S(18),S(792),S(195),S(843)};Rounded(dc,footer,kSidebar,kSidebar,10);
-    SetTextColor(dc,kText);r={S(25),S(798),S(193),S(839)};DrawTextW(dc,L"ReXGlue v0.10.0\nWindows PC",-1,&r,DT_LEFT);
     BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){

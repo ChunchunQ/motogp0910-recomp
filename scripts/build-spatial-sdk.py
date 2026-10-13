@@ -18,6 +18,7 @@ def main():
     parser.add_argument('--compiler', default='clang++')
     parser.add_argument('--cmake', default='cmake')
     parser.add_argument('--jobs', type=int, default=4)
+    parser.add_argument('--vulkan', action='store_true', help='Build the Linux Vulkan plugin instead of Windows D3D12')
     args = parser.parse_args()
     if not 1<=args.jobs<=16:
         parser.error('--jobs must be 1..16')
@@ -30,15 +31,17 @@ def main():
     revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != manifest['source_commit']:
         raise SystemExit('SDK source must match the exact v0.10.0 source commit in manifest.json.')
-    patch = ROOT/'cmake/sdk-explicit-video-mode.patch'
-    reversed_check = subprocess.run(['git','apply','--reverse','--check',str(patch)], cwd=source,
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if reversed_check.returncode:
-        run('git','apply','--check',patch,cwd=source)
-        run('git','apply',patch,cwd=source)
+    for name in ['sdk-explicit-video-mode.patch','sdk-livery-readback.patch']:
+        patch = ROOT/'cmake'/name
+        reversed_check = subprocess.run(['git','apply','--reverse','--check',str(patch)], cwd=source,
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if reversed_check.returncode:
+            run('git','apply','--check',patch,cwd=source)
+            run('git','apply',patch,cwd=source)
     run('git','submodule','update','--init','--recursive',cwd=source)
     command = [args.cmake, '-S', source, '-B', args.build_dir.resolve(), '-G', 'Ninja',
-               '-DCMAKE_BUILD_TYPE=Release', '-DREXGLUE_USE_VULKAN=OFF',
+               '-DCMAKE_BUILD_TYPE=Release', f'-DREXGLUE_USE_VULKAN={"ON" if args.vulkan else "OFF"}',
+               f'-DREXGLUE_USE_D3D12={"OFF" if args.vulkan else "ON"}',
                '-DREXGLUE_ENABLE_FIDELITYFX=OFF', '-DREXGLUE_ENABLE_TRACY=ON',
                '-DREXGLUE_BUILD_TESTS=OFF', f'-DCMAKE_PROJECT_INCLUDE={ROOT / "cmake/sdk-spatial-fsr.cmake"}']
     if args.toolchain:
@@ -49,7 +52,7 @@ def main():
     run(*command)
     run(args.cmake, '--build', args.build_dir.resolve(), '--target', 'rexruntime',
         'rexgpu-xenos', '--parallel', args.jobs)
-    print('Built runtime pair:', source/'out/win-amd64')
+    print('Built runtime pair:', source/('out/linux-amd64' if args.vulkan else 'out/win-amd64'))
     print('These local DLLs have compiler-specific checksums; the packaged pair remains pinned separately.')
 
 if __name__ == '__main__':

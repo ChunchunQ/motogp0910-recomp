@@ -1,0 +1,23 @@
+diff --git a/src/graphics/command_processor.cpp b/src/graphics/command_processor.cpp
+index a744375..1575249 100644
+--- a/src/graphics/command_processor.cpp
++++ b/src/graphics/command_processor.cpp
+@@ -35,6 +35,8 @@
+ #include <rex/system/kernel_state.h>
+ #include <rex/system/user_module.h>
+ 
++extern "C" bool Motogp_IsLiveryReadbackRequired();
++
+ REXCVAR_DEFINE_BOOL(vsync, true, "GPU", "Enable vertical sync");
+ 
+ REXCVAR_DEFINE_BOOL(clear_memory_page_state, true, "GPU",
+@@ -171,6 +173,9 @@ void CommandProcessor::InvalidateGpuMemory() {}
+ 
+ ReadbackResolveMode CommandProcessor::GetReadbackResolveMode(
+     bool legacy_readback_resolve_enabled) const {
++  if (Motogp_IsLiveryReadbackRequired()) {
++    return ReadbackResolveMode::kFull;
++  }
+   ReadbackResolveMode shared_mode = ParseReadbackResolveMode(REXCVAR_GET(readback_resolve));
+   bool shared_mode_overrides_legacy = shared_mode != ReadbackResolveMode::kDisabled ||
+                                       rex::cvar::HasNonDefaultValue("readback_resolve");

@@ -44,7 +44,13 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 original PS3 buttons - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 career texture readback repair - ReXGlue v0.10.0\n\n"
+        "CAREER TEXTURES: Synchronous GPU resolve readback is enabled only during\n"
+        "custom rider/bike livery generation. BOTH matching runtime DLLs are required.\n"
+        "13 scope/ABI checks (16 guest calls) passed on Linux and Windows/Wine.\n"
+        "The first career race needs local Windows visual verification.\n"
+        "LAUNCHER: Removed the lower-left SDK/platform label and its covering box.\n"
+        "The decorative stripes remain visible to the bottom of the sidebar.\n\n"
         "PHYSICS DATA: Preserves serialized collision coordinates during endian conversion.\n"
         "192 Linux and Windows/Wine field/record/ABI checks passed.\n"
         "The user verified 4-5 Qatar Time Trial laps without falling through the track.\n"
@@ -122,7 +128,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons-v3.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-career-texture-fix.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

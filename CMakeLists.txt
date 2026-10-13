@@ -17,6 +17,7 @@ set(MOTOGP0910_SOURCES
     src/button_prompts.cpp
     src/ps3_prompt_textures.cpp
     src/physics_assets.cpp
+    src/livery_readback.cpp
 )
 
 if(WIN32)
@@ -51,6 +52,10 @@ add_executable(button_prompt_input_probe EXCLUDE_FROM_ALL tools/button_prompt_in
 target_link_libraries(button_prompt_input_probe PRIVATE rex::runtime)
 rexglue_apply_target_settings(button_prompt_input_probe)
 
+add_executable(livery_readback_probe EXCLUDE_FROM_ALL tools/livery_readback_probe.cpp src/livery_readback.cpp)
+target_link_libraries(livery_readback_probe PRIVATE rex::runtime ${CMAKE_DL_LIBS})
+rexglue_apply_target_settings(livery_readback_probe)
+
 # Optional check of direct-launch input defaults against the actual SDK.
 add_executable(input_defaults_probe EXCLUDE_FROM_ALL tools/input_defaults_probe.cpp)
 target_link_libraries(input_defaults_probe PRIVATE rex::runtime)
@@ -71,7 +76,7 @@ if(TARGET motogp0910_recomp)
     add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
@@ -120,7 +125,7 @@ endforeach()
 if(WIN32)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -130,7 +135,7 @@ if(WIN32)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -140,4 +145,19 @@ if(WIN32)
             endif()
         endforeach()
     endif()
+endif()
+
+set(MOTOGP_LIVERY_GPU_PLUGIN "" CACHE FILEPATH "Linux v0.10.0 GPU plugin built with the career readback patch")
+if(NOT WIN32 AND MOTOGP_LIVERY_GPU_PLUGIN)
+    if(NOT EXISTS "${MOTOGP_LIVERY_GPU_PLUGIN}")
+        message(FATAL_ERROR "MOTOGP_LIVERY_GPU_PLUGIN does not exist")
+    endif()
+    foreach(stage_target motogp0910 button_prompt_probe button_prompt_window_probe button_prompt_gpu_probe livery_readback_probe)
+        if(TARGET ${stage_target})
+            add_custom_command(TARGET ${stage_target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${MOTOGP_LIVERY_GPU_PLUGIN}" "$<TARGET_FILE_DIR:${stage_target}>/librexgpu-xenos.so"
+                VERBATIM)
+        endif()
+    endforeach()
 endif()

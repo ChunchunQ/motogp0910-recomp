@@ -20,6 +20,7 @@
 #include "video_settings.h"
 #include "button_prompts.h"
 #include "ps3_prompt_textures.h"
+#include "livery_readback.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -113,6 +114,7 @@ class Motogp0910App : public rex::ReXApp {
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
+    motogp::livery::Initialize();
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::StartInputObserver(window());
