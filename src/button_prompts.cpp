@@ -205,12 +205,14 @@ bool DrawReplacement(PPCContext& ctx,uint8_t* base,Style style,bool inline_glyph
 }
 char ReplaySpriteGlyph(uint64_t caller,uint32_t sprite,const uint8_t* base) {
   // The five-control Second Chance row and the eight-control full replay row
-  // in sub_8233A168. Exclude the timeline/media rows even if they share an atlas.
-  if((caller!=0x8233A4F8 && caller!=0x8233AB0C) || !sprite)return 0;
+  // in sub_8233A168. The subsequent A4F8 / AB0C calls draw the lower media
+  // row, not buttons. IDs were verified against the ingame.mgb sprite art.
+  if((caller!=0x8233A420 && caller!=0x8233A99C) || !sprite)return 0;
   const auto bank=rex::memory::load_and_swap<uint32_t>(base+0x8294679C);
   if(!bank)return 0;
-  for(auto [index,glyph]:{std::pair{8,'l'},std::pair{5,'r'},std::pair{2,'L'},
-                         std::pair{3,'R'},std::pair{11,'B'}}) {
+  for(auto [index,glyph]:{std::pair{19,'L'},std::pair{20,'l'},std::pair{21,'R'},
+                         std::pair{22,'r'},std::pair{23,'A'},std::pair{24,'B'},
+                         std::pair{25,'X'},std::pair{26,'Y'}}) {
     if(rex::memory::load_and_swap<uint32_t>(base+bank+4*index)==sprite)return glyph;
   }
   return 0;

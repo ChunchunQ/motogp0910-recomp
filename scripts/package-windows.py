@@ -70,6 +70,9 @@ def main():
         "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
         "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
         "Keep both runtime DLLs: this v0.10.0 pair enables spatial FSR and shared SDL input.\n\n"
+        "REPLAY REPAIR: Replace the upper controller row, preserving the lower media row.\n"
+        "All eight full-replay controller sprites now switch Xbox/PS/keyboard styles.\n"
+        "The v2 build incorrectly replaced rewind/camera icons instead of the button row.\n\n"
         "PS3 ARTWORK REPAIR: Match the GPU loader's 512-byte BC3 row alignment.\n"
         "The previous PS3 button build uploaded tightly packed 256-byte rows.\n"
         "This build pads rows without changing any visible compressed pixel block.\n\n"
@@ -119,7 +122,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons-v2.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons-v3.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

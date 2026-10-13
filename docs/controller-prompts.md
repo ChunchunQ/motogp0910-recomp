@@ -35,12 +35,15 @@ square, triangle, L1/R1, L2/R2, SELECT, left/right sticks, left-stick directions
 and D-pad with all four directions. Duplicate source entries are retained.
 The LT/RT/LB/RB/B row in Second Chance and replay also changes style. Its atlas
 UVs are reset to the full replacement image and restored after drawing.
-Timeline and camera/media icons are left intact.
+The v3 build corrects the swapped rows reported in v2: the upper controller
+row is replaced, while the lower rewind/fast-forward/camera/stop row is
+retained. All eight full-replay button sprites (LB/LT/RB/RT/A/B/X/Y) are
+supported as well. Their identities were checked against the decoded
+`ingame.mgb` artwork, not inferred from sprite indices.
 
 No separate START, PS/Guide or text-labelled L3/R3 bitmap was found in this
 identified set. Stick prompts use the original stick pictures. Literal PRESS
-START text stays unchanged. Additional full-replay controls outside the five
-verified sprite IDs remain unconverted pending identification.
+START text stays unchanged.
 
 ## Rendering
 
@@ -70,10 +73,12 @@ backend. The SDK/code generator version is unchanged.
 
 ## Build checks
 
-The current Windows executables passed 143 native draw/pixel-row/texture descriptor,
+The current Windows executables passed 222 native draw/pixel-row/texture descriptor,
 replay crop and PPC ABI checks, plus 92 binding and real SDL virtual-controller
-checks under Wine. The native draw probe also passed on Linux. These checks
-do not validate gameplay visuals on a Windows GPU or a physical Sony pad.
+checks under Wine. The native draw probe also passed on Linux. It reads the
+actual patched XEX instructions to check all four replay drawing loops:
+5-button and 8-button upper rows, plus their 5-icon and 8-icon lower rows.
+This catches the swapped-row defect that the earlier synthetic fixture missed. These checks do not validate gameplay visuals on a Windows GPU or a physical Sony pad.
 The current cloud window probe could not open its X display; its earlier
 171-check result is not counted as a new-build verification. Additional game
 testing was stopped at the user's request; the user will test locally.

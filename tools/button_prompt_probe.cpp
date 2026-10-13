@@ -123,22 +123,45 @@ int main(int argc,char** argv) {
       // trigger replacement even with the same underlying texture atlas.
       const auto bank=allocation+0x1900;
       write(0x8294679C,bank);
-      const std::array<std::pair<unsigned,char>,5> replay{{{8,'l'},{5,'r'},{2,'L'},{3,'R'},{11,'B'}}};
+      const std::array<std::pair<unsigned,char>,8> replay{{{19,'L'},{20,'l'},{21,'R'},{22,'r'},
+                                                                      {23,'A'},{24,'B'},{25,'X'},{26,'Y'}}};
       for(unsigned i=0;i<45;++i)write(bank+4*i,allocation+0x2000+16*i);
-      for(auto caller:{0x8233A4F8u,0x8233AB0Cu})for(auto [index,glyph]:replay) {
+      struct Row {uint32_t begin,end;bool controller;unsigned expected;};
+      for(auto row:{Row{0x8233A348,0x8233A420,true,5},
+                    Row{0x8233A420,0x8233A4F8,false,5},
+                    Row{0x8233A880,0x8233A99C,true,8},
+                    Row{0x8233A99C,0x8233AB0C,false,8}}) {
+        unsigned last_id=0,found=0;
+        for(uint32_t pc=row.begin;pc<row.end;pc+=4) {
+          const auto instruction=rex::memory::load_and_swap<uint32_t>(base+pc);
+          if((instruction&0xFFFF0000u)==0x38600000u)last_id=instruction&0xFFFF;
+          if((instruction&0xFC000003u)!=0x48000001u)continue;
+          const int32_t displacement=int32_t((instruction&0x03FFFFFCu)<<6)>>6;
+          if(pc+displacement!=0x822B1198)continue;
+          if(last_id>=45)throw std::runtime_error("Unexpected native replay sprite ID");
+          const auto sprite=rex::memory::load_and_swap<uint32_t>(base+bank+4*last_id);
+          const auto glyph=motogp::prompts::ReplaySpriteGlyph(row.end,sprite,base);
+          if(bool(glyph)!=row.controller)
+            throw std::runtime_error("Real game replay row was misclassified");
+          ++found;++checks;
+        }
+        if(found!=row.expected)throw std::runtime_error("Native replay sprite sequence changed");
+      }
+      for(auto caller:{0x8233A420u,0x8233A99Cu})for(auto [index,glyph]:replay) {
         const auto sprite=rex::memory::load_and_swap<uint32_t>(base+bank+4*index);
         if(motogp::prompts::ReplaySpriteGlyph(caller,sprite,base)!=glyph ||
-           motogp::prompts::ReplaySpriteGlyph(0x8233A420,sprite,base) ||
-           motogp::prompts::ReplaySpriteGlyph(0x8233A99C,sprite,base))
+           motogp::prompts::ReplaySpriteGlyph(0x8233A4F8,sprite,base) ||
+           motogp::prompts::ReplaySpriteGlyph(0x8233AB0C,sprite,base))
           throw std::runtime_error("Replay controller row / media row mismatch");
         ++checks;
       }
-      for(unsigned index:{19,20,21,22,23,24,25,26}) {
-        if(motogp::prompts::ReplaySpriteGlyph(0x8233AB0C,allocation+0x2000+16*index,base))
+      for(unsigned index=0;index<19;++index) {
+        if(motogp::prompts::ReplaySpriteGlyph(0x8233A420,allocation+0x2000+16*index,base) ||
+           motogp::prompts::ReplaySpriteGlyph(0x8233A99C,allocation+0x2000+16*index,base))
           throw std::runtime_error("Replay media icon was classified as a controller");
         ++checks;
       }
-      for(auto caller:{0x8233A4F8u,0x8233AB0Cu})for(auto [index,glyph]:replay)
+      for(auto caller:{0x8233A420u,0x8233A99Cu})for(auto [index,glyph]:replay)
         for(auto style:{motogp::prompts::Style::PlayStation,motogp::prompts::Style::Keyboard})
           for(unsigned state=0;state<3;++state) {
             const auto sprite=allocation+0x2000+16*index;

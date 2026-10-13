@@ -1,6 +1,6 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-ps3-buttons-v2.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-ps3-buttons-v3.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 [Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); [Yenilenen İngilizce/Türkçe launcher; 720p/1440p/4K, FSR 1.0, ses ve sade tuş eşlemeleri](docs/launcher.md). Stabilite/kalite kontrol ve LAN multiplayer araştırması sonraki aşamalardır. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
 
@@ -27,11 +27,11 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 - Çarpışma kayıtlarının endian dönüşümünde sonlu koordinatları değiştiren bit kaybı giderildi. Gerçek XEX rutinleriyle Linux ve Windows/Wine altında **192/192 veri ve ABI kontrolü geçti**; eski Windows rutini aynı testte hatayı yeniden üretir. Kullanıcı güncel buildle Windows’ta Qatar Time Trial’da 4–5 tur boyunca pistin altına düşmediğini doğruladı; gönderdiği log gerçek çarpışma kayıtlarında onarımın devreye girdiğini gösteriyor. [Düzeltme ve test kapsamı](docs/collision-data.md).
 
-- Kullanıcının PS3 dumpından orijinal buton kaplamaları eklendi: yüz tuşları, L1/R1, L2/R2, SELECT, analog ve D-pad yönleri. Kayıtlı 21 simge ve Second Chance/tekrar panelindeki LT/RT/LB/RB/B satırı dönüştürülür. Windows/Wine altında **143 çizim/piksel aktarımı + 92 giriş kontrolü geçti**; bu buildin oyun içi görsel testi kullanıcıya bırakıldı. İlk PS3 buildinde parçalanmış simgelere yol açan 256/512 bayt satır aralığı uyumsuzluğu giderildi. `resources/controller/` klasörünü de ZIP’ten çıkar. Ayrı START, PS/Guide ve yazılı L3/R3 kaplaması bulunmadı. Kariyer kaplama düzeltmesi bu buildde bulunmuyor. [Kapsam](docs/controller-prompts.md).
+- Kullanıcının PS3 dumpından orijinal buton kaplamaları eklendi: yüz tuşları, L1/R1, L2/R2, SELECT, analog ve D-pad yönleri. Kayıtlı 21 simge, Second Chance panelinin üstündeki 5 tuş ve tam tekrar panelindeki 8 tuş dönüştürülür. v2’de yanlışlıkla değiştirilen alt geri sarma/kamera satırı v3’te korunur. Windows/Wine altında **222 çizim/piksel aktarımı/tekrar paneli kontrolü geçti**; Kullanıcı v2’de menüdeki PS simgelerinin düzeldiğini doğruladı; v3 tekrar panelinin Windows oyun içi testi kullanıcıya bırakıldı. İlk PS3 buildinde parçalanmış simgelere yol açan 256/512 bayt satır aralığı uyumsuzluğu giderildi. `resources/controller/` klasörünü de ZIP’ten çıkar. Ayrı START, PS/Guide ve yazılı L3/R3 kaplaması bulunmadı. Kariyer kaplama düzeltmesi bu buildde bulunmuyor. [Kapsam](docs/controller-prompts.md).
 
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-ps3-buttons-v2.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-ps3-buttons-v3.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
 1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
 2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
