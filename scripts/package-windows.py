@@ -39,10 +39,13 @@ def main():
     shutil.copy2(controller_db / "gamecontrollerdb.txt", STAGE / "gamecontrollerdb.txt")
     shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/tomlplusplus-LICENSE.txt", STAGE / "licenses/tomlplusplus-LICENSE.txt")
+    shutil.copy2(ROOT / "third_party/stb/LICENSE.txt", STAGE / "licenses/stb-LICENSE.txt")
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 advanced launcher - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 controller prompts - ReXGlue v0.10.0\n\n"
+        "UPGRADE: Replace the EXEs AND both rexruntime.dll / rexgpu-xenos.dll.\n"
+        "Keep your existing game folder, configuration and saves.\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
         "2. Tum orijinal oyun dosyalarini game altklasorune koy:\n"
         "   game/default.xex, game/xenondata/, game/nxeart/ ve diger disk dosyalari.\n"
@@ -59,9 +62,20 @@ def main():
         "CONTROLS: Select a row; edit the binding or click Press a key.\n"
         "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
         "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
-        "Keep both runtime DLLs: this modified v0.10.0 pair enables spatial FSR.\n"
-        "In-game PlayStation/keyboard prompt replacement is not implemented yet.\n"
-        "Windows GPU rendering with the new options still needs local testing.\n\n"
+        "Keep both runtime DLLs: this v0.10.0 pair enables spatial FSR and shared SDL input.\n\n"
+        "IN-GAME PROMPTS: Automatically switch Xbox / PlayStation / keyboard\n"
+        "symbols after meaningful input. Keyboard caps show your actual saved bindings.\n"
+        "PlayStation: A=cross, B=circle, X=square, Y=triangle; L1/R1 and L2/R2.\n"
+        "Shared stick/directional artwork stays unchanged for PlayStation.\n"
+        "No additional icon images or modified game assets are needed.\n"
+        "To test PS graphics with an XInput pad, open PowerShell here and run:\n"
+        ".\\motogp0910.exe --input_backend=xinput --button_prompt_style=playstation\n"
+        "Fixed styles: --button_prompt_style=xbox / playstation / keyboard\n"
+        "Automatic mode: --button_prompt_style=auto (default).\n"
+        "Use the SDL backend for automatic Sony controller recognition; XInput\n"
+        "wrappers expose an Xbox controller, so use the manual PlayStation style.\n"
+        "Native glyph rendering and virtual Sony/Xbox input checks passed;\n"
+        "physical DualSense detection and Windows gameplay visuals need local testing.\n\n"
         "Klavye ve gamepad icin dogrudan motogp0910.exe dosyasini ac; CMD gerekmez.\n"
         "Enter=Start, Space=A, Backspace=B, W/S/A/D=sol stick, Shift+oklar=D-pad.\n"
         "Klavye varsayilan olarak aciktir. Ozel mnk_mode=false ayarin varsa korunur.\n\n"
@@ -91,7 +105,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-advanced-launcher.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-controller-prompts.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

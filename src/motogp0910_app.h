@@ -18,6 +18,7 @@
 #include "input_defaults.h"
 #include "audio_settings.h"
 #include "video_settings.h"
+#include "button_prompts.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -110,12 +111,15 @@ class Motogp0910App : public rex::ReXApp {
   }
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
-  // void OnPostSetup() override {}
-  // void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {}
+  void OnPostSetup() override {
+    motogp::prompts::StartInputObserver(window());
+  }
   // std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override;
   // std::unique_ptr<rex::ui::AchievementNotificationDialog>
   // CreateAchievementNotificationDialog() override;
-  // void OnShutdown() override {}
+  void OnShutdown() override {
+    motogp::prompts::StopInputObserver();
+  }
   void OnConfigurePaths(rex::PathConfig& paths) override {
     if (!paths.game_data_root.empty()) {
       return;

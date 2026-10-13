@@ -14,10 +14,12 @@ include(generated/rexglue.cmake)
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
+    src/button_prompts.cpp
 )
 
 if(WIN32)
     add_executable(motogp0910 WIN32 ${MOTOGP0910_SOURCES})
+    target_link_libraries(motogp0910 PRIVATE xinput)
     add_executable(motogp0910-launcher WIN32 src/launcher/main.cpp)
     target_compile_definitions(motogp0910-launcher PRIVATE UNICODE _UNICODE)
     target_include_directories(motogp0910-launcher SYSTEM PRIVATE
@@ -37,6 +39,10 @@ endif()
 
 rexglue_setup_target(motogp0910 GPU_PLUGINS xenos)
 
+add_executable(button_prompt_input_probe EXCLUDE_FROM_ALL tools/button_prompt_input_probe.cpp)
+target_link_libraries(button_prompt_input_probe PRIVATE rex::runtime)
+rexglue_apply_target_settings(button_prompt_input_probe)
+
 # Optional check of direct-launch input defaults against the actual SDK.
 add_executable(input_defaults_probe EXCLUDE_FROM_ALL tools/input_defaults_probe.cpp)
 target_link_libraries(input_defaults_probe PRIVATE rex::runtime)
@@ -50,6 +56,14 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    add_executable(button_prompt_probe EXCLUDE_FROM_ALL
+        tools/button_prompt_probe.cpp src/button_prompts.cpp)
+    target_include_directories(button_prompt_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(button_prompt_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(button_prompt_probe)
+    if(WIN32)
+        target_link_libraries(button_prompt_probe PRIVATE xinput)
+    endif()
     add_executable(motogp_headless_probe EXCLUDE_FROM_ALL tools/headless_probe.cpp)
     target_include_directories(motogp_headless_probe PRIVATE
         ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
@@ -69,7 +83,7 @@ endif()
 if(WIN32)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -79,7 +93,7 @@ if(WIN32)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File

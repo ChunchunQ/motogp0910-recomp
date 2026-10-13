@@ -17,6 +17,12 @@ Without it, a 1280×720 selection could silently inherit a 1920×1080 host windo
 size, defeating the distinction between native rendering and spatial upscaling.
 This is a modified v0.10.0 runtime, not a newer SDK version.
 
+`src/shared_sdl_bridge.cpp` also adds `Motogp_GetSharedSDL`, a versioned C
+function table for the runtime’s own SDL instance. This is necessary because
+Windows SDK consumers otherwise link an independent static SDL instance,
+whose event watches cannot observe the game’s controller input. The bridge
+is added by the same CMake include, without changing the existing C++ ABI.
+
 The DLLs were cross-compiled with Clang 20.1.8, the MSVC 14.44 / Windows SDK
 10.0.26100 ABI, Release, D3D12 enabled, Vulkan disabled, and Tracy enabled.
 Cross compilation also needs SSSE3 enabled and case aliases for Windows SDK

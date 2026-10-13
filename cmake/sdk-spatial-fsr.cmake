@@ -6,3 +6,13 @@ add_compile_definitions(REX_HAS_FIDELITYFX_SDK=1)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-mssse3>)
 endif()
+
+# Keep input observers in the runtime's own SDL instance on Windows. Adding
+# a C export preserves the existing v0.10.0 SDK/plugin C++ ABI and import lib.
+if(WIN32 AND PROJECT_NAME STREQUAL "ReXGlue")
+  set(MOTOGP_SHARED_SDL_BRIDGE_SOURCE "${CMAKE_CURRENT_LIST_DIR}/../src/shared_sdl_bridge.cpp")
+  function(motogp_add_shared_sdl_bridge)
+    target_sources(rexruntime PRIVATE "${MOTOGP_SHARED_SDL_BRIDGE_SOURCE}")
+  endfunction()
+  cmake_language(DEFER CALL motogp_add_shared_sdl_bridge)
+endif()

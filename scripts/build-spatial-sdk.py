@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce the spatial FSR DLLs from the unchanged v0.10.0 source pin + patch."""
+"""Reproduce the FSR/shared-SDL DLL pair from the pinned v0.10.0 source + patch."""
 import argparse
 import json
 from pathlib import Path

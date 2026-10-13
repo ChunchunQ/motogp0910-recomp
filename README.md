@@ -1,10 +1,10 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-launcher.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-controller-prompts.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 [Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); [İngilizce/Türkçe launcher; grafik, FSR 1.0, ses ve tuş eşleme ayarları hazır](docs/launcher.md). Stabilite/kalite kontrol ve LAN multiplayer araştırması sonraki aşamalardır. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
 
-**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-advanced-launcher.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
+**Güncel kullanım: [düzeltilmiş kaynak paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-controller-prompts.zip) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
 
 
 ## Doğrulananlar
@@ -21,9 +21,11 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - Genişletilmiş Windows launcher ve eşleşen FSR 1/CAS runtime çifti derlendi. **58 launcher + 140 runtime + 50 oyun kodu kontrolü geçti**; gerçek İngilizce/Türkçe GUI sekmeleri, kaydet/yeniden aç ve tuş yakalama Wine/Xvfb altında sınandı. FSR testleri gerçek SDK pass planlamasını doğrular; Windows GPU üzerinde yeni seçeneklerle yarış testi değildir. [Ayarlar, testler ve ekran görüntüleri](docs/launcher.md).
 
 
+- Oyun içi kayıtlı tuş simgeleri için Xbox/PlayStation/klavye seçimi uygulandı. Güncel Windows PE kontrolleri Wine altında **337/337 geçti** (44 simge çizimi, 45 giriş/eşleme, 58 launcher, 140 runtime ve 50 oyun kodu). Klavye simgeleri gerçek kayıtlı eşlemeleri gösterir. [Kapsam, otomatik algılama ve XInput ile PS denemesi](docs/controller-prompts.md).
+
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-launcher.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-controller-prompts.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
 1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
 2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
@@ -35,7 +37,7 @@ Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yok
 
 Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki yarış düzeltmesini ve `game/` düzenini sorunsuz çalıştırdığını bildirdi. Bu teslimattaki giriş tercihi kontrolleri Windows PE probunda Wine altında 5/5 geçti; yeni EXE bu bulut ortamında Windows GPU üzerinde oynanmadı. Tüm mod/pistlerin kalite kontrolü ve duyulabilir ses kalitesi henüz doğrulanmadı. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `b1b34fa1f1a9567fce781b8fb7a4af4d286efaf48590b851ba78bf43d9622e93`.
+Paket SHA-256: `2d0fae3c988aae0ee6fc8089dbd7d2e33e35dc35eb0685366497745e26474d6f`.
 
 ## Windows'ta kaynaktan derleme
 
@@ -126,4 +128,4 @@ python3 scripts/package-windows.py
 
 Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
 
-Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-advanced-launcher.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-controller-prompts.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.

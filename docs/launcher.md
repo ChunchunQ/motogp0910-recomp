@@ -57,9 +57,9 @@ as text; keyboard capture records keyboard keys.
 
 SDL supports Xbox, PlayStation and other mapped USB/Bluetooth controllers.
 The included `gamecontrollerdb.txt` stays next to the EXE, outside `game/`.
-XInput can be selected separately. Device mapping does **not** replace in-game
-Xbox button artwork: automatic PlayStation/keyboard prompt replacement is
-still unimplemented; see [the investigation](controller-prompts.md).
+XInput can be selected separately. The game now replaces registered button
+glyphs for PlayStation and actual keyboard bindings; see [controller prompts](controller-prompts.md)
+for automatic switching and forced-style testing.
 
 ## Existing settings and data
 
