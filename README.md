@@ -25,7 +25,7 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 - Launcher arayüzü MotoGP kapak paletine uygun koyu kartlar ve turuncu/kırmızı vurgularla yenilendi. Tek iç çözünürlük seçimi ve 25 doğrudan tuş alanı bulunur. Üç sayfanın iki dilde, %75/%100/%125/%150 ölçekte yerleşimi doğrulandı; **72 launcher + 140 runtime kontrolü geçti**. Sayısal başlatma ayarlarının boolean olarak aktarılmasına neden olan TOML dönüşümü de düzeltildi. [Görünüm ve doğrulama](docs/launcher.md).
 
-- Çarpışma kayıtlarının endian dönüşümünde sonlu koordinatları değiştiren bit kaybı giderildi. Gerçek XEX rutinleriyle Linux ve Windows/Wine altında **192/192 veri ve ABI kontrolü geçti**; eski Windows rutini aynı testte hatayı yeniden üretir. Qatar Time Trial düşüşüyle bağlantısı kullanıcı cihazında henüz doğrulanmadı. [Düzeltme ve test kapsamı](docs/collision-data.md).
+- Çarpışma kayıtlarının endian dönüşümünde sonlu koordinatları değiştiren bit kaybı giderildi. Gerçek XEX rutinleriyle Linux ve Windows/Wine altında **192/192 veri ve ABI kontrolü geçti**; eski Windows rutini aynı testte hatayı yeniden üretir. Kullanıcı güncel buildle Windows’ta Qatar Time Trial’da 4–5 tur boyunca pistin altına düşmediğini doğruladı; gönderdiği log gerçek çarpışma kayıtlarında onarımın devreye girdiğini gösteriyor. [Düzeltme ve test kapsamı](docs/collision-data.md).
 
 ## Hazır Windows paketi
 

@@ -34,9 +34,15 @@ fields, return values, stack, LR and nonvolatile registers.
 - Patched: 192/192 checks passed on Linux and Windows PE under Wine.
 - Original Windows routines, invoked with --original: 54 float-field and
   6 complete-record mismatches reproduced (expected exit code 1).
-- The reported Qatar gameplay fall has not been reproduced or verified as
-  fixed in this cloud task. Local Windows route testing is required to
-  establish whether this defect causes that particular symptom.
+- Local Windows confirmation: the user reported 4–5 Qatar Time Trial laps
+  without falling below the track with the collision-data-fix build. The
+  supplied log identifies a GTX 1650 SUPER, patch 0.0.1.1 and repair activity
+  during actual asset loading. The cumulative counters reached at least
+  1024 triangle records and 64 shape records. These are repaired conversion
+  counts across loads, not necessarily distinct records; rate-limited logs
+  do not give the final exact total. The run ended through normal window
+  closure. This validates the reported route in that test; other tracks and
+  modes have not been verified by this report.
 
 Build optional target physics_asset_probe, then run it with the prepared
 XEX directory. Adding --original deliberately bypasses the hooks and is
