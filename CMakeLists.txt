@@ -15,6 +15,7 @@ include(generated/rexglue.cmake)
 set(MOTOGP0910_SOURCES
     src/main.cpp
     src/button_prompts.cpp
+    src/ps3_prompt_textures.cpp
     src/physics_assets.cpp
 )
 
@@ -67,14 +68,20 @@ if(TARGET motogp0910_recomp)
     target_include_directories(physics_asset_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(physics_asset_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(physics_asset_probe)
-    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp)
+    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp)
+    target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(button_prompt_gpu_probe)
+    rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)
     if(WIN32)
         target_link_libraries(button_prompt_window_probe PRIVATE xinput)
+        target_link_libraries(button_prompt_gpu_probe PRIVATE xinput)
     endif()
     add_executable(button_prompt_probe EXCLUDE_FROM_ALL
-        tools/button_prompt_probe.cpp src/button_prompts.cpp)
+        tools/button_prompt_probe.cpp src/button_prompts.cpp src/ps3_prompt_textures.cpp)
     target_include_directories(button_prompt_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_probe)
@@ -93,6 +100,19 @@ if(TARGET motogp0910_recomp)
                 $<TARGET_FILE:rex::runtime> $<TARGET_FILE_DIR:motogp_headless_probe>)
     endif()
 endif()
+
+foreach(artwork_target motogp0910 button_prompt_probe button_prompt_window_probe button_prompt_gpu_probe)
+    if(TARGET ${artwork_target})
+        set_property(TARGET ${artwork_target} APPEND PROPERTY LINK_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-prompts.bin")
+        add_custom_command(TARGET ${artwork_target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${artwork_target}>/resources/controller"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-prompts.bin"
+                "$<TARGET_FILE_DIR:${artwork_target}>/resources/controller/ps3-prompts.bin"
+            VERBATIM)
+    endif()
+endforeach()
 
 # Keep the runtime pair consistent even when building directly from an IDE.
 # The official v0.10.0 code generator/import library remain pinned; the

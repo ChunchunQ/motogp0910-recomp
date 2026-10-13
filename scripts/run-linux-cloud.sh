@@ -15,7 +15,7 @@ shift
   exit 2
 }
 source "$project_dir/scripts/cloud-env.sh"
-binary="$project_dir/out/build/linux-amd64-release/motogp0910"
+binary="${MOTOGP_CLOUD_BINARY:-$project_dir/out/build/linux-amd64-release/motogp0910}"
 [[ -x "$binary" ]] || { echo 'Build the Linux Release target first.' >&2; exit 2; }
 for tool in Xvfb xdotool; do
   command -v "$tool" >/dev/null || { echo "Missing $tool; run scripts/install-cloud.sh." >&2; exit 2; }

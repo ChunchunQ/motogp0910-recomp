@@ -11,25 +11,24 @@ namespace motogp::prompts {
 struct Glyph {
   char code;
   const char* playstation;
-  bool shared;
   std::array<const char*,4> bindings;
 };
 // Verified against the native texture table, with the glyph ID written into
 // the same rendered test frame. Case distinguishes shoulders from triggers.
 inline constexpr std::array<Glyph,21> kGlyphs{{
-  {'A',"",false,{"keybind_a"}}, {'B',"",false,{"keybind_b"}},
-  {'Y',"",false,{"keybind_y"}}, {'X',"",false,{"keybind_x"}},
-  {'T',"L",true,{"keybind_lstick_up","keybind_lstick_left","keybind_lstick_down","keybind_lstick_right"}},
-  {'o',"L",true,{"keybind_lstick_up","keybind_lstick_left","keybind_lstick_down","keybind_lstick_right"}},
-  {'O',"R",true,{"keybind_rstick_up","keybind_rstick_left","keybind_rstick_down","keybind_rstick_right"}},
-  {'R',"R1",false,{"keybind_right_shoulder"}}, {'L',"L1",false,{"keybind_left_shoulder"}},
-  {'r',"R2",false,{"keybind_right_trigger"}}, {'l',"L2",false,{"keybind_left_trigger"}},
-  {'S',"Create",false,{"keybind_back"}},
-  {'P',"D-pad",true,{"keybind_dpad_up","keybind_dpad_left","keybind_dpad_down","keybind_dpad_right"}},
-  {'1',"Up",true,{"keybind_dpad_up"}}, {'3',"Down",true,{"keybind_dpad_down"}},
-  {'4',"Left",true,{"keybind_dpad_left"}}, {'2',"Right",true,{"keybind_dpad_right"}},
-  {'z',"L Up",true,{"keybind_lstick_up"}}, {'Z',"L Down",true,{"keybind_lstick_down"}},
-  {'Q',"L Left",true,{"keybind_lstick_left"}}, {'q',"L Right",true,{"keybind_lstick_right"}},
+  {'A',"",{"keybind_a"}}, {'B',"",{"keybind_b"}},
+  {'Y',"",{"keybind_y"}}, {'X',"",{"keybind_x"}},
+  {'T',"L",{"keybind_lstick_up","keybind_lstick_left","keybind_lstick_down","keybind_lstick_right"}},
+  {'o',"L",{"keybind_lstick_up","keybind_lstick_left","keybind_lstick_down","keybind_lstick_right"}},
+  {'O',"R",{"keybind_rstick_up","keybind_rstick_left","keybind_rstick_down","keybind_rstick_right"}},
+  {'R',"R1",{"keybind_right_shoulder"}}, {'L',"L1",{"keybind_left_shoulder"}},
+  {'r',"R2",{"keybind_right_trigger"}}, {'l',"L2",{"keybind_left_trigger"}},
+  {'S',"SELECT",{"keybind_back"}},
+  {'P',"D-pad",{"keybind_dpad_up","keybind_dpad_left","keybind_dpad_down","keybind_dpad_right"}},
+  {'1',"Up",{"keybind_dpad_up"}}, {'3',"Down",{"keybind_dpad_down"}},
+  {'4',"Left",{"keybind_dpad_left"}}, {'2',"Right",{"keybind_dpad_right"}},
+  {'z',"L Up",{"keybind_lstick_up"}}, {'Z',"L Down",{"keybind_lstick_down"}},
+  {'Q',"L Left",{"keybind_lstick_left"}}, {'q',"L Right",{"keybind_lstick_right"}},
 }};
 inline const Glyph* FindGlyph(char code) {
   for(const auto& glyph:kGlyphs)if(glyph.code==code)return &glyph;

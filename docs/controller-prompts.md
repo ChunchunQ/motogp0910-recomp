@@ -1,108 +1,84 @@
 # In-game controller prompts
 
-The game now switches its registered controller glyphs between Xbox,
-PlayStation and the actual configured keyboard bindings. No replacement
-textures, external icon packs or changes to original game files are needed.
+Registered prompts switch between Xbox, PlayStation and saved keyboard
+bindings. PlayStation prompts now use the original PS3 controller textures
+supplied by the user, replacing the previous drawn symbols.
 
-## Usage
+## Installation and use
 
-Replace the game EXE and **both** runtime DLLs with the matching package.
-The default `button_prompt_style=auto` follows meaningful input. A connected
-pad or minor stick drift does not steal keyboard prompts. Sony devices are
-recognized through SDL gamepad type or vendor 0x054c; Xbox/other mapped pads
-use Xbox artwork. Keyboard switching respects `mnk_mode` and window focus.
+Extract the complete Windows ZIP. Replace the EXEs and both runtime DLLs,
+and keep `resources/controller/ps3-prompts.bin` in its supplied subdirectory.
+Keep your existing `game/`, settings and saves. The launcher and Qatar
+collision repair are retained. The career rider/bike texture investigation
+is paused and is **not** included in this build.
 
-To test PlayStation graphics with an XInput controller in PowerShell:
+Automatic switching follows meaningful input, not idle connection or minor
+stick drift. Use SDL for native Sony detection. XInput wrappers present an
+Xbox controller; test PS artwork with an Xbox pad using:
 
 ```powershell
 .\motogp0910.exe --input_backend=xinput --button_prompt_style=playstation
 ```
 
-A → cross, B → circle, X → square, Y → triangle. Shoulder and trigger
-prompts become L1/R1 and L2/R2; Back/View becomes the Create/Share symbol.
-Generic stick and directional artwork is retained for PlayStation.
+`--button_prompt_style=xbox`, `keyboard` and `auto` select the other modes.
+These switches change pictures, not controller mappings.
 
-Force `--button_prompt_style=keyboard` or `xbox` for comparison;
-`--button_prompt_style=auto` restores automatic switching. These switches
-change prompt visuals, not controller button mappings. Use SDL for native
-Sony recognition: an XInput wrapper presents an Xbox controller and cannot
-identify the physical Sony hardware. Testing forced PS graphics with an
-Xbox pad does not validate physical DualSense detection.
+## Artwork coverage
 
-Keyboard caps use saved keybind settings, including modifiers, alternatives,
-unbound actions and compact stick/directional groups. Supported registered
-glyphs are replaced in prompt bars and inline font icons. Literal game text
-such as PRESS START is not a registered glyph and is retained.
+All 42 controller texture entries identified in the supplied PS3
+`sharedfrontend.mgb` are included in the small resource pack. Their BC3 blocks
+are unchanged; the JSON catalog records names, dimensions and hashes.
+Xbox prompts retain the Xbox game's own artwork.
 
-## Native rendering
+PlayStation replacements cover the 21 registered glyphs: cross, circle,
+square, triangle, L1/R1, L2/R2, SELECT, left/right sticks, left-stick directions,
+and D-pad with all four directions. Duplicate source entries are retained.
+The LT/RT/LB/RB/B row in Second Chance and replay also changes style. Its atlas
+UVs are reset to the full replacement image and restored after drawing.
+Timeline and camera/media icons are left intact.
 
-The 21 registered glyphs were identified by drawing their IDs in the same
-native frame as the artwork, using texture IDs at `0x8292CC60` and texture
-handles through `0x8292CCB8`. Case distinguishes shoulder and trigger glyphs.
-D-pad IDs 1/3/4/2 mean Up/Down/Left/Right; S means Back, not Start.
+No separate START, PS/Guide or text-labelled L3/R3 bitmap was found in this
+identified set. Stick prompts use the original stick pictures. Literal PRESS
+START text stays unchanged. Additional full-replay controls outside the five
+verified sprite IDs remain unconverted pending identification.
 
-Strong hooks preserve the original generated functions:
+## Rendering
 
-| Address | Role |
+The pack is uploaded to guest physical memory as linear 64×64 BC3 textures.
+PlayStation pictures use the native textured quad path, retaining position,
+color, alpha and layering. Keyboard caps use saved bindings and native solid
+quads. Guest vertices and PPC state are restored after drawing. Original game
+archives are not modified.
+
+| Hook | Purpose |
 | --- | --- |
-| `0x82388C38` | Replace recognized native UI quads; forward other art |
-| `0x82358448` | Reserve keyboard cap width in prompt bars |
-| `0x82284E98`, `0x82284E88` | Recognize and measure inline glyphs |
-| `0x82284DB0` | Expand inline glyphs around their native center |
-| `0x823D1008` | Latch style per frame and observe Windows XInput |
+| `0x82388C38` | Registered glyph and selected replay quad replacement |
+| `0x8227E440` | Identify verified replay controller sprite calls |
+| `0x82358448` | Keyboard cap spacing in prompt bars |
+| `0x82284E98`, `0x82284E88`, `0x82284DB0` | Inline glyph recognition and sizing |
+| `0x823D1008` | Per-frame style and Windows XInput observation |
 
-Vectors and ASCII strokes go through the game's original solid-quad path,
-preserving native positions, projection, opacity, draw order and upscaling.
-Original vertices and PPC call state are restored after replacement.
-This is not a screen-space legend or a post-presentation overlay.
+The supplied ReXGlue v0.10.0 runtime pair exposes the existing shared SDL
+function table, keeping input observation in the same SDL instance as the
+backend. The SDK/code generator version is unchanged.
 
-On Windows, SDL is statically linked inside the runtime. The supplied
-v0.10.0 runtime exports `Motogp_GetSharedSDL`, a versioned function table
-that lets the observer use the **same** SDL instance as the game's input
-backend. An old runtime DLL cannot supply this table. The SDK version,
-code generator and existing C++ plugin ABI remain unchanged.
+## Build checks
 
-## Validation
+The current Windows executables passed 122 native draw/texture descriptor,
+replay crop and PPC ABI checks, plus 92 binding and real SDL virtual-controller
+checks under Wine. The native draw probe also passed on Linux. These checks
+do not validate gameplay visuals on a Windows GPU or a physical Sony pad.
+The current cloud window probe could not open its X display; its earlier
+171-check result is not counted as a new-build verification. Additional game
+testing was stopped at the user's request; the user will test locally.
 
-The optional probes exercise the shipped production implementation and actual
-v0.10.0 runtime, using virtual Sony/Xbox gamepads. No physical controller is
-needed for these checks.
-
-| Probe | Linux | Windows PE / Wine |
-| --- | ---: | ---: |
-| Native draw, guest vertices and PPC ABI | 44 | 44 |
-| Binding, gamepad events, deadzones and hotplug | 90 | 92 |
-| Production window observer and style selection | 171 | 171 |
-
-The Windows input probe also verifies that SDL function pointers belong to
-rexruntime.dll. Existing launcher/runtime/game CPU probes previously passed
-58 / 140 / 50 checks with the same game EXE and runtime pair.
-
-The window probe uses the actual SDK window and production observers. It
-passes events through the SDK's window handlers, rather than calling the
-keyboard observer directly. All six directed Xbox/PlayStation/keyboard
-transitions are exercised eight times. Additional checks cover held pads,
-modifier-only keys, keyboard/mouse disable settings, zero mouse deltas,
-focus loss/return, all three fixed styles, returning to auto and observer
-removal during shutdown. The input probe checks positive/negative deadzone
-boundaries on all four stick axes, idle hotplug, inactive removal,
-reconnection and fallback with keyboard disabled.
-
-These are CPU/runtime event-routing checks, not a Windows GPU gameplay test
-or physical USB/Bluetooth DualSense recognition. The extended checks found
-no production defect and did not change the delivered game EXE or DLLs.
-
-Build optional targets:
+Reproduce the pack from the supplied bank:
 
 ```sh
-cmake --build out/build/linux-amd64-release --target button_prompt_probe button_prompt_input_probe button_prompt_window_probe -j4
-out/build/linux-amd64-release/button_prompt_probe assets/game-tu
-out/build/linux-amd64-release/button_prompt_input_probe
-# A valid X display is required for the real SDK window:
-DISPLAY=:0 out/build/linux-amd64-release/button_prompt_window_probe
+python3 scripts/extract-ps3-prompts.py path/to/sharedfrontend.mgb
 ```
 
-Use your active display instead of :0 when different. Windows builds expose
-the same CMake targets; run the resulting EXEs from PowerShell. Pass the
-prepared 0.0.1.1 XEX directory only to button_prompt_probe. Window/input
-probes create virtual controllers themselves and need no game data.
+Optional targets: `button_prompt_probe`, `button_prompt_input_probe`,
+`button_prompt_window_probe`, `button_prompt_gpu_probe`. The GPU diagnostic
+is excluded from the Windows download. No screenshots are included in this
+change.

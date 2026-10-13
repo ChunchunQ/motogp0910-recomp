@@ -2,6 +2,7 @@
 #include "button_prompt_geometry.h"
 #include "button_prompt_input.h"
 #include "button_prompt_mapping.h"
+#include "ps3_prompt_textures.h"
 
 #include <rex/cvar.h>
 #include <rex/hook.h>
@@ -29,6 +30,7 @@ REX_EXTERN(__imp__sub_823D1008);
 REX_EXTERN(__imp__sub_82284E98);
 REX_EXTERN(__imp__sub_82284E88);
 REX_EXTERN(__imp__sub_82284DB0);
+REX_EXTERN(__imp__sub_8227E440);
 
 namespace motogp::prompts {
 namespace {
@@ -39,6 +41,8 @@ std::atomic<bool> focused{false};
 rex::ui::Window* input_window = nullptr;
 thread_local char measured_glyph=0;
 thread_local unsigned inline_depth=0;
+thread_local char sprite_glyph=0;
+thread_local Style sprite_style=Style::Xbox;
 #if REX_PLATFORM_WIN32
 std::array<DWORD,4> xinput_packets{};
 std::array<bool,4> xinput_seen{};
@@ -155,35 +159,81 @@ namespace motogp::prompts {
 float MeasureButtonHalfWidth(char code,float original,Style style) {
   return style==Style::Keyboard && FindGlyph(code)?original*LabelAspect(Label(code,style)):original;
 }
-bool DrawReplacement(PPCContext& ctx,uint8_t* base,Style style,bool inline_glyph) {
-  if(style==Style::Xbox || !ctx.r7.u32) return false;
-  const auto table=rex::memory::load_and_swap<uint32_t>(base+0x8292CCB8);
-  if(table) for(unsigned i=0;i<22;++i) {
-    if(rex::memory::load_and_swap<uint32_t>(base+table+4*i)!=ctx.r7.u32) continue;
-    const char glyph=char(rex::memory::load_and_swap<uint32_t>(base+0x8292CC60+4*i)-0x700);
+namespace {
+bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_glyph) {
     auto* definition=FindGlyph(glyph);
-    if(!definition || (style==Style::PlayStation && definition->shared)) break;
+    if(style==Style::Xbox || !definition) return false;
+    if(style==Style::PlayStation) {
+      const auto texture=PS3Texture(glyph,ctx.r7.u32,base);
+      if(!texture)return false;
+      const auto pointers=std::array{ctx.r3.u32,ctx.r4.u32,ctx.r5.u32,ctx.r6.u32};
+      std::array<std::array<uint8_t,8>,4> saved;
+      for(unsigned i=0;i<4;++i) {
+        std::memcpy(saved[i].data(),base+pointers[i]+16,8);
+        rex::memory::store_and_swap<float>(base+pointers[i]+16,i==1||i==2?1.f:0.f);
+        rex::memory::store_and_swap<float>(base+pointers[i]+20,i>=2?1.f:0.f);
+      }
+      ctx.r7.u64=texture;
+      __imp__sub_82388C38(ctx,base);
+      for(unsigned i=0;i<4;++i)std::memcpy(base+pointers[i]+16,saved[i].data(),8);
+      return true;
+    }
 
     const auto color=rex::memory::load_and_swap<uint32_t>(base+ctx.r3.u32+12);
     const float x0=rex::memory::load_and_swap<float>(base+ctx.r3.u32),y0=rex::memory::load_and_swap<float>(base+ctx.r3.u32+4);
     const float x1=rex::memory::load_and_swap<float>(base+ctx.r4.u32),y1=rex::memory::load_and_swap<float>(base+ctx.r4.u32+4);
     const float x3=rex::memory::load_and_swap<float>(base+ctx.r6.u32),y3=rex::memory::load_and_swap<float>(base+ctx.r6.u32+4);
     const float width=std::hypot(x1-x0,y1-y0),height=std::hypot(x3-x0,y3-y0);
-    if(!std::isfinite(width) || !std::isfinite(height) || height<.000001f || width<.000001f) break;
+    if(!std::isfinite(width) || !std::isfinite(height) || height<.000001f || width<.000001f) return false;
     const auto label=Label(glyph,style);
     const float factor=inline_glyph && style==Style::Keyboard?LabelAspect(label):1.f;
-    auto geometry=MakeGeometry(glyph,style,label,width/height*factor,color);
+    auto geometry=MakeKeyboardGeometry(label,width/height*factor,color);
     if(factor!=1)for(auto& q:geometry.quads)for(auto& p:q.points)p.x=.5f+(p.x-.5f)*factor;
-    if(geometry.quads.empty()) break;
+    if(geometry.quads.empty()) return false;
     Emit(ctx,base,geometry);return true;
+}
+}
+bool DrawReplacement(PPCContext& ctx,uint8_t* base,Style style,bool inline_glyph) {
+  if(style==Style::Xbox || !ctx.r7.u32) return false;
+  const auto table=rex::memory::load_and_swap<uint32_t>(base+0x8292CCB8);
+  if(table) for(unsigned i=0;i<22;++i) {
+    if(rex::memory::load_and_swap<uint32_t>(base+table+4*i)!=ctx.r7.u32) continue;
+    const char glyph=char(rex::memory::load_and_swap<uint32_t>(base+0x8292CC60+4*i)-0x700);
+    return DrawGlyph(ctx,base,style,glyph,inline_glyph);
   }
   return false;
+}
+char ReplaySpriteGlyph(uint64_t caller,uint32_t sprite,const uint8_t* base) {
+  // The five-control Second Chance row and the eight-control full replay row
+  // in sub_8233A168. Exclude the timeline/media rows even if they share an atlas.
+  if((caller!=0x8233A4F8 && caller!=0x8233AB0C) || !sprite)return 0;
+  const auto bank=rex::memory::load_and_swap<uint32_t>(base+0x8294679C);
+  if(!bank)return 0;
+  for(auto [index,glyph]:{std::pair{8,'l'},std::pair{5,'r'},std::pair{2,'L'},
+                         std::pair{3,'R'},std::pair{11,'B'}}) {
+    if(rex::memory::load_and_swap<uint32_t>(base+bank+4*index)==sprite)return glyph;
+  }
+  return 0;
+}
+void DrawReplaySprite(PPCContext& ctx,uint8_t* base,Style style) {
+  const auto saved_glyph=sprite_glyph;
+  const auto saved_style=sprite_style;
+  sprite_glyph=ReplaySpriteGlyph(ctx.lr,ctx.r5.u32,base);
+  sprite_style=style;
+  __imp__sub_8227E440(ctx,base);
+  sprite_glyph=saved_glyph;
+  sprite_style=saved_style;
 }
 }
 REX_HOOK_RAW(sub_82388C38) {
   using namespace motogp::prompts;
+  if(sprite_glyph && DrawGlyph(ctx,base,sprite_style,sprite_glyph,false))return;
   if(ready.load(std::memory_order_relaxed) && DrawReplacement(ctx,base,frame_style.load(std::memory_order_relaxed),inline_depth!=0)) return;
   __imp__sub_82388C38(ctx,base);
+}
+REX_HOOK_RAW(sub_8227E440) {
+  using namespace motogp::prompts;
+  DrawReplaySprite(ctx,base,ready.load(std::memory_order_relaxed)?frame_style.load(std::memory_order_relaxed):Style::Xbox);
 }
 REX_HOOK_RAW(sub_82358448) {
   using namespace motogp::prompts;

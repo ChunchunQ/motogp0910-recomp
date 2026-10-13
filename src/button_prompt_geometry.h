@@ -24,29 +24,6 @@ class Geometry {
   void Rect(float x,float y,float w,float h,uint32_t color) {
     quads.push_back({{{{x,y},{x+w,y},{x+w,y+h},{x,y+h}}},color});
   }
-  void Line(Point a,Point b,float thickness,uint32_t color,float aspect=1) {
-    const float dx=(b.x-a.x)*aspect,dy=b.y-a.y;
-    const float length=std::hypot(dx,dy);
-    if(length==0) return;
-    const float ox=-dy/length*thickness*.5f/aspect,oy=dx/length*thickness*.5f;
-    quads.push_back({{{{a.x-ox,a.y-oy},{b.x-ox,b.y-oy},{b.x+ox,b.y+oy},{a.x+ox,a.y+oy}}},color});
-  }
-  void Circle(Point center,float radius,float thickness,uint32_t color) {
-    constexpr unsigned count=24;
-    for(unsigned i=0;i<count;++i) {
-      const float a=i*6.2831853f/count,b=(i+1)*6.2831853f/count;
-      Line({center.x+std::cos(a)*radius,center.y+std::sin(a)*radius},
-           {center.x+std::cos(b)*radius,center.y+std::sin(b)*radius},thickness,color);
-    }
-  }
-  void Disc(Point center,float radius,uint32_t color) {
-    constexpr unsigned count=24;
-    for(unsigned i=0;i<count;++i) {
-      const float a=i*6.2831853f/count,b=(i+1)*6.2831853f/count;
-      quads.push_back({{{center,{center.x+std::cos(a)*radius,center.y+std::sin(a)*radius},
-          {center.x+std::cos(b)*radius,center.y+std::sin(b)*radius},center}},color});
-    }
-  }
   void Text(std::string label,float aspect,uint32_t color,float height_fraction=.62f) {
     // stb_easy_font supplies ASCII stroke geometry, not a platform font or
     // texture. It therefore also works in the native Xbox UI draw batch.
@@ -64,40 +41,13 @@ class Geometry {
     }
   }
 };
-inline Geometry MakeGeometry(char glyph,Style style,const std::string& label,float aspect,uint32_t color) {
+inline Geometry MakeKeyboardGeometry(const std::string& label,float aspect,uint32_t color) {
   Geometry g;
   const uint32_t background=(color&0xFF000000)|0x15181D;
-  if(style==Style::Keyboard) {
-    g.Rect(.01f,.13f,.98f,.74f,background);
-    g.Rect(.01f,.13f,.98f,.045f,color);g.Rect(.01f,.825f,.98f,.045f,color);
-    g.Rect(.01f,.13f,.045f/aspect,.74f,color);g.Rect(.99f-.045f/aspect,.13f,.045f/aspect,.74f,color);
-    g.Text(label,aspect,color);
-  } else {
-    if(glyph=='A'||glyph=='B'||glyph=='X'||glyph=='Y'||glyph=='S')g.Disc({.5f,.5f},.43f,background);
-    switch(glyph) {
-      case 'A': g.Line({.23f,.23f},{.77f,.77f},.075f,color);g.Line({.77f,.23f},{.23f,.77f},.075f,color);break;
-      case 'B': g.Circle({.5f,.5f},.31f,.075f,color);break;
-      case 'X':
-        g.Line({.23f,.23f},{.77f,.23f},.075f,color);g.Line({.77f,.23f},{.77f,.77f},.075f,color);
-        g.Line({.77f,.77f},{.23f,.77f},.075f,color);g.Line({.23f,.77f},{.23f,.23f},.075f,color);break;
-      case 'Y':
-        g.Line({.5f,.19f},{.81f,.77f},.075f,color);g.Line({.81f,.77f},{.19f,.77f},.075f,color);
-        g.Line({.19f,.77f},{.5f,.19f},.075f,color);break;
-      case 'S':
-        // DualSense Create / DualShock Share symbol: three outward rays.
-        g.Line({.5f,.42f},{.5f,.12f},.075f,color);
-        g.Line({.4f,.49f},{.19f,.29f},.075f,color);
-        g.Line({.6f,.49f},{.81f,.29f},.075f,color);
-        g.Rect(.38f,.64f,.24f,.11f,color);break;
-      default:
-        g.Rect(.05f,.18f,.9f,.64f,background);
-        g.Line({.05f,.18f},{.95f,.18f},.045f,color,aspect);
-        g.Line({.95f,.18f},{.95f,.82f},.045f,color,aspect);
-        g.Line({.95f,.82f},{.05f,.82f},.045f,color,aspect);
-        g.Line({.05f,.82f},{.05f,.18f},.045f,color,aspect);
-        g.Text(label,aspect,color,.48f);break;
-    }
-  }
+  g.Rect(.01f,.13f,.98f,.74f,background);
+  g.Rect(.01f,.13f,.98f,.045f,color);g.Rect(.01f,.825f,.98f,.045f,color);
+  g.Rect(.01f,.13f,.045f/aspect,.74f,color);g.Rect(.99f-.045f/aspect,.13f,.045f/aspect,.74f,color);
+  g.Text(label,aspect,color);
   return g;
 }
 }

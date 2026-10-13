@@ -42,13 +42,15 @@ def main():
     shutil.copy2(ROOT / "third_party/stb/LICENSE.txt", STAGE / "licenses/stb-LICENSE.txt")
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
+    shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 collision data repair - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 original PS3 buttons - ReXGlue v0.10.0\n\n"
         "PHYSICS DATA: Preserves serialized collision coordinates during endian conversion.\n"
         "192 Linux and Windows/Wine field/record/ABI checks passed.\n"
-        "The reported Qatar gameplay fall still needs local route verification.\n"
+        "The user verified 4-5 Qatar Time Trial laps without falling through the track.\n"
         "Repair messages in logs contain PHYSICS_ASSET_FIX.\n\n"
-        "UPGRADE: Replace the EXEs AND both rexruntime.dll / rexgpu-xenos.dll.\n"
+        "UPGRADE: Extract the complete ZIP, including resources/controller.\n"
+        "Replace the EXEs AND both rexruntime.dll / rexgpu-xenos.dll.\n"
         "Keep your existing game folder, configuration and saves.\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
         "2. Tum orijinal oyun dosyalarini game altklasorune koy:\n"
@@ -71,8 +73,12 @@ def main():
         "IN-GAME PROMPTS: Automatically switch Xbox / PlayStation / keyboard\n"
         "symbols after meaningful input. Keyboard caps show your actual saved bindings.\n"
         "PlayStation: A=cross, B=circle, X=square, Y=triangle; L1/R1 and L2/R2.\n"
-        "Shared stick/directional artwork stays unchanged for PlayStation.\n"
-        "No additional icon images or modified game assets are needed.\n"
+        "Original PS3 stick, stick direction, D-pad and SELECT artwork is included.\n"
+        "The Second Chance/replay LT/RT/LB/RB/B row also switches styles.\n"
+        "Keep resources/controller/ps3-prompts.bin beside the EXE in that subfolder.\n"
+        "All 42 controller textures found in the supplied sharedfrontend bank are included.\n"
+        "There is no separate START or PS/Guide bitmap in that set; literal START text stays.\n"
+        "Native sticks use the original stick pictures; separate L3/R3 labels were not found.\n"
         "To test PS graphics with an XInput pad, open PowerShell here and run:\n"
         ".\\motogp0910.exe --input_backend=xinput --button_prompt_style=playstation\n"
         "Fixed styles: --button_prompt_style=xbox / playstation / keyboard\n"
@@ -92,7 +98,7 @@ def main():
         "game/default.xex varsa game klasoru onceliklidir. Eski duz yerlesim de desteklenir.\n"
         "Kayit/cache konumu onceki EXE ile aynidir; kayit dosyalarini tasimak gerekmez.\n"
         "Bu build 0.0.1.1 oyun surumunu bekler. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.\n\n"
-        "Bu paket orijinal oyun dosyalarini veya title update'i icermiyor.\n"
+        "This package includes only the requested controller artwork, not full game data or TU.\n"
         "SDK kaynaklari: https://github.com/rexglue/rexglue-sdk/tree/v0.10.0\n",
         encoding="utf-8",
     )
@@ -110,7 +116,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-collision-data-fix.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

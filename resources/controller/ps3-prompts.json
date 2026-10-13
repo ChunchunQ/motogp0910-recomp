@@ -1,0 +1,343 @@
+{
+  "format": "MotoGP PS3 controller BC3 textures v1",
+  "source_bank_sha256": "ca8c1bb14a5a7c947a17e081a2a5122a62a99e83a3787a148b6e915c077043f6",
+  "pack_sha256": "426a61883b39293f3b283e264f8721416f233da39b35a2ad5ae9d0f2956361e2",
+  "textures": [
+    {
+      "index": 102,
+      "name": "xbox_a",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "0108BB02",
+      "bc3_sha256": "87626af271c3c5787411f7cea895b8b258bcef7990b68064f5ef3c6781de7161"
+    },
+    {
+      "index": 103,
+      "name": "xbox_b",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "08BA6061",
+      "bc3_sha256": "41dadb735e0ebb4f97109aff8ba468797500b5a969c760b150a88f30cd2f6eca"
+    },
+    {
+      "index": 104,
+      "name": "xbox_y",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "B9B03BEA",
+      "bc3_sha256": "e3ea022c55b7753e07a53aa96d8b3cbe8bb6afc7b9be097bbf274685b8ba6aa7"
+    },
+    {
+      "index": 105,
+      "name": "xbox_x",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "B1FE968B",
+      "bc3_sha256": "3790b615947bf1fb5c963c3ec584b36bc356d4169eb6b34c3a9f9bcb16ea3372"
+    },
+    {
+      "index": 106,
+      "name": "ps_cross",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "80A22308",
+      "bc3_sha256": "257c48f74cf29fc7d9f8c5105cbad4ef7bb9c1226f4894fbd9323d8a5b164af2"
+    },
+    {
+      "index": 107,
+      "name": "ps_circle",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "3B6352B1",
+      "bc3_sha256": "0ee2d75f56a4f6252bbaf46035f8a57e385c9e5f65ac5d134e50ec0e2d0841fb"
+    },
+    {
+      "index": 108,
+      "name": "ps_triangle",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "1E7675FA",
+      "bc3_sha256": "dfe9cd78f65e685545399241baf0ccd759ec8be817697fee6e6804a17ccf7216"
+    },
+    {
+      "index": 109,
+      "name": "ps_square",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "85511805",
+      "bc3_sha256": "03f82d6619fe3aa38de8e2018a9ea71ec4598b18d0bf3782e6a675eebff21623"
+    },
+    {
+      "index": 110,
+      "name": "ps_left_stick",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "AB81DEAE",
+      "bc3_sha256": "a29905ed4b8fbcd9de6bf99fbdf0001d7f8c415513e427dde94207942fb35536"
+    },
+    {
+      "index": 111,
+      "name": "ps_left_stick_alt",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "AB81DEAE",
+      "bc3_sha256": "a29905ed4b8fbcd9de6bf99fbdf0001d7f8c415513e427dde94207942fb35536"
+    },
+    {
+      "index": 112,
+      "name": "ps_right_stick",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "28DE0F34",
+      "bc3_sha256": "983169fa606ffd61585e6a1c63d58a5bf9e1ad46bcb71788ae709a463323729a"
+    },
+    {
+      "index": 113,
+      "name": "ps_r1",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "5C619263",
+      "bc3_sha256": "c8d413a8a1576ddf536d84b20d41df0b8448b9bbcd2b489e693de0e8143781c5"
+    },
+    {
+      "index": 114,
+      "name": "ps_l1",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "C54F6B5D",
+      "bc3_sha256": "4d5102be7a469b0128ab8ff49207bd810925a027c52a0544802dc25c3b8f5279"
+    },
+    {
+      "index": 115,
+      "name": "ps_r2",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "641337C2",
+      "bc3_sha256": "480ee834a738d3f09bde875d78ace4a096dbf56753ac2507a70a677fb74e5238"
+    },
+    {
+      "index": 116,
+      "name": "ps_l2",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "CD0110BC",
+      "bc3_sha256": "26302803fa226110acbf9c2e1381e2f8552e76f14842109c4975a59303a84d64"
+    },
+    {
+      "index": 117,
+      "name": "ps_select",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "CAF66AC6",
+      "bc3_sha256": "ed1cc0dd1df57c9fcf4218c77a74c120a03c3d6f6b607c5270d05fb180a52a10"
+    },
+    {
+      "index": 118,
+      "name": "xbox_left_stick",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "9C4AB089",
+      "bc3_sha256": "d2f66a054b2688a49ba84865169cc503f97970e28c473b952bf27fb17356e46f"
+    },
+    {
+      "index": 119,
+      "name": "xbox_left_stick_alt",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "9C4AB089",
+      "bc3_sha256": "d2f66a054b2688a49ba84865169cc503f97970e28c473b952bf27fb17356e46f"
+    },
+    {
+      "index": 120,
+      "name": "xbox_right_stick",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "B4ED7BB6",
+      "bc3_sha256": "6fd5309292f32e8af5dcd0212f588dc4590428cf881ef0ed6621065d9abe4352"
+    },
+    {
+      "index": 121,
+      "name": "xbox_rb",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "34F791DF",
+      "bc3_sha256": "fc308a4346dcbc6561bf6d027ee9b949a020a427c4dabc379a5bc0c7a7ec7d93"
+    },
+    {
+      "index": 122,
+      "name": "xbox_lb",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "F300B140",
+      "bc3_sha256": "c137afc366b4900eb57fb02d85fc7bd3d438d6b39c71b8c399b0529225514c3e"
+    },
+    {
+      "index": 123,
+      "name": "xbox_rt",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "A504AF0E",
+      "bc3_sha256": "e8e7df2b1f8285d32cd2951153c03a98895bc3999df03382764ce9b67c99f9aa"
+    },
+    {
+      "index": 124,
+      "name": "xbox_lt",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "CD53B231",
+      "bc3_sha256": "1fa16da19c2b7ae25079d3ec4a2458006a90bc15b56f3d75ae680f77d19f2223"
+    },
+    {
+      "index": 125,
+      "name": "xbox_back",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "09D213D8",
+      "bc3_sha256": "84d3a238a0ded72dde40604f00931b4488af297553f166ca365adfb0b9f8ce6d"
+    },
+    {
+      "index": 126,
+      "name": "xbox_dpad",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "5448C05E",
+      "bc3_sha256": "514d12e430b3c79c85ef8b2889e7971f8c1991247c8f6d06619cf69830360b13"
+    },
+    {
+      "index": 127,
+      "name": "xbox_dpad_up",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "270C5335",
+      "bc3_sha256": "7b5ffd060c2c948721e6560c0ad92813cb63ebe9489f7bb5012e617067507183"
+    },
+    {
+      "index": 128,
+      "name": "xbox_dpad_down",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "C32C1F0E",
+      "bc3_sha256": "f962632d2c5ff9d1ae718a3a84d6e7e7cb46b72edebccfb4ccda8ed44cf718ec"
+    },
+    {
+      "index": 129,
+      "name": "xbox_dpad_right",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "8B8E69B6",
+      "bc3_sha256": "44e21a48c78df3af3ff3d7dda3f92ea89e86225df6189f8c825b7b8b5fab4276"
+    },
+    {
+      "index": 130,
+      "name": "xbox_dpad_left",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "16D40289",
+      "bc3_sha256": "fc1f0de5e5117229406aed817545e4802393b970adfe4b4ad1d87af74b3dab3b"
+    },
+    {
+      "index": 131,
+      "name": "ps_left_stick_up",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "A0480F8C",
+      "bc3_sha256": "4ea074d3a141deb8fe3c83fdc11f34785118786c3594448bf4581d2fdc25a142"
+    },
+    {
+      "index": 132,
+      "name": "ps_left_stick_down",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "0FCBC9D3",
+      "bc3_sha256": "df861cec4202b2f0fe0ce4599e438b238f0024255aa29c009fad76b1e03529ba"
+    },
+    {
+      "index": 133,
+      "name": "ps_left_stick_left",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "21290AB8",
+      "bc3_sha256": "718332f45984c02a845d848dd796d3a8b2959025c6001dd389d68f9b3cb98529"
+    },
+    {
+      "index": 134,
+      "name": "ps_left_stick_right",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "413E7ACB",
+      "bc3_sha256": "b6cfd5ada70be7bd546c185216b6a14451f12efeb48f079b50d030994d6fb7d1"
+    },
+    {
+      "index": 135,
+      "name": "ps_dpad",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "E6A62610",
+      "bc3_sha256": "71d6494b7c543bad3338accdb6b311b110442ee7d654a0ab1578fd0ef331b0de"
+    },
+    {
+      "index": 136,
+      "name": "ps_dpad_up",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "61D6D878",
+      "bc3_sha256": "40c2d52704e1a4a280d00cdfb69596f8c1d0d402bd545486df1568849e9b2d4f"
+    },
+    {
+      "index": 137,
+      "name": "ps_dpad_down",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "756A5F91",
+      "bc3_sha256": "bbfb1cce7b3df5e71999fb35ecc0a5f859afd66aadb28956db905486eef31467"
+    },
+    {
+      "index": 138,
+      "name": "ps_dpad_left",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "C912430C",
+      "bc3_sha256": "0d809cea25d32a5fda7413f8c21b0604b0e7969ec4e1123347c1d0b71b95250d"
+    },
+    {
+      "index": 139,
+      "name": "ps_dpad_right",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "21183993",
+      "bc3_sha256": "c52d294a2b3e2bb44f9ccf933b22473da34f95beca3e89e731caf4748c45e7be"
+    },
+    {
+      "index": 140,
+      "name": "xbox_left_stick_up",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "EC55AE4F",
+      "bc3_sha256": "bb2e6d10df30f354a7d231678c72ba320e295e8b6e0b08092c6432418e4800e9"
+    },
+    {
+      "index": 141,
+      "name": "xbox_left_stick_down",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "8EECC3D6",
+      "bc3_sha256": "bd42d0354c9644dda9b1dd081b8502fe07777c03a41fd22a26c1425383ff92ec"
+    },
+    {
+      "index": 142,
+      "name": "xbox_left_stick_left",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "A04A04BB",
+      "bc3_sha256": "ad19af3c4d3f2e130b48e9999f5e04bcf97943439c3d7becc581a89236262b76"
+    },
+    {
+      "index": 143,
+      "name": "xbox_left_stick_right",
+      "width": 64,
+      "height": 64,
+      "resource_hash": "A63CC128",
+      "bc3_sha256": "5c6ad460245dc2cb8540e16b1267b936a24f82a68a016dd8bff44783fff1f4d8"
+    }
+  ]
+}

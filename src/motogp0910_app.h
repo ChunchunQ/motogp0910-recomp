@@ -19,6 +19,7 @@
 #include "audio_settings.h"
 #include "video_settings.h"
 #include "button_prompts.h"
+#include "ps3_prompt_textures.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -112,6 +113,8 @@ class Motogp0910App : public rex::ReXApp {
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
+    motogp::prompts::LoadPS3Artwork(runtime()->memory(),
+        rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::StartInputObserver(window());
   }
   // std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override;
@@ -119,6 +122,7 @@ class Motogp0910App : public rex::ReXApp {
   // CreateAchievementNotificationDialog() override;
   void OnShutdown() override {
     motogp::prompts::StopInputObserver();
+    motogp::prompts::StopPS3Artwork();
   }
   void OnConfigurePaths(rex::PathConfig& paths) override {
     if (!paths.game_data_root.empty()) {
