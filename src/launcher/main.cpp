@@ -137,8 +137,8 @@ struct App {
     if(selection<0)selection=static_cast<int>(SendMessageW(render_resolution,CB_GETCURSEL,0,0));
     SendMessageW(render_resolution,CB_RESETCONTENT,0,0);
     const std::array<std::wstring,3> names{
-      T(L"720p — 1280 × 720 (native)",L"720p — 1280 × 720 (yerel)"),
-      L"2K / 1440p — 2560 × 1440",L"4K / 2160p — 3840 × 2160"};
+      T(L"1x - 1280 x 720 (native)",L"1x - 1280 x 720 (yerel)"),
+      L"2x - 2560 x 1440",L"3x - 3840 x 2160"};
     for(const auto& text:names)SendMessageW(render_resolution,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));
     if(MatchingRenderPreset(settings)<0){
       auto [w,h]=RenderDimensions(settings);auto text=std::wstring(T(L"Custom — ",L"Özel — "))+std::to_wstring(w)+L" × "+std::to_wstring(h);
