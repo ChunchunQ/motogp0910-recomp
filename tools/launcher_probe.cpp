@@ -101,6 +101,14 @@ int wmain(int argc,wchar_t** argv) {
     Put(roots,"game_data_root",std::string("Selected Folder"));
     Check(ResolveGameRoot(base,roots)==base/L"Selected Folder","Configured relative root");
     auto args=Arguments(base/L"Game Türkçe & spaces",settings,restored.table);
+    for(const auto& [name,expected]:std::array<std::pair<const wchar_t*,const wchar_t*>,7>{{
+        {L"draw_resolution_scale_x",L"2"},{L"draw_resolution_scale_y",L"3"},
+        {L"resolution_scale",L"1"},{L"d3d12_adapter",L"0"},{L"audio_master_volume",L"37"},
+        {L"anisotropic_override",L"5"},{L"present_fsr_sharpness_reduction",L"0.540000"}}}) {
+      auto argument=L"--"+std::wstring(name)+L"="+expected;
+      Check(std::count(args.begin(),args.end(),argument)==1,"Numeric settings keep their type in actual launch arguments");
+      Check(rex::cvar::SetFlagByName(Utf8(name),Utf8(expected)),"Real SDK parses numeric launch values");
+    }
     Check(std::find(args.begin(),args.end(),L"--user_data_root=D:\\Existing saves")!=args.end(),"Custom save root forwarded");
     Check(std::none_of(args.begin(),args.end(),[](const auto& arg){return arg.starts_with(L"--cache_root=");}),"Default cache left to SDK");
     // Real known user-supplied files; no synthetic XEX/patch or SDK stubs.

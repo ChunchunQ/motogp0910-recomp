@@ -43,7 +43,7 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 controller prompts - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 polished launcher - ReXGlue v0.10.0\n\n"
         "UPGRADE: Replace the EXEs AND both rexruntime.dll / rexgpu-xenos.dll.\n"
         "Keep your existing game folder, configuration and saves.\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
@@ -54,12 +54,13 @@ def main():
         "4. motogp0910-launcher.exe dosyasini ac, ayarlarini sec ve PLAY'e bas.\n"
         "   Arayuz varsayilan olarak Ingilizcedir; Language / Dil menusunden Turkce secilebilir.\n"
         "   Dil secimi sonraki acilislarda korunur. Derleme gerekmez.\n\n"
-        "GRAPHICS: GPU, output size, internal X/Y scale, native 2x MSAA,\n"
+        "GRAPHICS: GPU, output size, 720p / 1440p (2K) / 4K internal resolution, native 2x MSAA,\n"
         "FSR 1.0 / CAS sharpness, anisotropic filtering, FXAA and shader cache.\n"
-        "FSR is spatial: use 1x internal scale for native 720p to 1080p upscaling.\n"
+        "FSR is spatial: choose 720p internal resolution for 720p to 1080p upscaling.\n"
         "Fullscreen uses the desktop size; output window size is for windowed mode.\n"
         "AUDIO: Real master volume 0-100% and mute.\n"
-        "CONTROLS: Select a row; edit the binding or click Press a key.\n"
+        "CONTROLS: Edit any binding directly, or use its ... button to capture a key.\n"
+        "Right-click a binding to unbind it or restore its action default.\n"
         "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
         "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
         "Keep both runtime DLLs: this v0.10.0 pair enables spatial FSR and shared SDL input.\n\n"
@@ -105,7 +106,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-controller-prompts.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-polished-launcher.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

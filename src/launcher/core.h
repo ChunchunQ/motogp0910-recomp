@@ -11,6 +11,7 @@
 #include <cmath>
 #include <array>
 #include "keyboard_bindings.h"
+#include "render_presets.h"
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -132,6 +133,7 @@ class Config {
 };
 struct Settings {
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
+  int guest_width=0,guest_height=0;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
@@ -142,6 +144,8 @@ struct Settings {
     Settings s;
     s.width = Get<int64_t>(t, "window_width", 0);
     s.height = Get<int64_t>(t, "window_height", 0);
+    s.guest_width=Get<int64_t>(t,"video_mode_width",0);
+    s.guest_height=Get<int64_t>(t,"video_mode_height",0);
     s.fullscreen = Get(t, "fullscreen", true);
     s.vsync = Get(t, "vsync", true);
     s.keyboard = Get(t, "mnk_mode", true);
@@ -169,6 +173,7 @@ struct Settings {
   }
   void Validate() const {
     if(width<0 || height<0 || width>8192 || height>8192 ||
+       guest_width<0 || guest_height<0 || guest_width>8192 || guest_height>8192 ||
        scale_x<1 || scale_x>8 || scale_y<1 || scale_y>8 ||
        adapter < -2 || anisotropic < -1 || anisotropic>5 || volume<0 || volume>100 ||
        !std::isfinite(fsr_reduction) || fsr_reduction<0 || fsr_reduction>2 ||
@@ -187,6 +192,8 @@ struct Settings {
   void Store(toml::table& t) const {
     Validate();
     Put(t, "window_width", width); Put(t, "window_height", height);
+    if(guest_width)Put(t,"video_mode_width",guest_width);
+    if(guest_height)Put(t,"video_mode_height",guest_height);
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
     Put(t, "input_backend", backend); Put(t, "present_effect", effect);
@@ -291,18 +298,20 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
     if(name=="window_width" || name=="window_height" || name=="fullscreen" || name=="vsync" ||
        name=="mnk_mode" || name=="audio_mute" || name=="input_backend") continue;
     std::string value;
-    if(auto string=node.value<std::string>()) value=*string;
-    else if(auto boolean=node.value<bool>()) value=*boolean?"true":"false";
-    else if(auto integer=node.value<int64_t>()) value=std::to_string(*integer);
-    else if(auto number=node.value<double>()) value=std::to_string(*number);
+    // toml++ value<bool>() converts integers too. Preserve each node's actual
+    // type so values such as 3x, 720 and 37% never become the string "true".
+    if(node.is_string()) value=*node.value<std::string>();
+    else if(node.is_boolean()) value=*node.value<bool>()?"true":"false";
+    else if(node.is_integer()) value=std::to_string(*node.value<int64_t>());
+    else if(node.is_floating_point()) value=std::to_string(*node.value<double>());
     args.push_back(L"--"+Wide(name)+L"="+Wide(value));
   }
   // FSR 1 is spatial: upscale the native 720p image to the selected host
   // output rather than silently raising the guest display mode to match it.
   // Keep an explicit custom guest mode from the user's TOML if present.
   if(s.effect=="fsr") {
-    args.push_back(L"--video_mode_width="+std::to_wstring(Get<int64_t>(config,"video_mode_width",1280)));
-    args.push_back(L"--video_mode_height="+std::to_wstring(Get<int64_t>(config,"video_mode_height",720)));
+    if(!s.guest_width)args.push_back(L"--video_mode_width="+std::to_wstring(Get<int64_t>(config,"video_mode_width",1280)));
+    if(!s.guest_height)args.push_back(L"--video_mode_height="+std::to_wstring(Get<int64_t>(config,"video_mode_height",720)));
   }
   // These paths are resolved before SDK TOML loading. Forward existing custom
   // roots rather than accidentally changing a user's save/cache location.

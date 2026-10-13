@@ -3,6 +3,8 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include "../src/launcher/ui_ids.h"
+using namespace launcher;
 #include <commctrl.h>
 #include <string>
 #include <iostream>
@@ -16,61 +18,60 @@ int main(int argc,char** argv) {
  std::string mode=argv[1];
  auto child=[&](int id){return GetDlgItem(w,id);};
  if(mode=="check-saved") {
-  if(Text(child(114))!=L"Türkçe" || Text(child(113))!=L"OYUNU BAŞLAT" ||
-     Text(child(103))!=L"1920 × 1080" || SendMessageW(child(104),CB_GETCURSEL,0,0)!=1 ||
-     SendMessageW(child(105),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
-     SendMessageW(child(107),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
-     SendMessageW(child(108),BM_GETCHECK,0,0)!=BST_CHECKED) return 1;
+  if(Text(child(kLanguage))!=L"Türkçe" || Text(child(kPlay))!=L"OYUNU BAŞLAT" ||
+     Text(child(kSize))!=L"1920 × 1080" || SendMessageW(child(kBackend),CB_GETCURSEL,0,0)!=1 ||
+     SendMessageW(child(kFullscreen),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
+     SendMessageW(child(kKeyboard),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
+     SendMessageW(child(kMute),BM_GETCHECK,0,0)!=BST_CHECKED) return 1;
  } else if(mode=="language-en" || mode=="language-tr") {
-  SendMessageW(child(114),CB_SETCURSEL,mode=="language-tr"?1:0,0);
-  SendMessageW(w,WM_COMMAND,MAKEWPARAM(114,CBN_SELCHANGE),reinterpret_cast<LPARAM>(child(114)));
-  if(Text(child(113))!=(mode=="language-tr"?L"OYUNU BAŞLAT":L"PLAY")) return 1;
+  SendMessageW(child(kLanguage),CB_SETCURSEL,mode=="language-tr"?1:0,0);
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kLanguage,CBN_SELCHANGE),reinterpret_cast<LPARAM>(child(kLanguage)));
+  if(Text(child(kPlay))!=(mode=="language-tr"?L"OYUNU BAŞLAT":L"PLAY")) return 1;
  } else if(mode=="defaults") {
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(110,BN_CLICKED),0);
-  if(Text(child(103))!=(Text(child(114))==L"Türkçe"?L"Otomatik / masaüstü":L"Automatic / desktop") ||
-     SendMessageW(child(107),BM_GETCHECK,0,0)!=BST_CHECKED) return 1;
+  if(Text(child(kSize))!=(Text(child(kLanguage))==L"Türkçe"?L"Otomatik / masaüstü":L"Automatic / desktop") ||
+     SendMessageW(child(kKeyboard),BM_GETCHECK,0,0)!=BST_CHECKED) return 1;
  } else if(mode=="graphics" || mode=="audio" || mode=="controls") {
   int page=mode=="graphics"?0:mode=="audio"?1:2;
-  SendMessageW(child(115),TCM_SETCURFOCUS,page,0);
-  if(!IsWindowVisible(child(page==0?103:page==1?123:124))) return 1;
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kNavGraphics+page,BN_CLICKED),0);
+  if(!IsWindowVisible(child(page==0?kSize:page==1?kVolume:kBindingBase))) return 1;
  } else if(mode=="configure-advanced") {
-  SendMessageW(child(118),CB_SETCURSEL,1,0); // FSR 1
-  SendMessageW(w,WM_COMMAND,MAKEWPARAM(118,CBN_SELCHANGE),0);
-  SendMessageW(child(119),TBM_SETPOS,TRUE,73);
-  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(119)));
-  SendMessageW(child(116),CB_SETCURSEL,1,0);
-  SendMessageW(child(117),CB_SETCURSEL,2,0);
-  SendMessageW(child(120),CB_SETCURSEL,6,0);
-  SendMessageW(child(123),TBM_SETPOS,TRUE,37);
-  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(123)));
-  SendMessageW(child(131),BM_SETCHECK,BST_UNCHECKED,0);
-  SetWindowTextW(child(125),L"Ctrl+K,Space");
-  SendMessageW(w,WM_COMMAND,MAKEWPARAM(125,EN_CHANGE),reinterpret_cast<LPARAM>(child(125)));
+  SendMessageW(child(kEffect),CB_SETCURSEL,1,0); // FSR 1
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kEffect,CBN_SELCHANGE),0);
+  SendMessageW(child(kSharpness),TBM_SETPOS,TRUE,73);
+  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(kSharpness)));
+  SendMessageW(child(kRenderResolution),CB_SETCURSEL,1,0);
+
+  SendMessageW(child(kAnisotropic),CB_SETCURSEL,6,0);
+  SendMessageW(child(kVolume),TBM_SETPOS,TRUE,37);
+  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(kVolume)));
+  SendMessageW(child(kMsaa),BM_SETCHECK,BST_UNCHECKED,0);
+  SetWindowTextW(child(kBindingBase),L"Ctrl+K,Space");
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kBindingBase,EN_CHANGE),reinterpret_cast<LPARAM>(child(kBindingBase)));
  } else if(mode=="standard-root") {
-  SetWindowTextW(child(101),L".\\game");
+  SetWindowTextW(child(kPath),L".\\game");
  } else if(mode=="demo-graphics") {
-  SendMessageW(child(103),CB_SETCURSEL,3,0);
-  SendMessageW(child(116),CB_SETCURSEL,0,0);
-  SendMessageW(child(117),CB_SETCURSEL,0,0);
-  SendMessageW(child(118),CB_SETCURSEL,1,0);
-  SendMessageW(w,WM_COMMAND,MAKEWPARAM(118,CBN_SELCHANGE),0);
-  SendMessageW(child(119),TBM_SETPOS,TRUE,85);
-  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(119)));
+  SendMessageW(child(kSize),CB_SETCURSEL,3,0);
+  SendMessageW(child(kRenderResolution),CB_SETCURSEL,0,0);
+
+  SendMessageW(child(kEffect),CB_SETCURSEL,1,0);
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kEffect,CBN_SELCHANGE),0);
+  SendMessageW(child(kSharpness),TBM_SETPOS,TRUE,85);
+  SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(kSharpness)));
  } else if(mode=="capture") {
-  SendMessageW(w,WM_COMMAND,MAKEWPARAM(126,BN_CLICKED),0);
+  SendMessageW(w,WM_COMMAND,MAKEWPARAM(kCaptureBase,BN_CLICKED),0);
  } else if(mode=="check-advanced") {
-  if(SendMessageW(child(118),CB_GETCURSEL,0,0)!=1 ||
-     SendMessageW(child(119),TBM_GETPOS,0,0)!=73 ||
-     SendMessageW(child(116),CB_GETCURSEL,0,0)!=1 ||
-     SendMessageW(child(117),CB_GETCURSEL,0,0)!=2 ||
-     SendMessageW(child(120),CB_GETCURSEL,0,0)!=6 ||
-     SendMessageW(child(123),TBM_GETPOS,0,0)!=37 ||
-     SendMessageW(child(131),BM_GETCHECK,0,0)!=BST_UNCHECKED || Text(child(125))!=L"Ctrl+K,Space") return 1;
+  if(SendMessageW(child(kEffect),CB_GETCURSEL,0,0)!=1 ||
+     SendMessageW(child(kSharpness),TBM_GETPOS,0,0)!=73 ||
+     SendMessageW(child(kRenderResolution),CB_GETCURSEL,0,0)!=1 ||
+     SendMessageW(child(kAnisotropic),CB_GETCURSEL,0,0)!=6 ||
+     SendMessageW(child(kVolume),TBM_GETPOS,0,0)!=37 ||
+     SendMessageW(child(kMsaa),BM_GETCHECK,0,0)!=BST_UNCHECKED || Text(child(kBindingBase))!=L"Ctrl+K,Space") return 1;
  } else if(mode=="save" || mode=="play" || mode=="report" || mode=="browse" || mode=="logs") {
   int id=mode=="save"?109:mode=="play"?113:mode=="report"?112:mode=="browse"?102:111;
   PostMessageW(w,WM_COMMAND,MAKEWPARAM(id,BN_CLICKED),0);
  } else if(mode=="missing-root") {
-  SetWindowTextW(child(101),L"Z:\\missing-game-folder");
+  SetWindowTextW(child(kPath),L"Z:\\missing-game-folder");
  } else if(mode=="close") PostMessageW(w,WM_CLOSE,0,0);
  else return 2;
  std::cout<<"PASS: "<<mode<<'\n';return 0;

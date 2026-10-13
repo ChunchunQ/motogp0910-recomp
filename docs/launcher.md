@@ -1,6 +1,9 @@
 # MotoGP 09/10 Launcher
 
 Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
+The interface uses charcoal cards with amber/red accents inspired by the MotoGP
+09/10 cover palette, an original vector racing ribbon and sidebar navigation.
+No reference launcher design, source code or artwork is copied.
 The default language is English; **Language / Dil → Türkçe** switches the whole
 interface immediately and retains the choice in `motogp0910-launcher.toml`.
 File names stay English. No CMD file is required.
@@ -12,7 +15,7 @@ File names stay English. No CMD file is required.
 | GPU selection | Automatic or a named DXGI hardware adapter; original adapter indices are retained |
 | Native 2× MSAA | Existing SDK native MSAA toggle, enabled by default |
 | Output window size | Automatic or 720p through 4K; fullscreen uses the desktop display size |
-| Internal render scale X / Y | Independent 1×–8× guest rendering multipliers; higher values use more GPU memory |
+| Internal resolution | 720p (native), 1440p / 2K, or 4K; exact 1× / 2× / 3× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
 | AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
 | AMD CAS | Contrast-adaptive sharpening; the SDK also uses CAS when FSR has no enlargement to perform |
@@ -35,6 +38,14 @@ nothing left to upscale. Explicit custom guest video modes in an existing
 configuration remain respected. Direct `motogp0910.exe` launch also reads saved
 settings and maintains the native source mode when FSR is selected.
 
+A single internal resolution selector replaces the independent X/Y controls.
+Selecting a standard preset explicitly saves a native 1280×720 source plus the
+matching integer draw scale; output window/fullscreen resolution stays separate.
+Existing asymmetric scales and explicit custom source modes are shown as
+**Custom** with their dimensions and preserved until a standard preset is chosen.
+1080p remains an output resolution, rather than a fictional fractional internal
+scale unsupported by this SDK.
+
 ## Audio
 
 The master slider controls real output gain, from 0% to 100%, for stereo and
@@ -44,10 +55,12 @@ on the next game launch.
 
 ## Keyboard and controllers
 
-The list contains all 25 SDK Xbox controller actions. Select a row and either
-edit the binding text or click **Press a key…** and press a key/chord. Escape
-cancels capture. **Unbind** clears one action; **Reset action** restores only
-that action. **Restore defaults** resets all launcher-managed settings.
+All 25 SDK controller actions appear as directly editable rows in two columns.
+Type a binding in its field or click the adjacent **…** to capture a key/chord.
+Escape cancels capture. Right-click a field for **Capture key**, **Unbind** and
+**Restore action default**. **Restore defaults** resets all launcher-managed
+settings. Alternatives remain supported; existing bindings are not silently
+rewritten to simpler defaults.
 
 Examples: `Space`, `Return`, `Ctrl+K`, `Shift+Up`, `Q,I` (alternative keys).
 Names are case-sensitive, as in the SDK. Unknown names and bare modifiers
@@ -79,22 +92,34 @@ and never uploaded automatically.
 ## Verification
 
 - Windows game, launcher and runtime DLL pair built successfully.
-- 58 launcher checks: advanced configuration round trips, SDK flags, preservation,
+- 72 launcher checks: numeric launch arguments are verified against actual SDK
+  parsers, alongside advanced configuration round trips, SDK flags, preservation,
   validation, Unicode and an actual child process receiving its arguments/CWD.
 - 140 runtime checks: FSR 1 EASU/RCAS pass planning and coefficients; native versus
   host video modes; real master gain and converted samples; real MnK driver
   delivering `Ctrl+K` / `Space` to guest A and `Shift+Up` to guest D-pad.
 - 50 existing game-code regression checks passed with the new runtime, including
   the race-start callback previously responsible for a crash.
-- Real Windows GUI under Wine/Xvfb: all three tabs, English/Turkish changes,
-  saving/reopening advanced settings, and actual `Ctrl+J` key capture exercised.
+- Production Win32 UI tested under Wine/Xvfb across all three pages, both
+  languages and 75% / 100% / 125% / 150% layout scales (24 layouts). Visible
+  controls fit without overlaps and localized static text fits its height.
+  Presets, all 25 binding fields, capture/cancel/reset, checkbox toggles, actual
+  save/reload and preservation of custom render settings are exercised by
+  `launcher_layout_probe`.
+- The compiled launcher EXE was also driven externally: all pages and both
+  languages, advanced settings, real Ctrl+J keyboard capture and saving were
+  verified through the production message loop.
 - Both Python and PowerShell staging verified against the pinned DLL hashes.
 
 The FSR test uses the real SDK CPU pass planner and a supplied surface size; it
 is **not a GPU pixel/shader execution or Windows race-playthrough test**. Native
 Windows GPU rendering and listening/playing with the new settings still need
 validation on the user's computer. Defaults keep bilinear presentation and
-original 1× rendering; experimental graphics choices are opt-in.
+native 720p rendering; higher resolutions and upscaling are opt-in.
+
+The launcher serializes launch arguments using actual TOML node types. Earlier
+boolean conversion of numeric nodes could turn scale/volume/sharpness values
+into `true`; the new regression checks prevent that.
 
 ## Screenshots
 
