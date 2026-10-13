@@ -148,3 +148,29 @@ Graphics, Advanced, Controls and Debug pages inspected. Native 2× MSAA is the
 additional supported setting retained from that inspection. Its launcher-only
 music settings are unrelated to game output volume; MotoGP's slider controls
 the actual game's output stage.
+
+
+## General preferences update
+
+The General page now contains the game folder, Launcher language, Game language
+and Button prompts. The folder and launcher language are hidden on the other
+pages. Graphics, Audio and Controls retain their own settings. Internal render
+presets are labelled 1x / 2x / 3x with exact dimensions. Window-size choices are
+limited by the target monitor's preferred physical dimensions, falling back to
+its current desktop size when native-mode reporting is unavailable. Existing
+oversized output values show Automatic / desktop; disk configuration changes
+only when the user saves or launches. Internal render resolution is independent
+of this output-size filter.
+
+Game language choices are English, French, German, Spanish and Italian. The
+launcher forwards user_language; a scoped title hook lets an explicit selection
+take precedence over the game's internal language tweak, uses the original
+localization-file mapping and restores that tweak. Six native locale/ABI checks
+passed under Wine, including preservation of the original direct-launch override.
+Launcher English/Turkish and game language remain independent.
+
+The production UI probe passed 44,500 layout, configuration and CLI assertions
+across all four pages, English/Turkish and 75–150% UI scales. The output tests
+include 1080p, 1366x768, ultrawide and 4K monitor limits. These tests do not check
+a physical monitor's EDID or game text rendering on a Windows GPU. No new
+screenshots are stored in the repository.

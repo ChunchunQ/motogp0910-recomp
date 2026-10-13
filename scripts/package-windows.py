@@ -44,7 +44,14 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 career texture readback repair - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 General launcher preferences - ReXGlue v0.10.0\n\n"
+        "GENERAL: Game folder, Launcher language, Game language and Button prompts.\n"
+        "The folder and launcher-language controls appear only on General.\n"
+        "Game languages: English, French, German, Spanish and Italian.\n"
+        "Prompt styles: Automatic, PlayStation 3, Xbox 360 and Keyboard.\n"
+        "OUTPUT: Window sizes are capped at the physical monitor's native resolution.\n"
+        "An oversized previous window setting falls back to Automatic / desktop in the UI.\n"
+        "Internal resolution labels now use 1x / 2x / 3x.\n\n"
         "CAREER TEXTURES: Synchronous GPU resolve readback is enabled only during\n"
         "custom rider/bike livery generation. BOTH matching runtime DLLs are required.\n"
         "13 scope/ABI checks (16 guest calls) passed on Linux and Windows/Wine.\n"
@@ -64,7 +71,7 @@ def main():
         "3. default.xexp patch'ini ve kendi title update dosyan\n"
         "   TU_11K61VG_0000004000000.0000000000081 dosyasini da game icine koy.\n"
         "4. motogp0910-launcher.exe dosyasini ac, ayarlarini sec ve PLAY'e bas.\n"
-        "   Arayuz varsayilan olarak Ingilizcedir; Language / Dil menusunden Turkce secilebilir.\n"
+        "   Arayuz varsayilan olarak Ingilizcedir; General > Launcher language menusunden Turkce secilebilir.\n"
         "   Dil secimi sonraki acilislarda korunur. Derleme gerekmez.\n\n"
         "GRAPHICS: GPU, output size, 720p / 1440p (2K) / 4K internal resolution, native 2x MSAA,\n"
         "FSR 1.0 / CAS sharpness, anisotropic filtering, FXAA and shader cache.\n"
@@ -128,7 +135,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-career-texture-fix.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-general-launcher.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))
