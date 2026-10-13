@@ -20,7 +20,7 @@ int main(int argc,char** argv) {
  if(mode=="check-saved") {
   if(Text(child(kLanguage))!=L"Türkçe" || Text(child(kPlay))!=L"OYUNU BAŞLAT" ||
      Text(child(kSize))!=L"1920 × 1080" || SendMessageW(child(kBackend),CB_GETCURSEL,0,0)!=1 ||
-     SendMessageW(child(kFullscreen),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
+     SendMessageW(child(kFullscreen),CB_GETCURSEL,0,0)!=2 ||
      SendMessageW(child(kKeyboard),BM_GETCHECK,0,0)!=BST_UNCHECKED ||
      SendMessageW(child(kMute),BM_GETCHECK,0,0)!=BST_CHECKED) return 1;
  } else if(mode=="language-en" || mode=="language-tr") {

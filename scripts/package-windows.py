@@ -44,7 +44,7 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 General launcher preferences - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 display settings - ReXGlue v0.10.0\n\n"
         "GENERAL: Game folder, Launcher language, Game language and Button prompts.\n"
         "The folder and launcher-language controls appear only on General.\n"
         "Game languages: English, French, German, Spanish and Italian.\n"
@@ -76,7 +76,10 @@ def main():
         "GRAPHICS: GPU, output size, 720p / 1440p (2K) / 4K internal resolution, native 2x MSAA,\n"
         "FSR 1.0 / CAS sharpness, anisotropic filtering, FXAA and shader cache.\n"
         "FSR is spatial: choose 720p internal resolution for 720p to 1080p upscaling.\n"
-        "Fullscreen uses the desktop size; output window size is for windowed mode.\n"
+        "DISPLAY: Fullscreen, borderless or windowed. Fullscreen can switch monitor Hz.\n"
+        "Borderless uses the desktop resolution/Hz; windowed keeps desktop Hz.\n"
+        "FPS limit is independent, off by default, and does not unlock the game cap.\n"
+        "Selected Hz must be supported at the selected output resolution.\n"
         "AUDIO: Real master volume 0-100% and mute.\n"
         "CONTROLS: Edit any binding directly, or use its ... button to capture a key.\n"
         "Right-click a binding to unbind it or restore its action default.\n"
@@ -135,7 +138,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-general-launcher.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-display-settings.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

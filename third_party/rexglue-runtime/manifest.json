@@ -2,16 +2,17 @@
   "sdk_version": "0.10.0",
   "source_commit": "f5337cdc947ff6d4c4196737e2c807a48f2a1fc2",
   "archive": "rexglue-v0.10.0-spatial-fsr-windows-x64.zip",
-  "sha256": "82026cbc2e4dd2f8ad5842ffc9480fb2b4bef710e9ab8d2113572ebdd752e79f",
+  "sha256": "d70e1171afe6132f81a096d2be814763e24a2740dd9fedb497d93106735838bf",
   "dll_sha256": {
-    "rexruntime.dll": "9dcbd516981a7e477d13865903942f3260ee4bf6914ba638cd6ea33cfac95987",
-    "rexgpu-xenos.dll": "770fe6d2523d203097b06384720a727682ebeeed1795c7ccfd512b710110fc71"
+    "rexruntime.dll": "c185ddbe8dde344a422f315f90f7ac3b98b459a26863fbbdced8044fb02092e3",
+    "rexgpu-xenos.dll": "0e9df3d8479255eb4d01d86b11bbed3803af19c56cd726bd641e8408573c6110"
   },
   "features": [
     "D3D12 spatial FSR 1 (EASU + RCAS)",
     "CAS",
     "explicit guest video mode source priority",
     "shared SDL input observer API v1",
-    "scoped synchronous career livery resolve readback API v1"
+    "scoped synchronous career livery resolve readback API v1",
+    "shared SDL startup host display modes and monitor refresh API v1"
   ]
 }

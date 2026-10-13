@@ -35,7 +35,7 @@ struct App {
   HWND window{},path{},size{},backend{},language{},status{},title{},subtitle{},folder_label{},
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
-       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{};
+       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{};
   std::array<HWND,4> navigation{};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -48,6 +48,7 @@ struct App {
   std::vector<Adapter> adapters=HardwareAdapters();
   std::pair<int,int> display_maximum=HardwareDisplayMaximum(Get<int64_t>(config.table,"monitor",0));
   std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum);
+  std::vector<int> refresh_rates{0},fps_limits{0,30,60,90,120,144,165,180,240};
   int current_page=0,binding_index=0;
   bool filling_binding=false,capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{};
@@ -135,6 +136,19 @@ struct App {
     EnableWindow(sharpness,!process && SendMessageW(effect,CB_GETCURSEL,0,0)!=0);
     SetWindowTextW(sharp_value,(std::to_wstring(SendMessageW(sharpness,TBM_GETPOS,0,0))+L"%").c_str());
   }
+  void RefreshRates(int preferred=-1){
+    if(!refresh_rate || !size)return;
+    if(preferred<0){auto index=SendMessageW(refresh_rate,CB_GETCURSEL,0,0);preferred=index>=0 && index<static_cast<LRESULT>(refresh_rates.size())?refresh_rates[index]:0;}
+    auto index=SendMessageW(size,CB_GETCURSEL,0,0);auto output=index>=0 && index<static_cast<LRESULT>(dimensions.size())?dimensions[index]:std::pair{0,0};
+    refresh_rates=HardwareRefreshRates(output.first,output.second,Get<int64_t>(config.table,"monitor",0));
+    SendMessageW(refresh_rate,CB_RESETCONTENT,0,0);
+    for(auto rate:refresh_rates){auto label=rate?std::to_wstring(rate)+L" Hz":T(L"Automatic",L"Otomatik");SendMessageW(refresh_rate,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
+    const bool exclusive=SendMessageW(fullscreen,CB_GETCURSEL,0,0)==0;
+    auto found=std::find(refresh_rates.begin(),refresh_rates.end(),exclusive?preferred:0);
+    SendMessageW(refresh_rate,CB_SETCURSEL,found==refresh_rates.end()?0:std::distance(refresh_rates.begin(),found),0);
+    EnableWindow(refresh_rate,exclusive && !process);
+    EnableWindow(size,SendMessageW(fullscreen,CB_GETCURSEL,0,0)!=1 && !process);
+  }
   void FillRenderPresets(int selection=-1){
     if(selection<0)selection=static_cast<int>(SendMessageW(render_resolution,CB_GETCURSEL,0,0));
     SendMessageW(render_resolution,CB_RESETCONTENT,0,0);
@@ -157,7 +171,7 @@ struct App {
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
     for(int i=0;i<4;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):T(L"General",L"Genel"));
-    SetWindowTextW(fullscreen,T(L"Fullscreen",L"Tam ekran"));SetWindowTextW(vsync,L"VSync");
+    FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Keep aspect ratio",L"En-boy oranını koru"));
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
     SetWindowTextW(shader_cache,T(L"Shader cache",L"Shader önbelleği"));
@@ -174,6 +188,9 @@ struct App {
     FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS"});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
     FillRenderPresets();
+    auto fps_selection=SendMessageW(fps_limit,CB_GETCURSEL,0,0);SendMessageW(fps_limit,CB_RESETCONTENT,0,0);
+    for(auto rate:fps_limits){auto label=rate?std::to_wstring(rate)+L" FPS":T(L"No added limit",L"Ek sınır yok");SendMessageW(fps_limit,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
+    SendMessageW(fps_limit,CB_SETCURSEL,fps_selection<0?0:fps_selection,0);
     auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);SendMessageW(adapter,CB_RESETCONTENT,0,0);
     SendMessageW(adapter,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(T(L"Automatic (recommended)",L"Otomatik (önerilen)")));
     for(const auto& item:adapters)SendMessageW(adapter,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(item.name.c_str()));
@@ -182,7 +199,7 @@ struct App {
     for(auto [w,h]:dimensions){auto text=(w||h)?std::to_wstring(w)+L" × "+std::to_wstring(h):T(L"Automatic / desktop",L"Otomatik / masaüstü");
       SendMessageW(size,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
     SendMessageW(size,CB_SETCURSEL,selected<0?0:selected,0);
-    SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();
+    SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();RefreshRates();
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   bool CaptureKey(const MSG& message){
@@ -200,6 +217,12 @@ struct App {
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
     if(found==dimensions.end())found=dimensions.begin();
     SendMessageW(size,CB_SETCURSEL,std::distance(dimensions.begin(),found),0);
+    const auto mode=s.display_mode=="auto"?(s.fullscreen?"borderless":"windowed"):s.display_mode;
+    SendMessageW(fullscreen,CB_SETCURSEL,mode=="fullscreen"?0:mode=="windowed"?2:1,0);
+    RefreshRates(s.refresh_rate);
+    auto fps=std::find(fps_limits.begin(),fps_limits.end(),s.fps_limit);
+    if(fps==fps_limits.end()){fps_limits.push_back(s.fps_limit);auto text=std::to_wstring(s.fps_limit)+L" FPS";SendMessageW(fps_limit,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));fps=fps_limits.end()-1;}
+    SendMessageW(fps_limit,CB_SETCURSEL,std::distance(fps_limits.begin(),fps),0);
     int gpu_index=0;
     if(s.adapter!=-1){auto gpu=std::find_if(adapters.begin(),adapters.end(),[&](const Adapter& v){return v.index==s.adapter;});
       if(gpu==adapters.end()){adapters.push_back({s.adapter,L"DXGI adapter #"+std::to_wstring(s.adapter)});
@@ -216,7 +239,7 @@ struct App {
     SendMessageW(volume,TBM_SETPOS,TRUE,std::clamp(s.volume,0,100));
     SetWindowTextW(volume_value,(std::to_wstring(std::clamp(s.volume,0,100))+L"%").c_str());
     SendMessageW(sharpness,TBM_SETPOS,TRUE,s.effect=="cas"?static_cast<int>((std::isfinite(s.cas_sharpness)?std::clamp(s.cas_sharpness,0.0,1.0):0.0)*100):static_cast<int>(100-(std::isfinite(s.fsr_reduction)?std::clamp(s.fsr_reduction,0.0,2.0):0.2)*50));
-    for(auto [c,value]:{std::pair{fullscreen,s.fullscreen},{vsync,s.vsync},{keyboard,s.keyboard},{mute,s.mute},
+    for(auto [c,value]:{std::pair{vsync,s.vsync},{keyboard,s.keyboard},{mute,s.mute},
         {letterbox,s.letterbox},{dither,s.dither},{shader_cache,s.shader_cache},{msaa,s.msaa}})SetCheck(c,value);
     CancelCapture();filling_binding=true;edited_bindings=s.bindings;
     for(size_t i=0;i<kBindings.size();++i)SetWindowTextW(binding_fields[i],Wide(edited_bindings[i]).c_str());
@@ -235,7 +258,13 @@ struct App {
     s.anisotropic=SendMessageW(anisotropic,CB_GETCURSEL,0,0)-1;s.volume=SendMessageW(volume,TBM_GETPOS,0,0);
     if(mode==1)s.fsr_reduction=2.0-SendMessageW(sharpness,TBM_GETPOS,0,0)/50.0;
     if(mode==2)s.cas_sharpness=SendMessageW(sharpness,TBM_GETPOS,0,0)/100.0;
-    s.fullscreen=Checked(fullscreen);s.vsync=Checked(vsync);s.keyboard=Checked(keyboard);s.mute=Checked(mute);
+    auto display=SendMessageW(fullscreen,CB_GETCURSEL,0,0);
+    if(display<0 || display>2)throw std::runtime_error("Invalid display mode");
+    s.display_mode=display==0?"fullscreen":display==1?"borderless":"windowed";s.fullscreen=display!=2;
+    const auto refresh=SendMessageW(refresh_rate,CB_GETCURSEL,0,0),fps=SendMessageW(fps_limit,CB_GETCURSEL,0,0);
+    if(refresh<0 || refresh>=static_cast<LRESULT>(refresh_rates.size()) || fps<0 || fps>=static_cast<LRESULT>(fps_limits.size()))throw std::runtime_error("Invalid refresh rate or frame limit");
+    s.refresh_rate=display==0?refresh_rates[refresh]:0;s.fps_limit=fps_limits[fps];
+    s.vsync=Checked(vsync);s.keyboard=Checked(keyboard);s.mute=Checked(mute);
     s.letterbox=Checked(letterbox);s.dither=Checked(dither);s.msaa=Checked(msaa);s.shader_cache=Checked(shader_cache);
     auto aa=SendMessageW(post_effect,CB_GETCURSEL,0,0);s.post_effect=aa==1?"fxaa":aa==2?"fxaa_extreme":"none";
     const auto language_index=SendMessageW(game_language,CB_GETCURSEL,0,0);
@@ -260,12 +289,14 @@ struct App {
     LabelControl(0,L"DISPLAY",L"GÖRÜNTÜ",260,247,374);
     LabelControl(0,L"Graphics adapter",L"Ekran kartı",260,290,374);adapter=combo(0,260,316,374,kAdapter);
     LabelControl(0,L"Output window size",L"Çıkış pencere boyutu",260,364,374);size=combo(0,260,390,374,kSize);
-    fullscreen=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,443,175,28,kFullscreen);
-    vsync=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,456,443,175,28,kVsync);
-    letterbox=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,488,374,28,kLetterbox);
-    dither=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,533,374,28,kDither);
-    shader_cache=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,578,374,28,kShaderCache);
-    LabelControl(0,L"Fullscreen uses your desktop resolution.\nInternal resolution controls the rendered detail.",L"Tam ekran masaüstü çözünürlüğünü kullanır.\nİç çözünürlük, işlenen detay düzeyini belirler.",260,655,374,48);
+    LabelControl(0,L"Display mode",L"Ekran modu",260,438,374);fullscreen=combo(0,260,464,374,kFullscreen);
+    LabelControl(0,L"Refresh rate",L"Yenileme hızı",260,512,181);refresh_rate=combo(0,260,538,181,kRefreshRate);
+    LabelControl(0,L"FPS limit",L"FPS sınırı",453,512,181);fps_limit=combo(0,453,538,181,kFpsLimit);
+    vsync=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,583,374,28,kVsync);
+    letterbox=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,621,374,28,kLetterbox);
+    dither=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,659,374,28,kDither);
+    shader_cache=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,697,374,28,kShaderCache);
+    LabelControl(0,L"Borderless and windowed use the desktop Hz.\nFPS limit does not change the game timing.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır.\nFPS sınırı, oyunun zamanlama ayarını değiştirmez.",260,748,374,66);
     LabelControl(0,L"RENDER QUALITY",L"GÖRÜNTÜ KALİTESİ",696,247,374);
     LabelControl(0,L"Internal resolution",L"İç çözünürlük",696,290,374);render_resolution=combo(0,696,316,374,kRenderResolution);
     LabelControl(0,L"Texture filtering",L"Doku filtreleme",696,364,374);anisotropic=combo(0,696,390,374,kAnisotropic);
@@ -478,6 +509,7 @@ struct App {
         edited_bindings[id-kBindingBase]=Utf8(Text(binding_fields[id-kBindingBase]));
       }else if(id==kLanguage && event==CBN_SELCHANGE){
         turkish=SendMessageW(language,CB_GETCURSEL,0,0)==1;Localize();Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
+      }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
       }else if(id==kEffect && event==CBN_SELCHANGE){auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);
         SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==2?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");

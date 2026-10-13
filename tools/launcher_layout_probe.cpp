@@ -79,6 +79,31 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(app.GetControls().width==0 && app.GetControls().height==0,"Oversized saved window uses desktop automatically");
     app.display_maximum=saved_maximum;app.dimensions=WindowSizesFor(saved_maximum);app.Localize();app.SetControls(Settings{});
     app.Rescale(1);app.turkish=false;app.ShowPage(0);
+    for(auto [index,mode]:{std::pair{0,"fullscreen"},std::pair{1,"borderless"},std::pair{2,"windowed"}}){
+      SendMessageW(app.fullscreen,CB_SETCURSEL,index,0);app.Command(kFullscreen,CBN_SELCHANGE);
+      CheckUI(bool(IsWindowEnabled(app.refresh_rate))==(index==0),"Hz choice is active only for real fullscreen");
+      SendMessageW(app.fps_limit,CB_SETCURSEL,5,0);
+      auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+      const auto restored=Settings::Load(table);
+      CheckUI(restored.display_mode==mode && restored.fullscreen==(index!=2),"Display mode and legacy fullscreen survive round trip");
+      CheckUI(restored.fps_limit==144 && (index==0 || restored.refresh_rate==0),"FPS cap is independent of desktop Hz");
+      const auto args=Arguments(game,chosen,table);
+      CheckUI(std::count(args.begin(),args.end(),L"--display_mode="+Wide(mode))==1 && std::count(args.begin(),args.end(),L"--fps_limit=144")==1,"Mode and cap forwarded exactly once");
+      app.turkish=!app.turkish;app.Localize();
+      CheckUI(app.GetControls().display_mode==mode && app.GetControls().fps_limit==144,"Language change preserves mode and cap");
+      for(size_t hz=1;hz<app.refresh_rates.size() && index==0;++hz){
+        SendMessageW(app.refresh_rate,CB_SETCURSEL,hz,0);auto timed=app.GetControls();
+        CheckUI(timed.refresh_rate==app.refresh_rates[hz] && timed.fps_limit==144,"Hardware Hz can vary independently from FPS cap");
+      }
+    }
+    Settings legacy;legacy.fullscreen=false;app.SetControls(legacy);
+    CheckUI(app.GetControls().display_mode=="windowed","Legacy fullscreen=false migrates to windowed");
+    legacy.fullscreen=true;app.SetControls(legacy);
+    CheckUI(app.GetControls().display_mode=="borderless","Legacy fullscreen=true preserves desktop fullscreen");
+    Settings custom_rate;custom_rate.fps_limit=72;app.SetControls(custom_rate);app.Localize();
+    CheckUI(app.GetControls().fps_limit==72,"Custom saved cap survives localization");
+    app.Running(false);CheckUI(!IsWindowEnabled(app.refresh_rate),"Game exit keeps borderless Hz disabled");
+    app.SetControls(Settings{});
     for(unsigned preset=0;preset<kRenderPresets.size();++preset){
       SendMessageW(app.render_resolution,CB_SETCURSEL,preset,0);auto s=app.GetControls();
       CheckUI(RenderDimensions(s)==std::pair{kRenderPresets[preset].width,kRenderPresets[preset].height},"UI preset maps to exact render dimensions");

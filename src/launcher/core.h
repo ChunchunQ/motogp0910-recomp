@@ -133,11 +133,11 @@ class Config {
 };
 struct Settings {
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
-  int guest_width=0,guest_height=0,game_language=1;
+  int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
-  std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto";
+  std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto", display_mode = "auto";
   std::array<std::string,kBindings.size()> bindings{};
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
@@ -147,6 +147,9 @@ struct Settings {
     s.guest_width=Get<int64_t>(t,"video_mode_width",0);
     s.guest_height=Get<int64_t>(t,"video_mode_height",0);
     s.fullscreen = Get(t, "fullscreen", true);
+    s.display_mode=Get(t,"display_mode",std::string("auto"));
+    if(s.display_mode!="auto")s.fullscreen=s.display_mode!="windowed";
+    s.refresh_rate=Get<int64_t>(t,"host_refresh_rate",0);s.fps_limit=Get<int64_t>(t,"fps_limit",0);
     s.vsync = Get(t, "vsync", true);
     s.keyboard = Get(t, "mnk_mode", true);
     s.mute = Get(t, "audio_mute", false);
@@ -181,6 +184,8 @@ struct Settings {
        !std::isfinite(fsr_reduction) || fsr_reduction<0 || fsr_reduction>2 ||
        !std::isfinite(cas_sharpness) || cas_sharpness<0 || cas_sharpness>1 ||
        (backend!="sdl" && backend!="xinput") ||
+       refresh_rate<0 || refresh_rate>1000 || fps_limit<0 || fps_limit>1000 ||
+       (display_mode!="auto" && display_mode!="fullscreen" && display_mode!="borderless" && display_mode!="windowed") ||
        (game_language!=1 && game_language!=3 && game_language!=4 && game_language!=5 && game_language!=6) ||
        (prompt_style!="auto" && prompt_style!="playstation" && prompt_style!="xbox" && prompt_style!="keyboard") ||
        (effect!="bilinear" && effect!="cas" && effect!="fsr") ||
@@ -199,6 +204,7 @@ struct Settings {
     if(guest_width)Put(t,"video_mode_width",guest_width);
     if(guest_height)Put(t,"video_mode_height",guest_height);
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
+    Put(t,"display_mode",display_mode);Put(t,"host_refresh_rate",refresh_rate);Put(t,"fps_limit",fps_limit);
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
     Put(t, "input_backend", backend); Put(t, "present_effect", effect);
     Put(t, "button_prompt_style", prompt_style);

@@ -3,6 +3,7 @@
 #include "button_prompt_input.h"
 #include "button_prompt_mapping.h"
 #include "ps3_prompt_textures.h"
+#include "frame_pacing.h"
 
 #include <rex/cvar.h>
 #include <rex/hook.h>
@@ -267,6 +268,7 @@ REX_HOOK_RAW(sub_82284DB0) {
   __imp__sub_82284DB0(ctx,base);
 }
 REX_HOOK_RAW(sub_823D1008) {
+  motogp::PaceGameFrame();
   using namespace motogp::prompts;
   if(ready.load(std::memory_order_relaxed)) {
     active.SetKeyboardEnabled(rex::cvar::Query<bool>("mnk_mode"));

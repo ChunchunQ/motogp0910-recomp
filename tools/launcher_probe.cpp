@@ -54,6 +54,15 @@ int wmain(int argc,wchar_t** argv) {
     Check(actual.adapter==0,"GPU index round trip");
     Check(actual.prompt_style=="playstation","Manual PS prompts preserved with XInput backend");
     Check(std::abs(actual.fsr_reduction-0.54)<0.00001, "FSR strength round trip");
+    for(const auto* mode:{"fullscreen","borderless","windowed"}){
+      auto display=actual;display.display_mode=mode;display.fullscreen=display.display_mode!="windowed";
+      display.refresh_rate=120;display.fps_limit=72;toml::table table;display.Store(table);
+      auto roundtrip=Settings::Load(table);
+      Check(roundtrip.display_mode==mode && roundtrip.refresh_rate==120 && roundtrip.fps_limit==72,"Host Hz and FPS cap remain independent after save/load");
+      auto cli=Arguments(base,display,table);
+      for(auto arg:{L"--display_mode="+Wide(mode),std::wstring(L"--host_refresh_rate=120"),std::wstring(L"--fps_limit=72")})
+        Check(std::count(cli.begin(),cli.end(),arg)==1,"Display setting CLI forwarded once");
+    }
     Check(ValidBinding("Ctrl+K,Space") && ValidBinding("Shift+Up") && ValidBinding(""), "Valid SDK mapping syntax");
     Check(!ValidBinding("Shift") && !ValidBinding("enter") && !ValidBinding("Ctrl+") && !ValidBinding("Space,"), "Silent or malformed mappings rejected");
     auto invalid_settings=actual;invalid_settings.bindings[0]="enter";

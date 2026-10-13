@@ -22,6 +22,9 @@ function table for the runtime’s own SDL instance. This is necessary because
 Windows SDK consumers otherwise link an independent static SDL instance,
 whose event watches cannot observe the game’s controller input. The bridge
 is added by the same CMake include, without changing the existing C++ ABI.
+It also exports `Motogp_ConfigureHostDisplay` v1 to select an actual SDL
+fullscreen mode/Hz, desktop borderless, or windowed mode on the UI thread.
+Invalid or unsupported modes are rejected before changing the window.
 
 `cmake/sdk-livery-readback.patch` and `src/livery_readback_bridge.cpp` add
 a scoped synchronous resolve readback override. The game enters this scope

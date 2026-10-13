@@ -19,6 +19,8 @@ set(MOTOGP0910_SOURCES
     src/physics_assets.cpp
     src/livery_readback.cpp
     src/game_language.cpp
+    src/frame_pacing.cpp
+    src/display_settings.cpp
 )
 
 if(WIN32)
@@ -35,8 +37,11 @@ if(WIN32)
         $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
     target_link_libraries(launcher_layout_probe PRIVATE user32 shell32 ole32 comctl32 bcrypt uuid dxgi gdiplus gdi32 dwmapi uxtheme)
     rexglue_apply_target_settings(launcher_layout_probe)
-    add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp)
+    add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp src/frame_pacing.cpp src/display_settings.cpp)
     target_link_libraries(launcher_probe PRIVATE rex::runtime shell32 bcrypt)
+    add_executable(display_settings_probe EXCLUDE_FROM_ALL tools/display_settings_probe.cpp src/frame_pacing.cpp src/display_settings.cpp)
+    target_link_libraries(display_settings_probe PRIVATE rex::runtime user32)
+    rexglue_apply_target_settings(display_settings_probe)
     add_executable(launcher_runtime_probe EXCLUDE_FROM_ALL tools/launcher_runtime_probe.cpp)
     target_link_libraries(launcher_runtime_probe PRIVATE rex::runtime)
     target_compile_definitions(launcher_runtime_probe PRIVATE REX_HAS_FIDELITYFX_SDK=1)
@@ -78,10 +83,10 @@ if(TARGET motogp0910_recomp)
     target_include_directories(physics_asset_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(physics_asset_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(physics_asset_probe)
-    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp)
+    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
@@ -91,7 +96,7 @@ if(TARGET motogp0910_recomp)
         target_link_libraries(button_prompt_gpu_probe PRIVATE xinput)
     endif()
     add_executable(button_prompt_probe EXCLUDE_FROM_ALL
-        tools/button_prompt_probe.cpp src/button_prompts.cpp src/ps3_prompt_textures.cpp)
+        tools/button_prompt_probe.cpp src/button_prompts.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_include_directories(button_prompt_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_probe)
@@ -130,7 +135,7 @@ endforeach()
 if(WIN32)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -140,7 +145,7 @@ if(WIN32)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe livery_readback_probe input_defaults_probe launcher_runtime_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File

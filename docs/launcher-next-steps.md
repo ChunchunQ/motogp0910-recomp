@@ -14,20 +14,26 @@ Completed:
 - Output-size list capped to native monitor dimensions, independently of the
   internal rendering resolution.
 
+- Fullscreen / borderless / windowed, real host fullscreen Hz and an independent
+  optional FPS cap. Windows/Wine window and configuration tests passed.
+
 Remaining, in increasing complexity:
-1. Fullscreen / borderless / windowed, real monitor Hz and a separate FPS cap.
-   The user explicitly wants Hz and FPS as separate settings.
 2. Aspect ratio: auto / 4:3 / 16:9 / 21:9 / 32:9. Clarify camera/FOV versus
    presentation-only behavior before implementing if uncertain.
+   Confirmed: preserve Auto / 16:9 now; test real ultrawide at the end of the queue.
 3. An Advanced menu with actual MotoGP engine settings. The supplied Downpour
    example includes motion blur, bloom, ambient occlusion, light shafts,
    distortion, lens flares, fog, radial blur, shadow quality/resolution,
    anisotropy, detail/LOD, decals and dynamic lights. MotoGP is not UE3;
    only verified equivalent controls should be offered.
 4. FSR 2/3 upscaling: verify the temporal backend and required title inputs.
-5. Frame generation, if feasible, as an independent checkbox, default off.
-   Upscaling must work with frame generation unchecked. The current release
-   implements spatial FSR 1 and CAS; it does not claim FSR 2/3 or frame generation.
+5. Frame generation dropped: v0.10.0 explicitly disables its FidelityFX
+   frame-generation provider and the presenter has no frame-interpolation path.
+   The user asked to abandon this if no working integration is available.
+   The current release implements spatial FSR 1 and CAS; it does not claim FSR 2/3.
+
+While the user is away, suspend ambiguous work, continue independent tasks,
+and perform a consolidated verification at the end.
 
 Keep ReXGlue v0.10.0 pinned and preserve the career, collision and PS3/replay
 repairs. Generated filenames remain English. Do not commit preview screenshots.

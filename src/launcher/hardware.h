@@ -71,4 +71,21 @@ inline std::pair<int,int> HardwareDisplayMaximum(int monitor_index=0) {
   if(EnumDisplaySettingsW(device.DeviceName,ENUM_CURRENT_SETTINGS,&mode))return {static_cast<int>(mode.dmPelsWidth),static_cast<int>(mode.dmPelsHeight)};
   return {GetSystemMetrics(SM_CXSCREEN),GetSystemMetrics(SM_CYSCREEN)};
 }
+inline std::vector<int> HardwareRefreshRates(int width,int height,int monitor_index=0) {
+  std::vector<DISPLAY_DEVICEW> displays;
+  for(DWORD i=0;;++i){DISPLAY_DEVICEW device{};device.cb=sizeof(device);
+    if(!EnumDisplayDevicesW(nullptr,i,&device,0))break;
+    if((device.StateFlags&DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) && !(device.StateFlags&DISPLAY_DEVICE_MIRRORING_DRIVER))displays.push_back(device);}
+  std::stable_sort(displays.begin(),displays.end(),[](const auto& a,const auto& b){return bool(a.StateFlags&DISPLAY_DEVICE_PRIMARY_DEVICE)>bool(b.StateFlags&DISPLAY_DEVICE_PRIMARY_DEVICE);});
+  std::vector<int> rates{0};if(displays.empty())return rates;
+  const auto index=monitor_index>0 && monitor_index<=static_cast<int>(displays.size())?monitor_index-1:0;
+  DEVMODEW desktop{};desktop.dmSize=sizeof(desktop);
+  if(!EnumDisplaySettingsW(displays[index].DeviceName,ENUM_CURRENT_SETTINGS,&desktop))return rates;
+  if(!width)width=desktop.dmPelsWidth;if(!height)height=desktop.dmPelsHeight;
+  for(DWORD i=0;;++i){DEVMODEW mode{};mode.dmSize=sizeof(mode);
+    if(!EnumDisplaySettingsW(displays[index].DeviceName,i,&mode))break;
+    if(mode.dmPelsWidth==static_cast<DWORD>(width) && mode.dmPelsHeight==static_cast<DWORD>(height) && mode.dmDisplayFrequency>=24 && mode.dmDisplayFrequency<=1000 &&
+       !(mode.dmDisplayFlags&DM_INTERLACED))rates.push_back(mode.dmDisplayFrequency);}
+  std::sort(rates.begin(),rates.end());rates.erase(std::unique(rates.begin(),rates.end()),rates.end());return rates;
+}
 } // namespace launcher

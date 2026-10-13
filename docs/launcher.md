@@ -4,7 +4,7 @@ Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
 The interface uses charcoal cards with amber/red accents inspired by the MotoGP
 09/10 cover palette, an original vector racing ribbon and sidebar navigation.
 No reference launcher design, source code or artwork is copied.
-The default language is English; **Language / Dil → Türkçe** switches the whole
+The default language is English; **General → Launcher language → Türkçe** switches the whole
 interface immediately and retains the choice in `motogp0910-launcher.toml`.
 File names stay English. No CMD file is required.
 
@@ -14,7 +14,10 @@ File names stay English. No CMD file is required.
 | --- | --- |
 | GPU selection | Automatic or a named DXGI hardware adapter; original adapter indices are retained |
 | Native 2× MSAA | Existing SDK native MSAA toggle, enabled by default |
-| Output window size | Automatic or 720p through 4K; fullscreen uses the desktop display size |
+| Output window size | Automatic or common sizes limited by the monitor native dimensions; borderless uses desktop size |
+| Display mode | Fullscreen with a selected monitor mode, desktop borderless, or windowed |
+| Refresh rate | Actual host Hz for fullscreen; desktop Hz in borderless/windowed |
+| FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change guest timing |
 | Internal resolution | 720p (native), 1440p / 2K, or 4K; exact 1× / 2× / 3× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
 | AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
@@ -174,3 +177,27 @@ across all four pages, English/Turkish and 75–150% UI scales. The output tests
 include 1080p, 1366x768, ultrawide and 4K monitor limits. These tests do not check
 a physical monitor's EDID or game text rendering on a Windows GPU. No new
 screenshots are stored in the repository.
+
+
+## Display modes, monitor Hz and FPS cap
+
+The matching v0.10.0 runtime uses its own SDL instance to select a real host
+fullscreen resolution/refresh mode. Only the monitor's reported Hz values for
+the selected resolution appear in the launcher. Automatic selects a supported
+mode near the desktop rate; unsupported explicit requests are rejected.
+Borderless uses desktop resolution and Hz; windowed keeps desktop Hz.
+The refresh control is disabled in these two modes, and output size is disabled
+for borderless. SDL restores the display mode when fullscreen ends.
+
+The optional FPS cap sleeps at the title's native presentation boundary
+(`0x823D1008`, which invokes `VdSwap`). It leaves video_mode_refresh_rate,
+physics constants and game speed settings alone. Zero adds no limit. This cap
+cannot remove an existing in-game/VSync limit. Previously saved fullscreen
+booleans migrate to their existing borderless/windowed behavior.
+
+Validation: 33 pacing and real SDL/Win32 window checks passed under Wine/Xvfb,
+including borderless desktop bounds, fullscreen at the desktop mode, restoration
+of windowed decorations and rejection of unsupported modes. Physical 60/144 Hz
+monitor switching and Windows GPU gameplay are not verified by a virtual desktop.
+The four-page bilingual UI passed 46,119 layout/configuration assertions.
+86 launcher integration checks and 140 runtime planner checks passed.
