@@ -64,17 +64,45 @@ code generator and existing C++ plugin ABI remain unchanged.
 
 ## Validation
 
-- Linux: 44 real-XEX native draw/vertex/ABI checks and 43 binding/SDL virtual
-  controller checks passed.
-- Windows PE under Wine: 44 native draw and 45 input/binding checks passed.
-  The input probe also verifies that SDL function
-  pointers belong to rexruntime.dll. Virtual Sony/Xbox devices exercise
-  real event watches, drift rejection, keyboard priority, focus and removal.
-- Existing launcher/runtime/game CPU probes passed: 58 / 140 / 50 checks.
+The optional probes exercise the shipped production implementation and actual
+v0.10.0 runtime, using virtual Sony/Xbox gamepads. No physical controller is
+needed for these checks.
 
-These checks are not a Windows GPU gameplay test. Physical DualSense
-recognition and menu/race prompt appearance are to be tested locally.
+| Probe | Linux | Windows PE / Wine |
+| --- | ---: | ---: |
+| Native draw, guest vertices and PPC ABI | 44 | 44 |
+| Binding, gamepad events, deadzones and hotplug | 90 | 92 |
+| Production window observer and style selection | 171 | 171 |
 
-Build the optional probes with CMake targets `button_prompt_probe` and
-`button_prompt_input_probe`; pass the prepared 0.0.1.1 XEX directory to the
-former. The latter creates virtual controllers and needs no physical pad.
+The Windows input probe also verifies that SDL function pointers belong to
+rexruntime.dll. Existing launcher/runtime/game CPU probes previously passed
+58 / 140 / 50 checks with the same game EXE and runtime pair.
+
+The window probe uses the actual SDK window and production observers. It
+passes events through the SDK's window handlers, rather than calling the
+keyboard observer directly. All six directed Xbox/PlayStation/keyboard
+transitions are exercised eight times. Additional checks cover held pads,
+modifier-only keys, keyboard/mouse disable settings, zero mouse deltas,
+focus loss/return, all three fixed styles, returning to auto and observer
+removal during shutdown. The input probe checks positive/negative deadzone
+boundaries on all four stick axes, idle hotplug, inactive removal,
+reconnection and fallback with keyboard disabled.
+
+These are CPU/runtime event-routing checks, not a Windows GPU gameplay test
+or physical USB/Bluetooth DualSense recognition. The extended checks found
+no production defect and did not change the delivered game EXE or DLLs.
+
+Build optional targets:
+
+```sh
+cmake --build out/build/linux-amd64-release --target button_prompt_probe button_prompt_input_probe button_prompt_window_probe -j4
+out/build/linux-amd64-release/button_prompt_probe assets/game-tu
+out/build/linux-amd64-release/button_prompt_input_probe
+# A valid X display is required for the real SDK window:
+DISPLAY=:0 out/build/linux-amd64-release/button_prompt_window_probe
+```
+
+Use your active display instead of :0 when different. Windows builds expose
+the same CMake targets; run the resulting EXEs from PowerShell. Pass the
+prepared 0.0.1.1 XEX directory only to button_prompt_probe. Window/input
+probes create virtual controllers themselves and need no game data.
