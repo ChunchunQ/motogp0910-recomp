@@ -7,7 +7,10 @@
 #include <bcrypt.h>
 #include <toml++/toml.hpp>
 
+#include <algorithm>
+#include <cmath>
 #include <array>
+#include "keyboard_bindings.h"
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -128,9 +131,13 @@ class Config {
   }
 };
 struct Settings {
-  int width = 0, height = 0;
+  int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
-  std::string backend = "sdl";
+  bool letterbox = true, dither = false, shader_cache = true, msaa = true;
+  double fsr_reduction = 0.2, cas_sharpness = 0.0;
+  std::string backend = "sdl", effect = "bilinear", post_effect = "none";
+  std::array<std::string,kBindings.size()> bindings{};
+  Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
     Settings s;
     s.width = Get<int64_t>(t, "window_width", 0);
@@ -139,14 +146,61 @@ struct Settings {
     s.vsync = Get(t, "vsync", true);
     s.keyboard = Get(t, "mnk_mode", true);
     s.mute = Get(t, "audio_mute", false);
+    s.letterbox = Get(t, "present_letterbox", true);
+    s.dither = Get(t, "present_dither", false);
+    s.shader_cache = Get(t, "store_shaders", true);
+    s.msaa = Get(t, "native_2x_msaa", true);
+    s.post_effect = Get(t, "swap_post_effect", std::string("none"));
     s.backend = Get(t, "input_backend", std::string("sdl"));
+    s.effect = Get(t, "present_effect", std::string("bilinear"));
+    s.scale_x = Get<int64_t>(t, "draw_resolution_scale_x", 1);
+    s.scale_y = Get<int64_t>(t, "draw_resolution_scale_y", 1);
+    // The SDK's single-value alias takes precedence only if actually changed.
+    const auto uniform = Get<int64_t>(t, "resolution_scale", 1);
+    if(uniform>1) s.scale_x=s.scale_y=static_cast<int>(uniform);
+    s.anisotropic = Get<int64_t>(t, "anisotropic_override", 3);
+    s.volume = Get<int64_t>(t, "audio_master_volume", 100);
+    s.adapter = Get<int64_t>(t, "d3d12_adapter", -1);
+    s.fsr_reduction = Get(t, "present_fsr_sharpness_reduction", 0.2);
+    s.cas_sharpness = Get(t, "present_cas_additional_sharpness", 0.0);
+    for(size_t i=0;i<s.bindings.size();++i)
+      s.bindings[i]=Get(t,kBindings[i].key,std::string(kBindings[i].defaults));
     return s;
   }
+  void Validate() const {
+    if(width<0 || height<0 || width>8192 || height>8192 ||
+       scale_x<1 || scale_x>8 || scale_y<1 || scale_y>8 ||
+       adapter < -2 || anisotropic < -1 || anisotropic>5 || volume<0 || volume>100 ||
+       !std::isfinite(fsr_reduction) || fsr_reduction<0 || fsr_reduction>2 ||
+       !std::isfinite(cas_sharpness) || cas_sharpness<0 || cas_sharpness>1 ||
+       (backend!="sdl" && backend!="xinput") ||
+       (effect!="bilinear" && effect!="cas" && effect!="fsr") ||
+       (post_effect!="none" && post_effect!="fxaa" && post_effect!="fxaa_extreme"))
+      throw Error(L"Unsupported settings value. Choose a supported option or restore defaults.",
+                  L"Desteklenmeyen ayar değeri. Desteklenen bir seçenek seç veya varsayılanlara dön.");
+    for(size_t i=0;i<bindings.size();++i) if(!ValidBinding(bindings[i]))
+      throw Error(L"Invalid binding for "+std::wstring(kBindings[i].english)+
+          L". Use names such as Space, Return or Shift+Up; separate alternatives with commas.",
+          L"Geçersiz tuş: "+std::wstring(kBindings[i].turkish)+
+          L". Space, Return veya Shift+Up gibi adlar kullan; alternatifleri virgülle ayır.");
+  }
   void Store(toml::table& t) const {
+    Validate();
     Put(t, "window_width", width); Put(t, "window_height", height);
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
-    Put(t, "input_backend", backend);
+    Put(t, "input_backend", backend); Put(t, "present_effect", effect);
+    Put(t, "draw_resolution_scale_x", scale_x); Put(t, "draw_resolution_scale_y", scale_y);
+    // Reset the alias so it cannot override the two edited axes.
+    Put(t, "resolution_scale", 1);
+    Put(t, "d3d12_adapter", adapter);
+    Put(t, "anisotropic_override", anisotropic); Put(t, "audio_master_volume", volume);
+    Put(t, "present_letterbox", letterbox); Put(t, "present_dither", dither);
+    Put(t, "native_2x_msaa", msaa);
+    Put(t, "store_shaders", shader_cache); Put(t, "swap_post_effect", post_effect);
+    Put(t, "present_fsr_sharpness_reduction", fsr_reduction);
+    Put(t, "present_cas_additional_sharpness", cas_sharpness);
+    for(size_t i=0;i<bindings.size();++i) Put(t,kBindings[i].key,bindings[i]);
   }
 };
 inline fs::path ResolveGameRoot(const fs::path& exe, const toml::table& t) {
@@ -230,6 +284,26 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
       std::wstring(L"--mnk_mode=") + (s.keyboard ? L"true" : L"false"),
       std::wstring(L"--audio_mute=") + (s.mute ? L"true" : L"false"),
       L"--input_backend=" + Wide(s.backend)};
+  // Forward every managed setting with command-line priority, including mappings.
+  toml::table managed; s.Store(managed);
+  for(const auto& [key,node]:managed) {
+    const auto name=std::string(key.str());
+    if(name=="window_width" || name=="window_height" || name=="fullscreen" || name=="vsync" ||
+       name=="mnk_mode" || name=="audio_mute" || name=="input_backend") continue;
+    std::string value;
+    if(auto string=node.value<std::string>()) value=*string;
+    else if(auto boolean=node.value<bool>()) value=*boolean?"true":"false";
+    else if(auto integer=node.value<int64_t>()) value=std::to_string(*integer);
+    else if(auto number=node.value<double>()) value=std::to_string(*number);
+    args.push_back(L"--"+Wide(name)+L"="+Wide(value));
+  }
+  // FSR 1 is spatial: upscale the native 720p image to the selected host
+  // output rather than silently raising the guest display mode to match it.
+  // Keep an explicit custom guest mode from the user's TOML if present.
+  if(s.effect=="fsr") {
+    args.push_back(L"--video_mode_width="+std::to_wstring(Get<int64_t>(config,"video_mode_width",1280)));
+    args.push_back(L"--video_mode_height="+std::to_wstring(Get<int64_t>(config,"video_mode_height",720)));
+  }
   // These paths are resolved before SDK TOML loading. Forward existing custom
   // roots rather than accidentally changing a user's save/cache location.
   for (const auto* key : {"user_data_root", "cache_root", "update_data_root", "metadata_root"}) {

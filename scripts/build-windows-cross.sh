@@ -11,6 +11,7 @@ cmake -S . -B out/build/windows-cross-release -G Ninja \
   -DCMAKE_PREFIX_PATH=/workspace/shared/rexglue-win-sdk/win-amd64
 cmake --build out/build/windows-cross-release \
   --target motogp0910 motogp0910-launcher motogp_headless_probe --parallel 4
+python3 scripts/stage-spatial-runtime.py out/build/windows-cross-release
 python3 - <<'PY'
 from pathlib import Path
 import shutil

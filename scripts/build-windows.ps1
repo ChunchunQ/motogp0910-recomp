@@ -139,6 +139,7 @@ try {
         Copy-Item -LiteralPath $_.FullName -Destination $ExeDirectory -Force
     }
     Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--target', 'motogp_headless_probe', '--parallel', "$Jobs")
+    & (Join-Path $PSScriptRoot 'stage-spatial-runtime.ps1') -Destination $ExeDirectory
     Invoke-Native -Command (Join-Path $ExeDirectory 'motogp_headless_probe.exe') -Arguments @($Staged)
     Write-Host 'Windows build complete. Executable: out/build/win-amd64-release/motogp0910.exe'
     Write-Host 'Gameplay has not been validated. See README.md for full game data and patch requirements.'

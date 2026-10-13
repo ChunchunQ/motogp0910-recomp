@@ -1,0 +1,15 @@
+{
+  "sdk_version": "0.10.0",
+  "source_commit": "f5337cdc947ff6d4c4196737e2c807a48f2a1fc2",
+  "archive": "rexglue-v0.10.0-spatial-fsr-windows-x64.zip",
+  "sha256": "1d6e697c6688dcc861b3a63ab33c852285d7679729596b156f3a2c66f8b4e291",
+  "dll_sha256": {
+    "rexruntime.dll": "013d5a236339072280ba6e6599b9a0bbe7158b74ae8f484ffc424194b8fd84d5",
+    "rexgpu-xenos.dll": "eee3a11cb623959731f574f8a54621f9d335979e135c4c1d64746145e97a64ab"
+  },
+  "features": [
+    "D3D12 spatial FSR 1 (EASU + RCAS)",
+    "CAS",
+    "explicit guest video mode source priority"
+  ]
+}

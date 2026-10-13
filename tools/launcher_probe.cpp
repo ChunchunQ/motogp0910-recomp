@@ -1,6 +1,7 @@
 // Windows integration checks for settings preservation and actual child launch.
 #include "../src/launcher/core.h"
 #include <rex/cvar.h>
+#include "../src/audio_settings.h"
 #include <shellapi.h>
 #include <iostream>
 using namespace launcher;
@@ -40,12 +41,22 @@ int wmain(int argc,wchar_t** argv) {
     Write(file,original); Config config(file);
     Check(Settings::Load(config.table).width==1600,"Nested SDK key loading");
     Check(Settings::Load(config.table).mute,"Nested audio loading");
-    Settings settings;settings.width=1920;settings.height=1080;settings.fullscreen=false;
+    Settings settings=Settings::Load(config.table);settings.width=1920;settings.height=1080;settings.fullscreen=false;
     settings.backend="xinput";settings.keyboard=false;settings.mute=true;
+    settings.effect="fsr";settings.scale_x=2;settings.scale_y=3;settings.volume=37;
+    settings.fsr_reduction=0.54;settings.anisotropic=5;settings.post_effect="fxaa";settings.adapter=0;
     settings.Store(config.table);Put(config.table,"game_data_root",Utf8(unicode));config.Save();
     Config restored(file);auto actual=Settings::Load(restored.table);
     Check(actual.width==1920 && actual.height==1080,"Window setting round trip");
     Check(!actual.fullscreen && actual.vsync && !actual.keyboard && actual.mute && actual.backend=="xinput","Boolean/input round trip");
+    Check(actual.effect=="fsr" && actual.scale_x==2 && actual.scale_y==3 && actual.volume==37 && actual.anisotropic==5 && actual.post_effect=="fxaa", "Advanced settings round trip");
+    Check(actual.adapter==0,"GPU index round trip");
+    Check(std::abs(actual.fsr_reduction-0.54)<0.00001, "FSR strength round trip");
+    Check(ValidBinding("Ctrl+K,Space") && ValidBinding("Shift+Up") && ValidBinding(""), "Valid SDK mapping syntax");
+    Check(!ValidBinding("Shift") && !ValidBinding("enter") && !ValidBinding("Ctrl+") && !ValidBinding("Space,"), "Silent or malformed mappings rejected");
+    auto invalid_settings=actual;invalid_settings.bindings[0]="enter";
+    bool invalid_rejected=false;try{toml::table temporary;invalid_settings.Store(temporary);}catch(const Error&){invalid_rejected=true;}
+    Check(invalid_rejected,"Invalid mappings cannot be saved");
     Check(Get(restored.table,"custom_flag",int64_t(0))==42,"Unknown key preserved");
     Check(Get(restored.table,"keybind_a",std::string{})=="K","Custom key binding preserved");
     Check(Get(restored.table,"user_data_root",std::string{})=="D:\\Existing saves","Save path preserved");
@@ -60,6 +71,12 @@ int wmain(int argc,wchar_t** argv) {
     Check(!rex::cvar::Query<bool>("fullscreen") && rex::cvar::Query<bool>("vsync"),"Actual SDK display flags");
     Check(rex::cvar::Query<std::string>("input_backend")=="xinput" && !rex::cvar::Query<bool>("mnk_mode"),"Actual SDK input flags");
     Check(rex::cvar::Query<bool>("audio_mute"),"Actual SDK mute flag");
+    Check(rex::cvar::Query<std::string>("present_effect")=="fsr" && rex::cvar::Query<int32_t>("anisotropic_override")==5, "Actual SDK graphics flags");
+    Check(rex::cvar::Query<int32_t>("draw_resolution_scale_x")==2 && rex::cvar::Query<int32_t>("draw_resolution_scale_y")==3, "Actual SDK render scales");
+    Check(rex::cvar::Query<int32_t>("d3d12_adapter")==0,"Actual SDK GPU selection flag");
+    Check(rex::cvar::Query<bool>("native_2x_msaa"), "Actual SDK native MSAA flag");
+    Check(rex::cvar::Query<std::string>("swap_post_effect")=="fxaa" && rex::cvar::Query<bool>("store_shaders"), "Actual SDK FXAA/cache flags");
+    Check(rex::cvar::Query<int32_t>("audio_master_volume")==37, "Game volume cvar loaded");
     Write(file,"custom_flag = 77\n"); bool rejected=false;
     try{config.Save();}catch(const Error&){rejected=true;}
     Check(rejected && ReadFile(file)=="custom_flag = 77\n","Concurrent edit protected");

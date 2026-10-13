@@ -4,6 +4,7 @@ from pathlib import Path
 import hashlib
 import shutil
 import zipfile
+import json
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "out/build/windows-cross-release"
@@ -21,6 +22,10 @@ def main():
         shutil.rmtree(STAGE)
     STAGE.mkdir(parents=True, exist_ok=True)
     DIST.mkdir(parents=True, exist_ok=True)
+    manifest = json.loads((ROOT / "third_party/rexglue-runtime/manifest.json").read_text())
+    for name, expected in manifest["dll_sha256"].items():
+        if hashlib.sha256((BUILD / name).read_bytes()).hexdigest() != expected:
+            raise SystemExit(f"Runtime mismatch: {name}; stage the spatial FSR pair first")
     for name in ("motogp0910.exe", "motogp0910-launcher.exe", *RUNTIME):
         source = BUILD / name
         if not source.is_file():
@@ -34,8 +39,10 @@ def main():
     shutil.copy2(controller_db / "gamecontrollerdb.txt", STAGE / "gamecontrollerdb.txt")
     shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/tomlplusplus-LICENSE.txt", STAGE / "licenses/tomlplusplus-LICENSE.txt")
+    shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
+    shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 launcher - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 advanced launcher - ReXGlue v0.10.0\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
         "2. Tum orijinal oyun dosyalarini game altklasorune koy:\n"
         "   game/default.xex, game/xenondata/, game/nxeart/ ve diger disk dosyalari.\n"
@@ -44,6 +51,17 @@ def main():
         "4. motogp0910-launcher.exe dosyasini ac, ayarlarini sec ve PLAY'e bas.\n"
         "   Arayuz varsayilan olarak Ingilizcedir; Language / Dil menusunden Turkce secilebilir.\n"
         "   Dil secimi sonraki acilislarda korunur. Derleme gerekmez.\n\n"
+        "GRAPHICS: GPU, output size, internal X/Y scale, native 2x MSAA,\n"
+        "FSR 1.0 / CAS sharpness, anisotropic filtering, FXAA and shader cache.\n"
+        "FSR is spatial: use 1x internal scale for native 720p to 1080p upscaling.\n"
+        "Fullscreen uses the desktop size; output window size is for windowed mode.\n"
+        "AUDIO: Real master volume 0-100% and mute.\n"
+        "CONTROLS: Select a row; edit the binding or click Press a key.\n"
+        "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
+        "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
+        "Keep both runtime DLLs: this modified v0.10.0 pair enables spatial FSR.\n"
+        "In-game PlayStation/keyboard prompt replacement is not implemented yet.\n"
+        "Windows GPU rendering with the new options still needs local testing.\n\n"
         "Klavye ve gamepad icin dogrudan motogp0910.exe dosyasini ac; CMD gerekmez.\n"
         "Enter=Start, Space=A, Backspace=B, W/S/A/D=sol stick, Shift+oklar=D-pad.\n"
         "Klavye varsayilan olarak aciktir. Ozel mnk_mode=false ayarin varsa korunur.\n\n"
@@ -73,7 +91,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-launcher.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-advanced-launcher.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

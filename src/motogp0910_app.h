@@ -16,6 +16,8 @@
 #include <vector>
 
 #include "input_defaults.h"
+#include "audio_settings.h"
+#include "video_settings.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -99,6 +101,9 @@ class Motogp0910App : public rex::ReXApp {
   }
   void OnPreSetup(rex::RuntimeConfig& config) override {
     ApplyMotogpInputDefaults();
+    ApplyMotogpAudioSettings();
+    ApplyMotogpVideoSettings();
+    WatchMotogpAudioSettings();
     if (config.gpu_plugin.empty()) {
       config.gpu_plugin = "xenos";
     }

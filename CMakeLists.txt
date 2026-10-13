@@ -22,9 +22,13 @@ if(WIN32)
     target_compile_definitions(motogp0910-launcher PRIVATE UNICODE _UNICODE)
     target_include_directories(motogp0910-launcher SYSTEM PRIVATE
         $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
-    target_link_libraries(motogp0910-launcher PRIVATE user32 shell32 ole32 comctl32 bcrypt uuid)
+    target_link_libraries(motogp0910-launcher PRIVATE user32 shell32 ole32 comctl32 bcrypt uuid dxgi)
     add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp)
     target_link_libraries(launcher_probe PRIVATE rex::runtime shell32 bcrypt)
+    add_executable(launcher_runtime_probe EXCLUDE_FROM_ALL tools/launcher_runtime_probe.cpp)
+    target_link_libraries(launcher_runtime_probe PRIVATE rex::runtime)
+    target_compile_definitions(launcher_runtime_probe PRIVATE REX_HAS_FIDELITYFX_SDK=1)
+    target_compile_options(launcher_runtime_probe PRIVATE $<$<CXX_COMPILER_ID:Clang>:-mssse3>)
     add_executable(launcher_ui_probe EXCLUDE_FROM_ALL tools/launcher_ui_probe.cpp)
     target_link_libraries(launcher_ui_probe PRIVATE user32)
 else()
@@ -56,5 +60,33 @@ if(TARGET motogp0910_recomp)
         add_custom_command(TARGET motogp_headless_probe POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:rex::runtime> $<TARGET_FILE_DIR:motogp_headless_probe>)
+    endif()
+endif()
+
+# Keep the runtime pair consistent even when building directly from an IDE.
+# The official v0.10.0 code generator/import library remain pinned; the
+# separately verified runtime enables that version's bundled spatial shaders.
+if(WIN32)
+    if(CMAKE_CROSSCOMPILING)
+        find_package(Python3 REQUIRED COMPONENTS Interpreter)
+        foreach(stage_target motogp0910 motogp_headless_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+            if(TARGET ${stage_target})
+                add_custom_command(TARGET ${stage_target} POST_BUILD
+                    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
+                        $<TARGET_FILE_DIR:${stage_target}>
+                    VERBATIM)
+            endif()
+        endforeach()
+    else()
+        find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
+        foreach(stage_target motogp0910 motogp_headless_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+            if(TARGET ${stage_target})
+                add_custom_command(TARGET ${stage_target} POST_BUILD
+                    COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
+                        ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.ps1
+                        -Destination $<TARGET_FILE_DIR:${stage_target}>
+                    VERBATIM)
+            endif()
+        endforeach()
     endif()
 endif()

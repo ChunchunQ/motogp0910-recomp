@@ -34,7 +34,7 @@ cd motogp0910-recomp
 
 Var olan klonu güncellemek için yerel değişikliklerini koruyarak `git pull --ff-only` kullan. ZIP kullanıyorsan ZIP içindeki proje dosyalarını mevcut kaynak klasörüne kopyala; `out/`, `assets/` ve `generated/default/` önbelleklerini koru. Kendi kaynak değişikliklerin varsa önce yedeğini al. Kullanıcının mevcut proje yolu `D:\x\motogp0910` olabilir; aşağıdaki `cd` komutunda o yolu kullanabilirsin.
 
-Gerekli proje dosyaları depoda bulunur. ReXGlue SDK betik tarafından indirilip SHA-256 ile doğrulanır. Oyun kodu senin XEX + TU dosyalarından yerel olarak üretilir; ayrı bir generated kod paketi gerekmez. Python, Linux, xwin veya SDK kaynaklarını derlemek gerekmez.
+Gerekli proje dosyaları depoda bulunur. ReXGlue SDK betik tarafından indirilip SHA-256 ile doğrulanır. Oyun kodu senin XEX + TU dosyalarından yerel olarak üretilir; ayrı bir generated kod paketi gerekmez. Python, Linux, xwin veya SDK kaynaklarını derlemek gerekmez. Doğrulanmış FSR 1/CAS runtime çifti kaynak paketinin `third_party/rexglue-runtime/` klasöründedir; CMake/PowerShell bu DLL çiftini derlemeden sonra otomatik yerleştirir. [Runtime pin ve yeniden derleme bilgisi](../third_party/rexglue-runtime/readme.md).
 
 ## Derle
 

@@ -10,7 +10,8 @@ tamamlandığı anlamına gelmez.
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
 | EXE yanında `game/` veri klasörü | Tamamlandı: game önceliği, paket klasörü ve Windows yol/TU kontrolleri. | 1 |
-| Windows launcher | İlk sürüm tamamlandı: varsayılan İngilizce, kalıcı Türkçe seçimi, ayarlar, dosya kontrolü, başlatma ve yerel hata raporu. | 1 |
+| Windows launcher | Genişletildi: İngilizce/Türkçe, grafik/GPU/MSAA/FSR 1/CAS/FXAA, gerçek ses düzeyi, 25 düzenlenebilir klavye eşlemesi; test ve paket mevcut. | 1 |
+| Cihaza göre oyun içi tuş simgeleri | İncelendi; sıkıştırılmış oyun kaynakları için doğrulanmış glyph eşlemesi henüz yok. [Notlar](controller-prompts.md). | Launcher sonrası ayrı çalışma |
 | Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
 | Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
 
