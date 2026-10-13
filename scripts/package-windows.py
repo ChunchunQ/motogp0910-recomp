@@ -21,7 +21,7 @@ def main():
         shutil.rmtree(STAGE)
     STAGE.mkdir(parents=True, exist_ok=True)
     DIST.mkdir(parents=True, exist_ok=True)
-    for name in ("motogp0910.exe", *RUNTIME):
+    for name in ("motogp0910.exe", "motogp0910-launcher.exe", *RUNTIME):
         source = BUILD / name
         if not source.is_file():
             raise SystemExit(f"Missing build output: {name}")
@@ -30,17 +30,26 @@ def main():
     if licenses.is_dir():
         shutil.copytree(licenses, STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2("/workspace/shared/rexglue-sdk/LICENSE", STAGE / "licenses/ReXGlue-LICENSE.txt")
+    controller_db = ROOT / "third_party/SDL_GameControllerDB"
+    shutil.copy2(controller_db / "gamecontrollerdb.txt", STAGE / "gamecontrollerdb.txt")
+    shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
+    shutil.copy2(ROOT / "third_party/tomlplusplus-LICENSE.txt", STAGE / "licenses/tomlplusplus-LICENSE.txt")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 direct EXE launch - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 launcher - ReXGlue v0.10.0\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
         "2. Tum orijinal oyun dosyalarini game altklasorune koy:\n"
         "   game/default.xex, game/xenondata/, game/nxeart/ ve diger disk dosyalari.\n"
         "3. default.xexp patch'ini ve kendi title update dosyan\n"
         "   TU_11K61VG_0000004000000.0000000000081 dosyasini da game icine koy.\n"
-        "4. Ust klasordeki motogp0910.exe dosyasini ac. Derleme gerekmez.\n\n"
+        "4. motogp0910-launcher.exe dosyasini ac, ayarlarini sec ve PLAY'e bas.\n"
+        "   Arayuz varsayilan olarak Ingilizcedir; Language / Dil menusunden Turkce secilebilir.\n"
+        "   Dil secimi sonraki acilislarda korunur. Derleme gerekmez.\n\n"
         "Klavye ve gamepad icin dogrudan motogp0910.exe dosyasini ac; CMD gerekmez.\n"
         "Enter=Start, Space=A, Backspace=B, W/S/A/D=sol stick, Shift+oklar=D-pad.\n"
         "Klavye varsayilan olarak aciktir. Ozel mnk_mode=false ayarin varsa korunur.\n\n"
+        "gamecontrollerdb.txt EXE ile ayni klasorde kalmali; game icine koyma.\n"
+        "Bu dosya SDL gamepad eslemelerini ekler; input_backend=xinput seciminde kullanilmaz.\n"
+        "Kaynak: https://github.com/mdqinc/SDL_GameControllerDB\n\n"
         "Ilk acilista uygulama title update icinden default.xexp dosyasini olusturur;\n"
         "orijinal default.xex degismez. Mevcut default.xexp dosyasi yeniden yazilmaz.\n"
         "game/default.xex varsa game klasoru onceliklidir. Eski duz yerlesim de desteklenir.\n"
@@ -64,7 +73,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-direct-launch.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-launcher.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

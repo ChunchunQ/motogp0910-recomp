@@ -5,12 +5,12 @@
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
-İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). Launcher ve LAN henüz uygulanmadı.
+İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN henüz uygulanmadı.
 
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
 | EXE yanında `game/` veri klasörü | Tamamlandı: game önceliği, paket klasörü ve Windows yol/TU kontrolleri. | 1 |
-| Windows launcher | Yapılabilir; mevcut SDK ayarları ve oyun başlatma yolu kullanılabilir. | 1 |
+| Windows launcher | İlk sürüm tamamlandı: varsayılan İngilizce, kalıcı Türkçe seçimi, ayarlar, dosya kontrolü, başlatma ve yerel hata raporu. | 1 |
 | Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
 | Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
 
@@ -23,6 +23,12 @@ yönergeler `readme.txt` ve `game/readme.txt` adlarıyla dağıtılır. Bundan s
 üretilen dosya adları İngilizce olacak.
 
 ## Launcher
+
+İlk sürüm: [kullanım ve doğrulama](launcher.md). Dosya adı `motogp0910-launcher.exe`;
+varsayılan dil İngilizce, Language / Dil menüsünden Türkçe seçilir. Controller
+veritabanı EXE yanında paketlenir. Launcher teslim edilmeden sonraki genel kalite
+kontrol veya LAN aşamasına geçilmez.
+
 
 Hedef: Windows üzerinde ayarları kaydeden, oyun dosyalarını denetleyen ve oyunu
 başlatan ayrı bir uygulama. Ayarlar için SDK'nın mevcut CLI/TOML yapılandırmasını
@@ -37,7 +43,7 @@ oyun hızı ve fizik üzerindeki etkileriyle sınanmalıdır.
 - Ayarları saklama, tekrar açıldığında geri yükleme ve varsayılanlara dönüş.
 - Oyunu başlatma ve mevcut kullanıcı kayıt/cache konumunu koruma.
 - Log klasörüne erişim ve hata raporu hazırlama.
-- Türkçe arayüz, EXE ile birlikte dağıtım; son kullanıcıda derleme gerektirmeme.
+- Varsayılan İngilizce ve seçilebilir Türkçe arayüz, EXE ile birlikte dağıtım; son kullanıcıda derleme gerektirmeme.
 
 Kabul ölçütü: boşluk/Türkçe karakter içeren yollardan oyun açılır, ayarlar kalıcı
 olur, mevcut kayıtlar korunur, eksik veri durumunda anlaşılır hata gösterilir.
@@ -50,7 +56,9 @@ Bu nedenle mevcut race-start-fix EXE ile de aşağıdaki düzen kullanılabilir:
 
 ```text
 MotoGP0910/
+├── motogp0910-launcher.exe
 ├── motogp0910.exe
+├── gamecontrollerdb.txt
 ├── rexruntime.dll
 ├── rexgpu-xenos.dll
 ├── diğer paket DLL'leri
@@ -69,7 +77,7 @@ EXE/DLL'ler üst dizinde kalır. Her iki yerde XEX varsa yeni EXE `game/` klasö
 kullanıldığında yol yeni `game/` dizinine işaret etmelidir. Kayıt ve cache
 klasörleri oyun verisinden ayrı korunmalıdır; taşımaya gerek yoktur.
 
-Paket ve [taşıma rehberi](game-layout.md) bu düzeni standartlaştırır. Launcher ayrı sonraki iştir. Kabul ölçütü:
+Paket ve [taşıma rehberi](game-layout.md) bu düzeni standartlaştırır. Launcher ayrı aşamada teslim edilir; [ilk sürüm](launcher.md) hazırdır. Kabul ölçütü:
 farklı çalışma dizininden çift tıklamayla açılış, title-update yükleme ve kayıt
 koruma doğrulanır; eski düzende açılış da desteklenir.
 

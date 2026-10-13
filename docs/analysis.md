@@ -87,3 +87,15 @@ Bu GUI yol denemeleri patch hazırlığından sonra bu host'un Direct3D 12 sunum
 ## Launcher öncesi ayrı teslimat: doğrudan EXE açılışı
 
 Kullanıcı game/ düzeninin sorunsuz çalıştığını bildirdi ve CMD yerine EXE açılışı istedi. OnPreSetup giriş sistemi kurulmadan önce, yalnızca kaynağı SDK varsayılanı olan mnk_mode değerini true yapar. Açık config/env/CLI/runtime tercihleri ve mevcut backend/tuş eşlemeleri korunur. SDK ve guest oyun kodu değiştirilmedi. Windows EXE artımlı derlendi. Gerçek SDK ile Windows PE giriş probunda beş öncelik senaryosu ve her senaryoda runtime false tercihinin korunması geçti (5/5, exit 0). Grafik veya fiziksel gamepad yeniden denenmedi. Paket CMD içermez; yeni yönerge dosyaları readme.txt ve game/readme.txt adlarıyla İngilizce adlandırıldı. CRC, üye hashleri ve EXE/derleme eşleşmesi kontrol edildi. Launcher geliştirmesine başlanmadı.
+
+
+## Kullanıcının controller veritabanını paketleme
+
+ReXGlue v0.10.0 SDL sürücüsünde varsayılan hid_mappings_file=gamecontrollerdb.txt ve gerçek SDL_AddGamepadMappingsFromFile yükleme yolu doğrulandı. Kullanıcı dosyası değiştirilmeden third_party altında saklandı; upstream kaynak/zlib lisansı korundu. Paketleme betiği bundan sonraki Windows ZIPlerine dosyayı EXE yanında, lisansı licenses altında ekler. Linux gerçek SDK SDL API yüklemesi 472 yeni eşleme aldı. Aynı resmi Windows SDK SDL static library ile Windows PE probu Wine altında platform=Windows, 569 yeni eşleme ve örnek GUID/düğme içeriğini doğruladı (exit 0). Fiziksel kol denenmedi. XInput backend bu dosyayı kullanmaz; SDK varsayılan göreli yolu çalışma dizininden arar. EXE/DLL kodu değiştirilmedi. 14 dosyalı paket CRC/üye hashleri ve yüklenen dosyayla byte eşleşmesi kontrol edildi. Launcher henüz uygulanmadı.
+
+
+## Ayrı teslimat: İngilizce/Türkçe Windows launcher
+
+Varsayılan dil İngilizce; Language / Dil menüsünden Türkçe seçilir ve ayrı motogp0910-launcher.toml dosyasında saklanır. Native Win32 launcher mevcut motogp0910.toml değerlerini toml++ ile okur; yönetilmeyen değerleri korur, ilk dosyanın byte yedeğini alır, dış değişikliği denetler ve atomik kaydeder. Seçilen game root ve yönetilen SDK seçenekleri CreateProcessW ile iletilir; çalışma dizini EXE klasörüdür. Özel kayıt/cache yolları korunur. SDK/game kodu değiştirilmedi; oyun EXE'si eski direct-launch paketindekiyle aynıdır. Controller veritabanı ve upstream lisansları paketlenir.
+
+Windows PE launcher probunda Wine altında 46 kontrol geçti (exit 0), gerçek SDK flag değerleri ve Unicode/boşluk içeren yolda çocuk süreç argümanları/CWD doğrulandı. Gerçek GUI'de iki dil, ayar kaydı/yeniden yükleme, varsayılanlar, klasör seçimi ve üç logun 2 MiB kuyruklarıyla rapor üretimi denendi. İlk klasör seçici hatası yerel Wine kurulumunda eksik winspool.drv ve tamamlanmamış COM/profil kayıtlarından kaynaklandı; driver erişimi ve wineboot -u ile giderildi. Tam dump'taki nxeart boş olduğundan ön kontrol bunu hata saymaz; xenondata dolu olmalı. Gerçek kullanıcı kolu/Windows GPU oynanışı yeniden denenmedi. Genel QA/LAN aşamasına başlanmadı.

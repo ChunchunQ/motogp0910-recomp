@@ -22,7 +22,7 @@ if ((Get-FileHash -LiteralPath $PatchDestination -Algorithm SHA256).Hash -ne $Pa
 }
 $UserData = Join-Path $ProjectRoot 'out/userdata'
 New-Item -ItemType Directory -Force $UserData | Out-Null
-Push-Location $ProjectRoot
+Push-Location (Split-Path -Parent $Executable)
 try {
     & $Executable "--game_data_root=$GameRoot" "--user_data_root=$UserData" "--log_file=$(Join-Path $ProjectRoot 'out/motogp-windows.log')"
     if ($LASTEXITCODE -ne 0) { throw "Game exited with code $LASTEXITCODE; see out/motogp-windows.log." }

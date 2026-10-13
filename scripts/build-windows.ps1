@@ -128,6 +128,12 @@ try {
     Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk")
     Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--parallel', "$Jobs")
     $ExeDirectory = Join-Path $ProjectRoot 'out/build/win-amd64-release'
+    $ControllerDb = Join-Path $ProjectRoot 'third_party/SDL_GameControllerDB'
+    Copy-Item -LiteralPath (Join-Path $ControllerDb 'gamecontrollerdb.txt') -Destination $ExeDirectory -Force
+    $LicensesDirectory = Join-Path $ExeDirectory 'licenses'
+    New-Item -ItemType Directory -Force $LicensesDirectory | Out-Null
+    Copy-Item -LiteralPath (Join-Path $ControllerDb 'LICENSE.txt') -Destination (Join-Path $LicensesDirectory 'SDL_GameControllerDB-LICENSE.txt') -Force
+    Copy-Item -LiteralPath (Join-Path $ProjectRoot 'third_party/tomlplusplus-LICENSE.txt') -Destination (Join-Path $LicensesDirectory 'tomlplusplus-LICENSE.txt') -Force
     # Ship the SDK's auxiliary runtime DLLs as well as the plugin CMake stages.
     Get-ChildItem -LiteralPath (Join-Path $Sdk 'bin') -Filter '*.dll' -File | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $ExeDirectory -Force

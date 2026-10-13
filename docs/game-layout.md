@@ -1,16 +1,18 @@
 # Oyun verilerini game klasörüne yerleştirme
 
-Bu teslimat yalnızca dosya düzenini standartlaştırır. Windows launcher ayrı
-bir sonraki iştir. ReXGlue sürümü **v0.10.0**, oyun sürümü **0.0.1.1**.
+Bu belge standart oyun dosya düzenini açıklar. [Windows launcher kullanımı](launcher.md)
+ayrı belgede bulunur. ReXGlue sürümü **v0.10.0**, oyun sürümü **0.0.1.1**.
 
 ## Hedef düzen
 
 ```text
 D:\x\motogp0910\
+├── motogp0910-launcher.exe
 ├── motogp0910.exe
 ├── rexruntime.dll
 ├── rexgpu-xenos.dll
 ├── diğer paket DLL'leri
+├── gamecontrollerdb.txt
 ├── readme.txt
 └── game\
     ├── default.xex
@@ -23,7 +25,7 @@ D:\x\motogp0910\
 
 ## Mevcut kurulumdan geçiş
 
-1. Oyunu kapat. [Yeni Windows paketini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-direct-launch.zip)
+1. Oyunu kapat. [Yeni Windows paketini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher.zip)
    GitHub'da **Download raw file** ile indir ve program klasörüne çıkar.
 2. Kendi oyununun **tüm orijinal disk dosyalarını**, `default.xex`, mevcut
    `default.xexp` ve TU paketiyle birlikte `game` altklasörüne taşı. `xenondata`
@@ -31,7 +33,8 @@ D:\x\motogp0910\
 3. Üst klasördeki `motogp0910.exe`ye çift tıkla. Klavye varsayılan olarak açıktır;
    `.cmd` gerekmez. Program doğru oyun dizinini kendisi bulur.
 
-ZIP yalnızca program/DLL'leri ve `game` içindeki yerleştirme notunu içerir.
+ZIP program/DLL'leri, EXE yanındaki `gamecontrollerdb.txt` eşleme dosyasını
+ve yönerge/lisans dosyalarını içerir.
 Oyun verileri, XEX, title update veya patch ZIP'te bulunmaz. Dosyaları otomatik
 taşıyan bir işlem yapılmaz; mevcut oyun dosyaları kullanıcı tarafından taşınır.
 

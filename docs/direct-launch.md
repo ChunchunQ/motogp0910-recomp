@@ -1,6 +1,6 @@
 # Doğrudan EXE ile açılış
 
-Yeni Windows paketi: `MotoGP0910-Windows-x64-direct-launch.zip`.
+Yeni Windows paketi: `MotoGP0910-Windows-x64-launcher.zip`.
 ZIP'i mevcut program klasörüne çıkarıp EXE/DLL'leri güncelle. Oyun dosyaları
 `game/` altında kalır. `motogp0910.exe`ye çift tıkla; klavye kontrolü için
 CMD veya komut satırı parametresi gerekmez. Yeni paketteki yönerge dosyaları
@@ -9,7 +9,7 @@ ve Türkçe yönerge dosyalarını kullanman gerekmez; istersen silebilirsin.
 
 Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
 SDK'nın gamepad backend'i ve mevcut tuş eşlemeleri aynı şekilde kullanılır.
-Bu teslimat yalnızca doğrudan başlatma davranışını düzenler; launcher ayrı iştir.
+Doğrudan açılış davranışı korunur; [launcher kullanımı](launcher.md) ayrı belgede açıklanır.
 
 ## Kullanıcı tercihini koruma
 

@@ -18,6 +18,15 @@ set(MOTOGP0910_SOURCES
 
 if(WIN32)
     add_executable(motogp0910 WIN32 ${MOTOGP0910_SOURCES})
+    add_executable(motogp0910-launcher WIN32 src/launcher/main.cpp)
+    target_compile_definitions(motogp0910-launcher PRIVATE UNICODE _UNICODE)
+    target_include_directories(motogp0910-launcher SYSTEM PRIVATE
+        $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
+    target_link_libraries(motogp0910-launcher PRIVATE user32 shell32 ole32 comctl32 bcrypt uuid)
+    add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp)
+    target_link_libraries(launcher_probe PRIVATE rex::runtime shell32 bcrypt)
+    add_executable(launcher_ui_probe EXCLUDE_FROM_ALL tools/launcher_ui_probe.cpp)
+    target_link_libraries(launcher_ui_probe PRIVATE user32)
 else()
     add_executable(motogp0910 ${MOTOGP0910_SOURCES})
 endif()

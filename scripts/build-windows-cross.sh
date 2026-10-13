@@ -10,7 +10,7 @@ cmake -S . -B out/build/windows-cross-release -G Ninja \
   -DCMAKE_PROJECT_INCLUDE="$project/cmake/windows-host-tools.cmake" \
   -DCMAKE_PREFIX_PATH=/workspace/shared/rexglue-win-sdk/win-amd64
 cmake --build out/build/windows-cross-release \
-  --target motogp0910 motogp_headless_probe --parallel 4
+  --target motogp0910 motogp0910-launcher motogp_headless_probe --parallel 4
 python3 - <<'PY'
 from pathlib import Path
 import shutil
@@ -18,4 +18,9 @@ source = Path('/workspace/shared/msvc-redist/Contents/VC/Redist/MSVC/14.44.35112
 destination = Path('out/build/windows-cross-release')
 for file in source.glob('*.dll'):
     shutil.copy2(file, destination / file.name)
+controller_db = Path('third_party/SDL_GameControllerDB')
+shutil.copy2(controller_db / 'gamecontrollerdb.txt', destination / 'gamecontrollerdb.txt')
+(destination / 'licenses').mkdir(exist_ok=True)
+shutil.copy2(controller_db / 'LICENSE.txt', destination / 'licenses/SDL_GameControllerDB-LICENSE.txt')
+shutil.copy2('third_party/tomlplusplus-LICENSE.txt', destination / 'licenses/tomlplusplus-LICENSE.txt')
 PY

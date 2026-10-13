@@ -10,3 +10,11 @@ ReXGlue v0.10.0, tam MotoGP 09/10 disk verileri ve 0.0.1.1 title update kullanı
 Ana menü görüntüsü tam disk verileriyle gerçek oyun penceresinden alınmıştır.
 Bu, yarış veya gerçek Windows GPU doğrulaması değildir; test kapsamı için proje
 README'sine bak.
+
+## Windows launcher
+
+- [English](launcher-english.png)
+- [Türkçe](launcher-turkish.png)
+
+Windows PE launcher Wine/Xvfb altında gerçek arayüzden yakalandı; Windows oyun
+grafik/yarış testi değildir. [Launcher test kapsamı](../launcher.md).
