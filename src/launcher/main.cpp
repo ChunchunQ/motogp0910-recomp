@@ -46,7 +46,8 @@ struct App {
   std::map<HWND,bool> checks;
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
-  std::vector<std::pair<int,int>> dimensions{{0,0},{1280,720},{1600,900},{1920,1080},{2560,1440},{3840,2160}};
+  std::pair<int,int> display_maximum=HardwareDisplayMaximum(Get<int64_t>(config.table,"monitor",0));
+  std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum);
   int current_page=0,binding_index=0;
   bool filling_binding=false,capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{};
@@ -196,7 +197,8 @@ struct App {
   }
   void SetControls(const Settings& s){
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
-    if(found==dimensions.end()){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
+    if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
+    if(found==dimensions.end())found=dimensions.begin();
     SendMessageW(size,CB_SETCURSEL,std::distance(dimensions.begin(),found),0);
     int gpu_index=0;
     if(s.adapter!=-1){auto gpu=std::find_if(adapters.begin(),adapters.end(),[&](const Adapter& v){return v.index==s.adapter;});

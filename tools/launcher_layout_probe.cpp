@@ -67,6 +67,17 @@ int wmain(int argc,wchar_t** argv){
         }
       }
     }
+    for(auto maximum:{std::pair{1920,1080},std::pair{1366,768},std::pair{2560,1080},std::pair{3840,2160}}){
+      auto sizes=WindowSizesFor(maximum);
+      CheckUI(std::find(sizes.begin(),sizes.end(),maximum)!=sizes.end(),"Native monitor dimensions are offered");
+      for(auto size:sizes)CheckUI(WindowSizeFits(size,maximum),"Output size never exceeds physical monitor");
+      if(maximum==std::pair{1920,1080})CheckUI(std::find(sizes.begin(),sizes.end(),std::pair{2560,1440})==sizes.end() && std::find(sizes.begin(),sizes.end(),std::pair{3840,2160})==sizes.end(),"1080p monitor hides 1440p and 4K output");
+    }
+    const auto saved_maximum=app.display_maximum;
+    app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
+    Settings oversize;oversize.width=3840;oversize.height=2160;app.SetControls(oversize);
+    CheckUI(app.GetControls().width==0 && app.GetControls().height==0,"Oversized saved window uses desktop automatically");
+    app.display_maximum=saved_maximum;app.dimensions=WindowSizesFor(saved_maximum);app.Localize();app.SetControls(Settings{});
     app.Rescale(1);app.turkish=false;app.ShowPage(0);
     for(unsigned preset=0;preset<kRenderPresets.size();++preset){
       SendMessageW(app.render_resolution,CB_SETCURSEL,preset,0);auto s=app.GetControls();
