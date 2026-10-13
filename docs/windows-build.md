@@ -21,7 +21,7 @@ SDK programı eksik `MSVCP140` / `VCRUNTIME140` DLL hatası verirse [Microsoft V
 
 ## Kaynakları indir
 
-[Düzeltilmiş kaynak ZIP'ini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-polished-launcher.zip) GitHub hesabına giriş yaptıktan sonra **Download raw file** düğmesiyle indir. ZIP içindeki `motogp0910-recomp` klasörünü `D:\x` altına çıkar ve proje klasörünü `motogp0910` olarak adlandır. Bu klasörde `CMakeLists.txt`, `motogp0910_manifest.toml`, `src/`, `tools/` ve `scripts/` bulunmalı.
+[Düzeltilmiş kaynak ZIP'ini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-source-collision-data-fix.zip) GitHub hesabına giriş yaptıktan sonra **Download raw file** düğmesiyle indir. ZIP içindeki `motogp0910-recomp` klasörünü `D:\x` altına çıkar ve proje klasörünü `motogp0910` olarak adlandır. Bu klasörde `CMakeLists.txt`, `motogp0910_manifest.toml`, `src/`, `tools/` ve `scripts/` bulunmalı.
 
 Alternatif: [proje deposunda](https://github.com/inflamesgo/motogp0910-recomp) **Code → Download ZIP** seç; bu daha büyük paket eski executable arşivini de içerir. Proje klasörü bu yöntemde `motogp0910-recomp-main` adını alır; aşağıdaki `cd` yolunu buna göre değiştir.
 

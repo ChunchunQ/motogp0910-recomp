@@ -43,7 +43,11 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 polished launcher - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 collision data repair - ReXGlue v0.10.0\n\n"
+        "PHYSICS DATA: Preserves serialized collision coordinates during endian conversion.\n"
+        "192 Linux and Windows/Wine field/record/ABI checks passed.\n"
+        "The reported Qatar gameplay fall still needs local route verification.\n"
+        "Repair messages in logs contain PHYSICS_ASSET_FIX.\n\n"
         "UPGRADE: Replace the EXEs AND both rexruntime.dll / rexgpu-xenos.dll.\n"
         "Keep your existing game folder, configuration and saves.\n\n"
         "1. ZIP'i program klasorune cikart; motogp0910.exe ve DLL'ler burada kalsin.\n"
@@ -106,7 +110,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-polished-launcher.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-collision-data-fix.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

@@ -15,6 +15,7 @@ include(generated/rexglue.cmake)
 set(MOTOGP0910_SOURCES
     src/main.cpp
     src/button_prompts.cpp
+    src/physics_assets.cpp
 )
 
 if(WIN32)
@@ -62,6 +63,10 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    add_executable(physics_asset_probe EXCLUDE_FROM_ALL tools/physics_asset_probe.cpp src/physics_assets.cpp)
+    target_include_directories(physics_asset_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(physics_asset_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(physics_asset_probe)
     add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
@@ -95,7 +100,7 @@ endif()
 if(WIN32)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -105,7 +110,7 @@ if(WIN32)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe input_defaults_probe launcher_runtime_probe launcher_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe input_defaults_probe launcher_runtime_probe launcher_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
