@@ -2,6 +2,7 @@
 #include "../src/launcher/core.h"
 #include <rex/cvar.h>
 #include "../src/audio_settings.h"
+#include "../src/button_prompt_options.h"
 #include <shellapi.h>
 #include <iostream>
 using namespace launcher;
@@ -37,7 +38,7 @@ int wmain(int argc,wchar_t** argv) {
     for(int i=0;i<count;++i) Check(parsed[i]==quoted[i],"Quote argument value");
     LocalFree(parsed);
     auto file=base/L"motogp0910.toml";
-    const std::string original="# Keep my settings\nuser_data_root = 'D:\\Existing saves'\ncustom_flag = 42\nkeybind_a = 'K'\n[window]\nwidth = 1600\nheight = 900\n[audio]\nmute = true\n[custom]\nitems = [1, 2, 3]\n";
+    const std::string original="# Keep my settings\nuser_data_root = 'D:\\Existing saves'\ncustom_flag = 42\nbutton_prompt_style = 'playstation'\nkeybind_a = 'K'\n[window]\nwidth = 1600\nheight = 900\n[audio]\nmute = true\n[custom]\nitems = [1, 2, 3]\n";
     Write(file,original); Config config(file);
     Check(Settings::Load(config.table).width==1600,"Nested SDK key loading");
     Check(Settings::Load(config.table).mute,"Nested audio loading");
@@ -51,6 +52,7 @@ int wmain(int argc,wchar_t** argv) {
     Check(!actual.fullscreen && actual.vsync && !actual.keyboard && actual.mute && actual.backend=="xinput","Boolean/input round trip");
     Check(actual.effect=="fsr" && actual.scale_x==2 && actual.scale_y==3 && actual.volume==37 && actual.anisotropic==5 && actual.post_effect=="fxaa", "Advanced settings round trip");
     Check(actual.adapter==0,"GPU index round trip");
+    Check(actual.prompt_style=="playstation","Manual PS prompts preserved with XInput backend");
     Check(std::abs(actual.fsr_reduction-0.54)<0.00001, "FSR strength round trip");
     Check(ValidBinding("Ctrl+K,Space") && ValidBinding("Shift+Up") && ValidBinding(""), "Valid SDK mapping syntax");
     Check(!ValidBinding("Shift") && !ValidBinding("enter") && !ValidBinding("Ctrl+") && !ValidBinding("Space,"), "Silent or malformed mappings rejected");
@@ -67,6 +69,7 @@ int wmain(int argc,wchar_t** argv) {
     auto gpu_flags=LoadLibraryW((ExecutableFolder()/L"rexgpu-xenos.dll").c_str());
     Check(gpu_flags!=nullptr,"GPU plugin cvars loaded without presentation");
     rex::cvar::LoadConfig(file);
+    Check(rex::cvar::Query<std::string>("button_prompt_style")=="playstation","Production prompt cvar loaded from saved configuration");
     Check(rex::cvar::Query<int32_t>("window_width")==1920 && rex::cvar::Query<int32_t>("window_height")==1080,"Actual SDK window flags");
     Check(!rex::cvar::Query<bool>("fullscreen") && rex::cvar::Query<bool>("vsync"),"Actual SDK display flags");
     Check(rex::cvar::Query<std::string>("input_backend")=="xinput" && !rex::cvar::Query<bool>("mnk_mode"),"Actual SDK input flags");

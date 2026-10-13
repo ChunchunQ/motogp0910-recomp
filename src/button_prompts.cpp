@@ -21,8 +21,7 @@
 #include <Xinput.h>
 #endif
 
-REXCVAR_DEFINE_STRING(button_prompt_style, "auto", "Input",
-    "In-game button symbols: auto, xbox, playstation, keyboard. Manual selection also supports controller wrappers.");
+#include "button_prompt_options.h"
 
 REX_EXTERN(__imp__sub_82388C38);
 REX_EXTERN(__imp__sub_82358448);

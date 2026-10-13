@@ -35,14 +35,14 @@ struct App {
   HWND window{},path{},size{},backend{},language{},status{},title{},subtitle{},folder_label{},
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
-       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{};
-  std::array<HWND,3> navigation{};
+       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{};
+  std::array<HWND,4> navigation{};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
   struct Placement {HWND control;int x,y,w,h;};
   std::vector<Label> labels;
   std::vector<Placement> placements;
-  std::array<std::vector<HWND>,3> pages;
+  std::array<std::vector<HWND>,4> pages;
   std::map<HWND,bool> checks;
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
@@ -91,6 +91,7 @@ struct App {
     return DefSubclassProc(control,message,wparam,lparam);
   }
   HWND PageControl(int page,const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
+    if(page!=3)y-=110;
     auto c=Control(cls,text,style,x,y,w,h,id);pages[page].push_back(c);return c;
   }
   HWND LabelControl(int page,const wchar_t* en,const wchar_t* tr,int x,int y,int w,int h=22){
@@ -126,7 +127,7 @@ struct App {
   }
   void ShowPage(int page){
     CancelCapture();current_page=page;
-    for(int i=0;i<3;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
+    for(int i=0;i<4;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
     Localize();InvalidateRect(window,nullptr,FALSE);
   }
   void UpdateSharpness(){
@@ -149,12 +150,12 @@ struct App {
   void Localize(){
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
-    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):T(L"Controls",L"Kontroller"));
+    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):T(L"General",L"Genel"));
     SetWindowTextW(subtitle,current_page==0?T(L"Display, detail and upscaling.",L"Görüntü, detay ve ölçekleme."):
-        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."));
+        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):T(L"Your game preferences.",L"Oyun tercihlerin."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<3;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):T(L"Controls",L"Kontroller"));
+    for(int i=0;i<4;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):T(L"General",L"Genel"));
     SetWindowTextW(fullscreen,T(L"Fullscreen",L"Tam ekran"));SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Keep aspect ratio",L"En-boy oranını koru"));
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
@@ -168,6 +169,7 @@ struct App {
     SetWindowTextW(play,T(process?L"GAME RUNNING":L"PLAY",process?L"OYUN ÇALIŞIYOR":L"OYUNU BAŞLAT"));
     FillCombo(post_effect,{T(L"Off",L"Kapalı"),L"FXAA",L"FXAA Extreme"});
     FillCombo(backend,{L"SDL — Xbox / PlayStation / USB",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
+    FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
     FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS"});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
     FillRenderPresets();
@@ -203,6 +205,8 @@ struct App {
       gpu_index=static_cast<int>(std::distance(adapters.begin(),gpu))+1;}
     SendMessageW(adapter,CB_SETCURSEL,gpu_index,0);
     SendMessageW(backend,CB_SETCURSEL,s.backend=="xinput"?1:0,0);
+    SendMessageW(game_language,CB_SETCURSEL,s.game_language==4?1:s.game_language==3?2:s.game_language==5?3:s.game_language==6?4:0,0);
+    SendMessageW(prompt_style,CB_SETCURSEL,s.prompt_style=="playstation"?1:s.prompt_style=="xbox"?2:s.prompt_style=="keyboard"?3:0,0);
     auto preset=MatchingRenderPreset(s);FillRenderPresets(preset<0?static_cast<int>(kRenderPresets.size()):preset);
     SendMessageW(effect,CB_SETCURSEL,s.effect=="fsr"?1:s.effect=="cas"?2:0,0);
     SendMessageW(post_effect,CB_SETCURSEL,s.post_effect=="fxaa"?1:s.post_effect=="fxaa_extreme"?2:0,0);
@@ -232,6 +236,13 @@ struct App {
     s.fullscreen=Checked(fullscreen);s.vsync=Checked(vsync);s.keyboard=Checked(keyboard);s.mute=Checked(mute);
     s.letterbox=Checked(letterbox);s.dither=Checked(dither);s.msaa=Checked(msaa);s.shader_cache=Checked(shader_cache);
     auto aa=SendMessageW(post_effect,CB_GETCURSEL,0,0);s.post_effect=aa==1?"fxaa":aa==2?"fxaa_extreme":"none";
+    const auto language_index=SendMessageW(game_language,CB_GETCURSEL,0,0);
+    constexpr std::array<int,5> language_ids{1,4,3,5,6};
+    if(language_index<0 || language_index>=static_cast<LRESULT>(language_ids.size()))throw std::runtime_error("Invalid game language selection");
+    s.game_language=language_ids[language_index];
+    const auto glyph_mode=SendMessageW(prompt_style,CB_GETCURSEL,0,0);
+    if(glyph_mode<0 || glyph_mode>3)throw std::runtime_error("Invalid prompt style selection");
+    s.prompt_style=glyph_mode==1?"playstation":glyph_mode==2?"xbox":glyph_mode==3?"keyboard":"auto";
     s.bindings=edited_bindings;s.Validate();return s;
   }
   void ReadyStatus(){try{Validate(exe,GameRoot());Status(L"Ready to play · Title update 0.0.1.1",L"Başlatmaya hazır · Title update 0.0.1.1");}
@@ -239,13 +250,10 @@ struct App {
   void BuildControls(){
     CreateFonts();title=Control(L"STATIC",L"",0,242,28,610,46);SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     subtitle=Control(L"STATIC",L"",0,244,80,590,24);
-    auto lang_label=Control(L"STATIC",L"Language / Dil",0,878,29,210,22);SendMessageW(lang_label,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
-    language=Control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,878,56,210,160,kLanguage);
-    SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
-    for(int i=0;i<3;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,216+i*52,170,42,kNavGraphics+i);
-    folder_label=Control(L"STATIC",L"",0,260,130,700,22);SendMessageW(folder_label,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
-    path=Control(L"EDIT",ResolveGameRoot(exe,config.table).c_str(),WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,260,160,658,28,kPath);SendMessageW(path,EM_SETLIMITTEXT,32760,0);
-    browse=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,932,158,138,32,kBrowse);
+    for(int i=0;i<4;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,i==3?216:268+i*52,170,42,kNavGraphics+i);
+    folder_label=PageControl(3,L"STATIC",L"",0,260,130,700,22);SendMessageW(folder_label,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
+    path=PageControl(3,L"EDIT",ResolveGameRoot(exe,config.table).c_str(),WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,260,160,658,28,kPath);SendMessageW(path,EM_SETLIMITTEXT,32760,0);
+    browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,932,158,138,32,kBrowse);
     auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,220,id);};
     LabelControl(0,L"DISPLAY",L"GÖRÜNTÜ",260,247,374);
     LabelControl(0,L"Graphics adapter",L"Ekran kartı",260,290,374);adapter=combo(0,260,316,374,kAdapter);
@@ -265,6 +273,17 @@ struct App {
     sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,690,602,386,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     msaa=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,653,374,28,kMsaa);
     LabelControl(0,L"Higher resolutions use more GPU memory.",L"Yüksek çözünürlük daha fazla GPU belleği kullanır.",696,696,374,22);
+    LabelControl(3,L"GAME PREFERENCES",L"OYUN TERCİHLERİ",260,247,798);
+    LabelControl(3,L"Launcher language",L"Launcher dili",260,290,374);
+    language=combo(3,260,316,374,kLanguage);
+    SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));
+    SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));
+    SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
+    LabelControl(3,L"Game language",L"Oyun dili",260,376,374);
+    game_language=combo(3,260,402,374,kGameLanguage);
+    FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano"});
+    LabelControl(3,L"Button prompts",L"Tuş simgeleri",260,462,374);prompt_style=combo(3,260,488,374,kPromptStyle);
+    LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,798,38);
     LabelControl(1,L"GAME AUDIO",L"OYUN SESİ",260,247,798);
     LabelControl(1,L"One level for music, engines and menu sounds.",L"Müzik, motor ve menü sesleri için toplam ses düzeyi.",260,292,798);
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",260,343,700);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,994,343,76,24);
@@ -344,10 +363,10 @@ struct App {
     RECT client;GetClientRect(window,&client);auto dc=CreateCompatibleDC(target);auto bitmap=CreateCompatibleBitmap(target,client.right,client.bottom);auto old=SelectObject(dc,bitmap);
     FillRect(dc,&client,background);RECT side{0,0,S(210),client.bottom};auto b=CreateSolidBrush(kSidebar);FillRect(dc,&side,b);DeleteObject(b);
     auto box=[&](int x,int y,int w,int h){RECT r{S(x),S(y),S(x+w),S(y+h)};Rounded(dc,r,kCard,kBorder,16);};
-    box(242,118,846,84);
-    if(current_page==0){box(242,228,410,504);box(678,228,410,504);}
-    else if(current_page==1)box(242,228,846,368);
-    else{box(242,228,846,72);box(242,322,410,410);box(678,322,410,410);}
+    if(current_page==3){box(242,118,846,84);box(242,228,846,368);}
+    else if(current_page==0){box(242,118,410,614);box(678,118,410,614);}
+    else if(current_page==1)box(242,118,846,368);
+    else{box(242,118,846,72);box(242,212,410,410);box(678,212,410,410);}
     {Gdiplus::Graphics g(dc);g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);g.ScaleTransform(static_cast<float>(scale),static_cast<float>(scale));
       Gdiplus::GraphicsPath red;red.AddBezier(0.f,854.f,194.f,828.f,72.f,683.f,210.f,573.f);red.AddLine(210.f,573.f,210.f,636.f);red.AddBezier(210.f,636.f,144.f,726.f,195.f,828.f,28.f,860.f);red.CloseFigure();
       Gdiplus::SolidBrush ribbon(Gdiplus::Color(255,126,37,33));g.FillPath(&ribbon,&red);
@@ -462,7 +481,7 @@ struct App {
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
         auto c=GetDlgItem(window,id);if(checks.contains(c)){SetCheck(c,!Checked(c));return;}
-        if(id>=kNavGraphics && id<=kNavControls){ShowPage(id-kNavGraphics);return;}
+        if(id>=kNavGraphics && id<=kNavGeneral){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");

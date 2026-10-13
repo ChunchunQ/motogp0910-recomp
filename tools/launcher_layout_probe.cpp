@@ -59,9 +59,9 @@ int wmain(int argc,wchar_t** argv){
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;
-        for(int page=0;page<3;++page){app.ShowPage(page);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+        for(int page=0;page<4;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           if(scale==1. || (scale==.75 && tr && page==2)){
-            const auto tab=page==0?L"graphics":page==1?L"audio":L"controls";
+            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":L"general";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);
           }
         }
@@ -75,6 +75,24 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(MatchingRenderPreset(restored)==static_cast<int>(preset),"Render preset round trip");
       const auto args=Arguments(game,s,table);
       CheckUI(std::count(args.begin(),args.end(),L"--video_mode_width=1280")==1 && std::count(args.begin(),args.end(),L"--video_mode_height=720")==1,"Native source forwarded once");
+    }
+    for(auto [index,style]:{std::pair{0,"auto"},std::pair{1,"playstation"},std::pair{2,"xbox"},std::pair{3,"keyboard"}}){
+      SendMessageW(app.prompt_style,CB_SETCURSEL,index,0);
+      const auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+      CheckUI(Settings::Load(table).prompt_style==style,"Prompt style survives save/load");
+      auto args=Arguments(game,chosen,table);
+      CheckUI(std::count(args.begin(),args.end(),L"--button_prompt_style="+Wide(style))==1,"Selected style forwarded exactly once");
+      app.turkish=!app.turkish;app.Localize();
+      CheckUI(app.GetControls().prompt_style==style,"Language change preserves prompt style");
+    }
+    for(auto [index,id]:{std::pair{0,1},std::pair{1,4},std::pair{2,3},std::pair{3,5},std::pair{4,6}}){
+      SendMessageW(app.game_language,CB_SETCURSEL,index,0);
+      const auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+      CheckUI(Settings::Load(table).game_language==id,"Game language survives save/load");
+      auto args=Arguments(game,chosen,table);
+      CheckUI(std::count(args.begin(),args.end(),L"--user_language="+std::to_wstring(id))==1,"Game language forwarded once");
+      app.turkish=!app.turkish;app.Localize();
+      CheckUI(app.GetControls().game_language==id,"Launcher language does not alter game language");
     }
     auto custom=Settings{};custom.scale_x=2;custom.scale_y=3;custom.guest_width=1600;custom.guest_height=900;
     app.settings=custom;app.SetControls(custom);

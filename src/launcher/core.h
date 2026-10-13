@@ -133,11 +133,11 @@ class Config {
 };
 struct Settings {
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
-  int guest_width=0,guest_height=0;
+  int guest_width=0,guest_height=0,game_language=1;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
-  std::string backend = "sdl", effect = "bilinear", post_effect = "none";
+  std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto";
   std::array<std::string,kBindings.size()> bindings{};
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
@@ -156,6 +156,8 @@ struct Settings {
     s.msaa = Get(t, "native_2x_msaa", true);
     s.post_effect = Get(t, "swap_post_effect", std::string("none"));
     s.backend = Get(t, "input_backend", std::string("sdl"));
+    s.prompt_style = Get(t, "button_prompt_style", std::string("auto"));
+    s.game_language = Get<int64_t>(t, "user_language", 1);
     s.effect = Get(t, "present_effect", std::string("bilinear"));
     s.scale_x = Get<int64_t>(t, "draw_resolution_scale_x", 1);
     s.scale_y = Get<int64_t>(t, "draw_resolution_scale_y", 1);
@@ -179,6 +181,8 @@ struct Settings {
        !std::isfinite(fsr_reduction) || fsr_reduction<0 || fsr_reduction>2 ||
        !std::isfinite(cas_sharpness) || cas_sharpness<0 || cas_sharpness>1 ||
        (backend!="sdl" && backend!="xinput") ||
+       (game_language!=1 && game_language!=3 && game_language!=4 && game_language!=5 && game_language!=6) ||
+       (prompt_style!="auto" && prompt_style!="playstation" && prompt_style!="xbox" && prompt_style!="keyboard") ||
        (effect!="bilinear" && effect!="cas" && effect!="fsr") ||
        (post_effect!="none" && post_effect!="fxaa" && post_effect!="fxaa_extreme"))
       throw Error(L"Unsupported settings value. Choose a supported option or restore defaults.",
@@ -197,6 +201,8 @@ struct Settings {
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
     Put(t, "input_backend", backend); Put(t, "present_effect", effect);
+    Put(t, "button_prompt_style", prompt_style);
+    Put(t, "user_language", game_language);
     Put(t, "draw_resolution_scale_x", scale_x); Put(t, "draw_resolution_scale_y", scale_y);
     // Reset the alias so it cannot override the two edited axes.
     Put(t, "resolution_scale", 1);
@@ -290,13 +296,14 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
       std::wstring(L"--vsync=") + (s.vsync ? L"true" : L"false"),
       std::wstring(L"--mnk_mode=") + (s.keyboard ? L"true" : L"false"),
       std::wstring(L"--audio_mute=") + (s.mute ? L"true" : L"false"),
+      L"--button_prompt_style=" + Wide(s.prompt_style),
       L"--input_backend=" + Wide(s.backend)};
   // Forward every managed setting with command-line priority, including mappings.
   toml::table managed; s.Store(managed);
   for(const auto& [key,node]:managed) {
     const auto name=std::string(key.str());
     if(name=="window_width" || name=="window_height" || name=="fullscreen" || name=="vsync" ||
-       name=="mnk_mode" || name=="audio_mute" || name=="input_backend") continue;
+       name=="mnk_mode" || name=="audio_mute" || name=="input_backend" || name=="button_prompt_style") continue;
     std::string value;
     // toml++ value<bool>() converts integers too. Preserve each node's actual
     // type so values such as 3x, 720 and 37% never become the string "true".
