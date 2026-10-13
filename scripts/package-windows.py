@@ -70,6 +70,9 @@ def main():
         "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
         "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
         "Keep both runtime DLLs: this v0.10.0 pair enables spatial FSR and shared SDL input.\n\n"
+        "PS3 ARTWORK REPAIR: Match the GPU loader's 512-byte BC3 row alignment.\n"
+        "The previous PS3 button build uploaded tightly packed 256-byte rows.\n"
+        "This build pads rows without changing any visible compressed pixel block.\n\n"
         "IN-GAME PROMPTS: Automatically switch Xbox / PlayStation / keyboard\n"
         "symbols after meaningful input. Keyboard caps show your actual saved bindings.\n"
         "PlayStation: A=cross, B=circle, X=square, Y=triangle; L1/R1 and L2/R2.\n"
@@ -116,7 +119,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-ps3-buttons-v2.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

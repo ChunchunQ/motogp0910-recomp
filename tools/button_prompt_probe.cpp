@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -25,7 +26,10 @@ int main(int argc,char** argv) {
     if(XFAILED(runtime.Setup(PPCImageConfig,std::move(config))) ||
        XFAILED(runtime.LoadXexImage("game:\\default.xex"))) throw std::runtime_error("Patched game setup failed");
     auto* memory=runtime.memory();auto* base=runtime.virtual_membase();
-    motogp::prompts::LoadPS3Artwork(memory,rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
+    const auto artwork_path=rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin";
+    motogp::prompts::LoadPS3Artwork(memory,artwork_path);
+    std::ifstream artwork_stream(artwork_path,std::ios::binary);
+    const std::vector<uint8_t> artwork((std::istreambuf_iterator<char>(artwork_stream)),{});
     const auto allocation=memory->SystemHeapAlloc(0x40000);
     if(!allocation)throw std::runtime_error("Fixture allocation failed");
     const uint32_t count_address=uint32_t((-31941*65536)-17184);
@@ -79,9 +83,25 @@ int main(int argc,char** argv) {
           const auto descriptor=rex::memory::load_and_swap<uint32_t>(base+expected);
           const auto d0=rex::memory::load_and_swap<uint32_t>(base+descriptor+28);
           const auto d1=rex::memory::load_and_swap<uint32_t>(base+descriptor+32);
-          if(d0!=0x00800002 || (d1&0xFFF)!=0x14 ||
+          if(d0!=0x01000002 || (d1&0xFFF)!=0x14 ||
              rex::memory::load_and_swap<uint32_t>(base+descriptor+36)!=0x0007E03F)
             throw std::runtime_error("PS3 linear BC3 descriptor lost dimensions, endian mode or row pitch");
+          // Read the texture exactly as the GPU does: linear BC3 rows are
+          // aligned to 32 compressed blocks, even when only 16 contain pixels.
+          // Compare every visible block to the source pack. This rejects the
+          // previous tightly packed upload that passed descriptor-only checks.
+          constexpr std::array<unsigned,21> source_indices{
+            106,107,108,109,110,110,112,113,114,115,116,117,135,
+            136,137,138,139,131,132,133,134};
+          const auto source=artwork.data()+12+(source_indices[i]-102)*(16+4096)+16;
+          const auto* pixels=memory->TranslatePhysical(d1&0xFFFFF000);
+          for(unsigned row=0;row<16;++row) {
+            if(std::memcmp(pixels+row*512,source+row*256,256))
+              throw std::runtime_error("GPU-visible BC3 pixels differ from original PS3 artwork");
+            for(unsigned byte=256;byte<512;++byte)if(pixels[row*512+byte])
+              throw std::runtime_error("BC3 row padding is not initialized");
+          }
+          ++checks;
         } else if(batched_texture)throw std::runtime_error("Keyboard cap unexpectedly used a texture");
         for(unsigned v=0;v<4;++v)if(std::memcmp(saved_vertices[v].data(),base+vertices[v],24))throw std::runtime_error("Original guest vertices were changed");
         for(unsigned v=0;v<count;++v) {

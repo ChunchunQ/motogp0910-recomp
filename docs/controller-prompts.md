@@ -45,6 +45,12 @@ verified sprite IDs remain unconverted pending identification.
 ## Rendering
 
 The pack is uploaded to guest physical memory as linear 64×64 BC3 textures.
+Source rows contain 16 BC3 blocks (256 bytes); the v0.10.0 GPU loader aligns
+rows to 32 blocks (512 bytes), including linear base textures. The upload
+now pads each row to 512 bytes and advertises a 128-texel pitch. This repairs
+the corrupted symbols reported with the first PS3 artwork build. The native
+probe compares all 16 GPU-visible rows for each of the 21 glyphs to the source
+pack and checks zero padding, rather than testing descriptors alone.
 PlayStation pictures use the native textured quad path, retaining position,
 color, alpha and layering. Keyboard caps use saved bindings and native solid
 quads. Guest vertices and PPC state are restored after drawing. Original game
@@ -64,7 +70,7 @@ backend. The SDK/code generator version is unchanged.
 
 ## Build checks
 
-The current Windows executables passed 122 native draw/texture descriptor,
+The current Windows executables passed 143 native draw/pixel-row/texture descriptor,
 replay crop and PPC ABI checks, plus 92 binding and real SDL virtual-controller
 checks under Wine. The native draw probe also passed on Linux. These checks
 do not validate gameplay visuals on a Windows GPU or a physical Sony pad.

@@ -44,10 +44,16 @@ void LoadPS3Artwork(rex::memory::Memory* memory,const std::filesystem::path& fil
   guest_memory=memory;
   for(unsigned i=0;i<42;++i) {
     const auto p=bytes.data()+12+i*(16+4096);
-    const auto physical=memory->SystemHeapAlloc(4096,4096,rex::memory::kSystemHeapPhysical);
+    // The GPU loader aligns compressed rows to 32 blocks even for linear
+    // base textures. A 64-pixel BC3 image has 16 source blocks per row, but
+    // needs 32 * 16 = 512 guest bytes per row (128-pixel pitch).
+    const auto physical=memory->SystemHeapAlloc(8192,4096,rex::memory::kSystemHeapPhysical);
     const auto objects=memory->SystemHeapAlloc(128);
     if(!physical || !objects)throw std::runtime_error("Controller texture allocation failed");
-    std::memcpy(memory->TranslateVirtual(physical),p+16,4096);
+    auto* destination=memory->TranslateVirtual(physical);
+    std::memset(destination,0,8192);
+    for(unsigned row=0;row<16;++row)
+      std::memcpy(destination+row*512,p+16+row*256,256);
     textures.push_back({102+i,physical,objects,objects+64});
   }
 }
@@ -65,10 +71,10 @@ uint32_t PS3Texture(char glyph,uint32_t original,uint8_t* base) {
       if(!native)return 0;
       std::memcpy(base+texture.wrapper,base+original,64);
       std::memcpy(base+texture.descriptor,base+native,52);
-      // BC3 data is already in PC/PS3 byte order, with 256-byte linear rows.
+      // BC3 data is already in PC/PS3 byte order, with padded 512-byte rows.
       rex::graphics::xenos::xe_gpu_texture_fetch_t fetch{};
       fetch.type=rex::graphics::xenos::FetchConstantType::kTexture;
-      fetch.pitch=2; // 64 texels / 32, 16 BC3 blocks * 16 bytes per row.
+      fetch.pitch=4; // 128 texels / 32, 32 BC3 blocks * 16 bytes per row.
       fetch.format=rex::graphics::xenos::TextureFormat::k_DXT4_5;
       fetch.base_address=guest_memory->GetPhysicalAddress(texture.physical)>>12;
       fetch.size_2d.width=63;fetch.size_2d.height=63;
