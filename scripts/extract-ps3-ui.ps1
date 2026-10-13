@@ -97,8 +97,10 @@ public static class MotoGPPSARC {
                 if (packed == 0) packed = blockSize;
                 if (packed > blockSize) throw new InvalidDataException("Oversized archive block.");
                 byte[] data = Read(File, packed);
-                if (packed != blockSize) data = Inflate(data);
                 int expected = (int)Math.Min(remaining, blockSize);
+                // The last raw block may be shorter than blockSize (e.g.
+                // 16-byte .zones files). Stored == logical size means raw.
+                if (packed != expected && packed != blockSize) data = Inflate(data);
                 if (data.Length < expected || data.Length > blockSize)
                     throw new InvalidDataException("Unexpected decompressed block length.");
                 output.Write(data, 0, expected);
