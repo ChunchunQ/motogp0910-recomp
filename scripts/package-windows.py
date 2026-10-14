@@ -21,6 +21,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
     parser.add_argument('--archive',default='MotoGP0910-Windows-x64-stability-update.zip')
+    parser.add_argument('--lan-preview',action='store_true',help='Label the first LAN foundation milestone; multiplayer racing is unfinished')
     args=parser.parse_args();BUILD=args.build_dir.resolve()
     if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
         parser.error('--archive must be a ZIP filename')
@@ -52,8 +53,22 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
+    milestone="LAN foundation preview" if args.lan_preview else "Stability update"
+    preview_notes=(
+        "LAN FOUNDATION: This build does NOT yet provide playable LAN multiplayer.\n"
+        "Offline play remains the default. Do not enable lan_enabled for racing yet.\n"
+        "Native discovery, real room/session keys, join/leave and guest session calls\n"
+        "were tested with two Windows processes under Wine, by automatic and direct IP.\n"
+        "The service's opaque packet channel is not yet wired to the game's WSA APIs.\n"
+        "Player Match UI, live admission, XNet/QoS and Radmin races remain unfinished.\n"
+        "See lan-readme.txt for exact scope and tests.\n\n"
+        "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
+        "the supplied MotoGP logo. Both embed seven Windows icon sizes (16-256 px).\n\n"
+    ) if args.lan_preview else ""
+    if args.lan_preview:
+        shutil.copy2(ROOT / "docs/lan-lobby-preview.md", STAGE / "lan-readme.txt")
     (STAGE / "readme.txt").write_text(
-        f"MotoGP 09/10 - Windows x64 Stability update - ReXGlue {sdk['version']}\n\n"
+        f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
         "STABILITY: Reject out-of-range/overflowing TLS slots, preserve owned launch paths,\n"
         "use unique atomic thread IDs and a thread-safe host processor count cache.\n"
         "FILETIME calendar conversions preserve the 1601 epoch and 100 ns precision.\n"

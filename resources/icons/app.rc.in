@@ -1,0 +1,2 @@
+// Each executable embeds its own artwork under the same local resource ID.
+101 ICON "@MOTOGP_ICON_FILE@"

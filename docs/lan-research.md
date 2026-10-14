@@ -7,8 +7,9 @@ is automatic room discovery, with direct host IPv4 entry as a fallback.
 Internet matchmaking, NAT traversal,
 ranked services, friends, voice and leaderboards are outside this first stage.
 
-This is a research milestone. No networking implementation or new executable
-has been shipped. The baseline remains stability commit `bcef3c9`, SDK
+The research baseline was stability commit `bcef3c9`. The subsequent
+[first lobby foundation](lan-lobby-preview.md) implements and checks native
+discovery and guest session calls; playable LAN racing remains unfinished. SDK
 `0.10.0.24-dev.gbd833a2`, patched title version `0.0.1.1`.
 
 ## Existing ReXGlue examples

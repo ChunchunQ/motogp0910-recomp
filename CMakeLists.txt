@@ -18,9 +18,25 @@ if(NOT REXGLUE_VERSION_STRING STREQUAL MOTOGP_SDK_VERSION)
 endif()
 option(MOTOGP_STAGE_RUNTIME "Stage the verified matching Windows runtime" ON)
 
+# Native LAN protocol/service, separate from guest memory and GPU presentation.
+add_library(motogp_lan STATIC src/lan/protocol.cpp src/lan/node.cpp)
+target_include_directories(motogp_lan PUBLIC src)
+if(WIN32)
+    target_link_libraries(motogp_lan PUBLIC ws2_32 iphlpapi bcrypt)
+else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(motogp_lan PUBLIC Threads::Threads)
+endif()
+add_executable(lan_service_probe EXCLUDE_FROM_ALL tools/lan_service_probe.cpp)
+target_link_libraries(lan_service_probe PRIVATE motogp_lan)
+add_library(motogp_lan_guest STATIC src/lan/guest_bridge.cpp)
+target_link_libraries(motogp_lan_guest PUBLIC motogp_lan rex::runtime)
+rexglue_apply_target_settings(motogp_lan_guest)
+
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
+    src/lan/runtime.cpp
     src/button_prompts.cpp
     src/ps3_prompt_textures.cpp
     src/physics_assets.cpp
@@ -37,14 +53,27 @@ target_link_libraries(nightly_input_probe PRIVATE rex::runtime)
 rexglue_apply_target_settings(nightly_input_probe)
 
 if(WIN32)
+    enable_language(RC)
+    function(motogp_embed_icon target artwork)
+        set(MOTOGP_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/${artwork}.ico")
+        configure_file(resources/icons/app.rc.in "${CMAKE_CURRENT_BINARY_DIR}/${target}-icon.rc" @ONLY)
+        target_sources(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${target}-icon.rc")
+        set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${target}-icon.rc" APPEND PROPERTY
+            OBJECT_DEPENDS "${MOTOGP_ICON_FILE}")
+    endfunction()
     add_executable(motogp0910 WIN32 ${MOTOGP0910_SOURCES})
+    motogp_embed_icon(motogp0910 game)
     target_link_libraries(motogp0910 PRIVATE xinput)
     add_executable(motogp0910-launcher WIN32 src/launcher/main.cpp)
+    motogp_embed_icon(motogp0910-launcher launcher)
+    add_executable(windows_icon_probe EXCLUDE_FROM_ALL tools/windows_icon_probe.cpp)
+    target_link_libraries(windows_icon_probe PRIVATE user32 gdi32)
     target_compile_definitions(motogp0910-launcher PRIVATE UNICODE _UNICODE)
     target_include_directories(motogp0910-launcher SYSTEM PRIVATE
         $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
     target_link_libraries(motogp0910-launcher PRIVATE user32 shell32 ole32 comctl32 bcrypt uuid dxgi gdiplus gdi32 dwmapi uxtheme)
     add_executable(launcher_layout_probe EXCLUDE_FROM_ALL tools/launcher_layout_probe.cpp)
+    motogp_embed_icon(launcher_layout_probe launcher)
     target_compile_definitions(launcher_layout_probe PRIVATE UNICODE _UNICODE)
     target_include_directories(launcher_layout_probe SYSTEM PRIVATE
         $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -68,6 +97,7 @@ else()
 endif()
 
 rexglue_setup_target(motogp0910 GPU_PLUGINS xenos)
+target_link_libraries(motogp0910 PRIVATE motogp_lan_guest)
 
 add_executable(button_prompt_input_probe EXCLUDE_FROM_ALL tools/button_prompt_input_probe.cpp)
 target_link_libraries(button_prompt_input_probe PRIVATE rex::runtime)
@@ -90,6 +120,14 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    add_executable(lan_import_probe EXCLUDE_FROM_ALL tools/lan_import_probe.cpp src/lan/runtime.cpp)
+    target_include_directories(lan_import_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(lan_import_probe PRIVATE motogp0910_recomp motogp_lan_guest)
+    rexglue_apply_target_settings(lan_import_probe)
+    add_executable(lan_guest_probe EXCLUDE_FROM_ALL tools/lan_guest_probe.cpp)
+    target_include_directories(lan_guest_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(lan_guest_probe PRIVATE motogp0910_recomp motogp_lan_guest)
+    rexglue_apply_target_settings(lan_guest_probe)
     add_executable(runtime_stability_probe EXCLUDE_FROM_ALL tools/runtime_stability_probe.cpp)
     target_include_directories(runtime_stability_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(runtime_stability_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -109,9 +147,9 @@ if(TARGET motogp0910_recomp)
     add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
-    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime)
+    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
     rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)
     if(WIN32)
@@ -158,7 +196,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -168,7 +206,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File

@@ -23,6 +23,8 @@
 #include "ps3_prompt_textures.h"
 #include "livery_readback.h"
 #include "display_settings.h"
+#include "window_icons.h"
+#include "lan/runtime.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -117,6 +119,8 @@ class Motogp0910App : public rex::ReXApp {
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
+    motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
+    motogp::lan::Start(runtime()->kernel_state());
     motogp::ApplyHostDisplay(window());
     motogp::wide::Start(window());
     motogp::livery::Initialize();
@@ -128,6 +132,7 @@ class Motogp0910App : public rex::ReXApp {
   // std::unique_ptr<rex::ui::AchievementNotificationDialog>
   // CreateAchievementNotificationDialog() override;
   void OnShutdown() override {
+    motogp::lan::Stop();
     motogp::wide::Stop();
     motogp::prompts::StopInputObserver();
     motogp::prompts::StopPS3Artwork();

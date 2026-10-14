@@ -5,7 +5,7 @@
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
-İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN henüz uygulanmadı.
+İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN keşif/oturum altyapısının ilk aşaması uygulandı; oynanabilir LAN yarışı henüz hazır değil.
 
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
@@ -13,7 +13,7 @@ tamamlandığı anlamına gelmez.
 | Windows launcher | Genişletildi: İngilizce/Türkçe, grafik/GPU/MSAA/FSR 1/CAS/FXAA, gerçek ses düzeyi, 25 düzenlenebilir klavye eşlemesi; test ve paket mevcut. | 1 |
 | Cihaza göre oyun içi tuş simgeleri | Native çizim ve otomatik giriş seçimi uygulandı. [Kapsam ve testler](controller-prompts.md). | Yerel Windows görsel testi |
 | Stabilite ve kalite kontrol | Runtime bellek/thread/yol düzeltmeleri ve Windows CPU/UI regresyonu tamamlandı. [Kapsam](stability-quality-control.md). Tam pist/mod GPU taraması bekliyor. | Her aşama |
-| Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
+| Xbox Live multiplayer akışının LAN üzerinden çalışması | [İlk keşif/oturum altyapısı](lan-lobby-preview.md) ve iki Windows süreciyle test hazır. XNet/WSA oyun paket entegrasyonu ve gerçek yarış bekliyor. | 3 |
 
 ## Doğrudan EXE açılışı
 
@@ -87,7 +87,8 @@ koruma doğrulanır; eski düzende açılış da desteklenir.
 14 Ekim 2026: ilk hedef **Windows + Radmin VPN, aynı sanal ağda otomatik oda
 keşfi ve host/join; yedek seçenek olarak IP ile bağlanma**. Ayrı merkezi sunucu zorunluluğu yok. [Kaynak incelemesi ve uygulama
 rotası](lan-research.md) tamamlandı; DBZ Burst Limit'in Radmin/LAN yolu ve diğer
-ReXGlue ağ katmanları incelendi. MotoGP ağ desteği henüz uygulanmadı.
+ReXGlue ağ katmanları incelendi. [Keşif/guest oturum köprüsü](lan-lobby-preview.md)
+ilk aşaması uygulandı. Oynanabilir LAN yarışı ve oyun içi lobby UI testi henüz tamamlanmadı.
 
 Kullanıcının tercihi: **aynı yerel ağda, ayrı bir merkezi/dedicated sunucu
 zorunluluğu olmadan** oynama. Bir oyuncunun oda açması ve diğerlerinin ona
