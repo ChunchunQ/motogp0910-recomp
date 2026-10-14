@@ -10,7 +10,7 @@ cmake -S . -B out/build/windows-nightly-release -G Ninja \
   -DCMAKE_PROJECT_INCLUDE="$project/cmake/windows-host-tools.cmake" \
   -DCMAKE_PREFIX_PATH=/workspace/shared/rexglue-nightly-packages/win-amd64
 cmake --build out/build/windows-nightly-release \
-  --target motogp0910 motogp0910-launcher motogp_headless_probe --parallel 4
+  --target motogp0910 motogp0910-launcher motogp0910-crash-monitor motogp_headless_probe --parallel 4
 python3 scripts/stage-spatial-runtime.py out/build/windows-nightly-release
 python3 - <<'PY'
 from pathlib import Path

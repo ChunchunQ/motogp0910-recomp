@@ -36,7 +36,7 @@ def main():
     for name, expected in manifest["dll_sha256"].items():
         if hashlib.sha256((BUILD / name).read_bytes()).hexdigest() != expected:
             raise SystemExit(f"Runtime mismatch: {name}; stage the spatial FSR pair first")
-    for name in ("motogp0910.exe", "motogp0910-launcher.exe", *RUNTIME):
+    for name in ("motogp0910.exe", "motogp0910-launcher.exe", "motogp0910-crash-monitor.exe", "motogp0910.map", *RUNTIME):
         source = BUILD / name
         if not source.is_file():
             raise SystemExit(f"Missing build output: {name}")
@@ -59,7 +59,8 @@ def main():
         "General > Enable LAN (Experimental); automatic rooms, optional host IPv4 fallback.\n"
         "Use the same package on both PCs and unranked Player Match on LAN / Radmin.\n"
         "No Xbox Live login or dedicated server. Offline remains the default.\n"
-        "New runtime/gameplay/regression tests were skipped at the user's request.\n"
+        "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
+        "Empty Auto-IP command-line values no longer swallow the next option.\n"
         "This build is compiled, but synchronized racing and real Radmin are UNVERIFIED.\n"
         "Read lan-readme.txt for the exact two-PC steps and unsupported features.\n\n"
         "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
@@ -67,14 +68,23 @@ def main():
     ) if args.lan_preview else ""
     if args.lan_preview:
         shutil.copy2(ROOT / "docs/lan-multiplayer-test.md", STAGE / "lan-readme.txt")
+        shutil.copy2(ROOT / "docs/lan-startup-fix.md", STAGE / "lan-startup-fix.txt")
+    shutil.copy2(ROOT / "docs/crash-reports.md", STAGE / "crash-readme.txt")
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
+        "CRASH REPORTS: General > Extended crash diagnostics (default ON).\n"
+        "The separate monitor captures fatal errors including fast-fail 0xC0000409.\n"
+        "Reports: logs/crash-*/report.txt and crash.dmp, with latest log and settings.\n"
+        "Error report also copies the latest native crash folder.\n"
+        "Keep motogp0910-crash-monitor.exe and motogp0910.map with the other files.\n"
+        "A minidump can contain memory fragments and local paths.\n"
+        "Read crash-readme.txt for coverage, fallback location and sharing steps.\n\n" +
         "STABILITY: Reject out-of-range/overflowing TLS slots, preserve owned launch paths,\n"
         "use unique atomic thread IDs and a thread-safe host processor count cache.\n"
         "FILETIME calendar conversions preserve the 1601 epoch and 100 ns precision.\n"
         "Unpinned CPU updates avoid host topology queries and repeated warnings.\n"
         "FPS pacing and ultrawide HUD diagnostics avoid redundant hot-path work.\n"
-        "Earlier Windows CPU/UI regressions passed under Wine; this new LAN integration is untested.\n\n"
+        "Earlier Windows CPU/UI regressions passed under Wine; LAN racing remains unverified.\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"

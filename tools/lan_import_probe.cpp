@@ -1,5 +1,6 @@
 #include "motogp0910_init.h"
 #include "lan/runtime.h"
+#include "../src/launcher/core.h"
 #include <rex/kernel/init.h>
 #include <rex/runtime.h>
 #include <rex/system/xio.h>
@@ -73,6 +74,33 @@ struct Fixture {
 }
 int main(int argc,char** argv){try{
  if(argc<2)throw std::runtime_error("Usage: lan_import_probe GAME_ROOT [host READY STOP | client automatic|direct]");
+ if(argc==3 && std::string(argv[2])=="startup-auto"){
+   launcher::Settings settings;settings.lan_enabled=true;settings.lan_player_name="inflames";settings.lan_room_name="test";
+   settings.bindings[0]=""; // Intentional unbinding must survive the empty-CLI fix.
+   toml::table config;settings.Store(config);
+   const auto file=std::filesystem::temp_directory_path()/("motogp-lan-startup-"+std::to_string(GetCurrentProcessId())+".toml");
+   struct Cleanup{std::filesystem::path file;~Cleanup(){std::error_code error;std::filesystem::remove(file,error);}} cleanup{file};
+   {std::ofstream output(file);output<<toml::toml_formatter{config};if(!output)throw std::runtime_error("Cannot write startup fixture");}
+   auto command=launcher::Arguments(std::filesystem::canonical(argv[1]),settings,config);
+   std::vector<std::string> arguments{"probe"};for(const auto& argument:command)arguments.push_back(launcher::Utf8(argument));
+   std::vector<char*> pointers;for(auto& argument:arguments)pointers.push_back(argument.data());
+   rex::cvar::Init(static_cast<int>(pointers.size()),pointers.data());rex::cvar::LoadConfig(file);
+   Check(rex::cvar::Query<bool>("lan_enabled"),"Actual launcher command preserves LAN enabled");
+   Check(rex::cvar::Query<std::string>("lan_bind_ip").empty(),"Auto local IP stays empty after real SDK CLI parsing");
+   Check(rex::cvar::Query<std::string>("lan_host_ip").empty(),"Auto host IP stays empty after real SDK CLI parsing");
+   Check(rex::cvar::Query<std::string>("lan_player_name")=="inflames","Player name is not consumed as the previous argument");
+   Check(rex::cvar::Query<std::string>("lan_room_name")=="test","Room name survives actual launcher and SDK parser");
+   Check(rex::cvar::Query<std::string>("keybind_a").empty(),"Intentional unbound key loads from saved TOML");
+   Fixture fixture(argv[1]);Check(!XFAILED(fixture.runtime.LoadXexImage("game:\\default.xex")),"Load real TU before automatic LAN start");
+   for(unsigned i=0;i<3;++i){motogp::lan::Start(fixture.runtime.kernel_state());motogp::lan::Stop();}
+   rex::cvar::SetFlagFromCommandLine("lan_bind_ip","--lan_enabled=true");bool rejected=false;
+   try{motogp::lan::Start(fixture.runtime.kernel_state());}catch(const std::exception& error){rejected=std::string(error.what())=="Invalid LAN local IPv4";}
+   Check(rejected,"Reported malformed CLI IP is rejected without publishing a partial bridge");motogp::lan::Stop();
+   auto ctx=fixture.Context();ctx.r3.u64=fixture.allocation+32;__imp__XamSessionCreateHandle(ctx,fixture.Base());
+   Check(ctx.r3.u32==0 && fixture.Get(32)==0xCAFEDEAD,"Failed startup restores original offline imports");
+   rex::cvar::SetFlagFromCommandLine("lan_bind_ip","");motogp::lan::Start(fixture.runtime.kernel_state());fixture.Create(true);fixture.Delete();
+   std::cout<<checks<<" actual launcher/SDK auto-LAN startup checks passed\n";return 0;
+ }
  Fixture fixture(argv[1]);
  if(argc==2){
    auto ctx=fixture.Context();ctx.r3.u64=fixture.allocation+32;__imp__XamSessionCreateHandle(ctx,fixture.Base());

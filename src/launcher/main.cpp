@@ -39,7 +39,7 @@ struct App {
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
   std::array<HWND,5> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
+  HWND crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -185,6 +185,7 @@ struct App {
     SetWindowTextW(shader_cache,T(L"Shader cache",L"Shader önbelleği"));
     SetWindowTextW(dither,T(L"Reduce color banding",L"Renk bantlaşmasını azalt"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
+    SetWindowTextW(crash_diagnostics,T(L"Extended crash diagnostics",L"Gelişmiş çökme tanılaması"));
     SetWindowTextW(lan_enabled,T(L"Enable LAN (Experimental)",L"LAN’ı etkinleştir (Deneysel)"));
     SetWindowTextW(mute,T(L"Mute game audio",L"Oyun sesini kapat"));
     SetWindowTextW(save,T(L"Save settings",L"Ayarları kaydet"));
@@ -360,6 +361,8 @@ struct App {
     LabelControl(3,L"Host IPv4 (empty = automatic discovery)",L"Kurucu IPv4 (boş = otomatik oda arama)",696,512,374);lan_host=lan_field(538,kLanHost,15);
     LabelControl(3,L"Same build on both PCs. Use Player Match.\nJoin the same LAN / Radmin network.\nRanked matches and Xbox Live are unsupported.\nGameplay verification is pending.",
         L"İki PC’de aynı build: Player Match kullan.\nAynı LAN / Radmin ağına bağlan.\nRanked ve Xbox Live desteklenmiyor.\nOyun içi doğrulama henüz yapılmadı.",696,590,374,106);
+    crash_diagnostics=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,654,374,28,kCrashDiagnostics);
+    SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
     LabelControl(4,L"POST-PROCESSING",L"SON İŞLEME",260,247,374);
     for(size_t i=0;i<2;++i){LabelControl(4,kEngineEffects[i].english,kEngineEffects[i].turkish,260,290+86*i,374);engine_choices[i]=combo(4,260,316+86*i,374,kEngineBase+i);}
     LabelControl(4,L"SHADOWS",L"GÖLGELER",696,247,374);
@@ -487,6 +490,7 @@ struct App {
     settings=GetControls(); settings.Store(config.table);
     Put(config.table,"game_data_root",Utf8(GameRoot().wstring()));
     config.Save();
+    Put(preferences.table,"crash_monitor",Checked(crash_diagnostics));preferences.Save();
     Status(L"Settings saved. They will be used on the next launch.",L"Ayarlar kaydedildi. Sonraki açılışta kullanılacak.");
   }
   void Browse() {
@@ -545,6 +549,12 @@ struct App {
       output<<"Log tail "<<i+1<<": "<<Utf8(files[i].path().filename().wstring())<<'\n';
       if(!tail) throw std::runtime_error("Could not write log report");
     }
+    fs::path native_crash;fs::file_time_type crash_time=fs::file_time_type::min();
+    for(const auto& entry:fs::directory_iterator(exe/L"logs")){
+      if(!entry.is_directory() || !entry.path().filename().wstring().starts_with(L"crash-") || !fs::is_regular_file(entry.path()/L"report.txt"))continue;
+      const auto modified=entry.last_write_time();if(modified>=crash_time){crash_time=modified;native_crash=entry.path();}
+    }
+    if(!native_crash.empty()){fs::copy(native_crash,folder/L"native-crash",fs::copy_options::recursive);output<<"Native crash evidence: native-crash/\n";}
     output.close(); if(!output) throw std::runtime_error("Could not write report");
     Status(L"Report created: "+folder.wstring(),L"Rapor oluşturuldu: "+folder.wstring());
     OpenFolder(folder);
@@ -577,7 +587,7 @@ struct App {
           case kBrowse:Browse();break;case kSave:SaveSettings();break;
           case kDefaults:settings=Settings{};SetControls(settings);Status(L"Defaults selected. Save or press PLAY to apply.",L"Varsayılanlar seçildi. Kaydet veya oyunu başlat.");break;
           case kLogs:OpenFolder(exe/L"logs");break;case kReport:CreateReport();break;
-          case kPlay:if(process)break;Validate(exe,GameRoot());SaveSettings();process=Start(exe,Arguments(GameRoot(),settings,config.table));Running(true);SetTimer(window,1,700,nullptr);
+          case kPlay:if(process)break;Validate(exe,GameRoot());SaveSettings();process=Start(exe,Arguments(GameRoot(),settings,config.table),Checked(crash_diagnostics));Running(true);SetTimer(window,1,700,nullptr);
             Status(L"Game running. Closing the launcher leaves the game open.",L"Oyun çalışıyor. Launcher'ı kapatman oyunu kapatmaz.");break;
         }
       }
@@ -586,7 +596,7 @@ struct App {
   void Poll(){
     if(!process || WaitForSingleObject(process,0)!=WAIT_OBJECT_0)return;
     DWORD code=0;GetExitCodeProcess(process,&code);CloseHandle(process);process=nullptr;KillTimer(window,1);Running(false);
-    if(code)Status(L"Game exited (code "+std::to_wstring(code)+L"). Open logs or create an error report.",L"Oyun kapandı (kod "+std::to_wstring(code)+L"). Logları aç veya hata raporu oluştur.");
+    if(code)Status(L"Game exited (code "+std::to_wstring(code)+L"). Open logs for the crash report.",L"Oyun kapandı (kod "+std::to_wstring(code)+L"). Çökme raporu için logları aç.");
     else Status(L"Game closed. You can launch again.",L"Oyun kapandı. Tekrar başlatabilirsin.");
   }
 };

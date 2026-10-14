@@ -352,6 +352,10 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
     else if(node.is_boolean()) value=*node.value<bool>()?"true":"false";
     else if(node.is_integer()) value=std::to_string(*node.value<int64_t>());
     else if(node.is_floating_point()) value=std::to_string(*node.value<double>());
+    // CLI11 treats --name= as a missing value and consumes the next option.
+    // SaveSettings writes intentional empty strings to TOML before Start; let
+    // the SDK load those values there instead (Auto IPs and unbound keys).
+    if(node.is_string() && value.empty())continue;
     args.push_back(L"--"+Wide(name)+L"="+Wide(value));
   }
   // FSR 1 is spatial: upscale the native 720p image to the selected host
@@ -369,8 +373,11 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
   }
   return args;
 }
-inline HANDLE Start(const fs::path& exe, const std::vector<std::wstring>& arguments) {
-  const auto program = exe / "motogp0910.exe";
+inline HANDLE Start(const fs::path& exe, const std::vector<std::wstring>& arguments,bool monitored=false) {
+  const auto program = exe / (monitored?"motogp0910-crash-monitor.exe":"motogp0910.exe");
+  if(monitored && !fs::is_regular_file(program))throw Error(
+      L"Crash monitor is missing. Extract the complete new Windows ZIP.",
+      L"Çökme izleyicisi eksik. Yeni Windows ZIP’ini tamamen çıkar.");
   std::wstring command = Quote(program.wstring());
   for (const auto& arg : arguments) command += L" " + Quote(arg);
   STARTUPINFOW startup{sizeof(startup)};

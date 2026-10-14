@@ -98,9 +98,11 @@ void Start(rex::system::KernelState* kernel){
   Options options;options.bind_ip=rex::cvar::Query<std::string>("lan_bind_ip");
   const auto player=rex::cvar::Query<std::string>("lan_player_name");
   if(player.empty() || player.size()>15 || player.find('\0')!=std::string::npos)throw std::runtime_error("LAN player name must contain 1-15 UTF-8 bytes");
+  REXLOG_INFO("LAN_STARTUP: initializing adapter={}",options.bind_ip.empty()?"automatic":options.bind_ip);
   auto node=std::make_shared<Node>(options);
-  bridge=std::make_unique<GuestBridge>(kernel,node,rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"));
-  sockets=std::make_unique<SocketBridge>(*bridge);
+  auto next_bridge=std::make_unique<GuestBridge>(kernel,node,rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"));
+  auto next_sockets=std::make_unique<SocketBridge>(*next_bridge);
+  bridge=std::move(next_bridge);sockets=std::move(next_sockets);
   REXLOG_INFO("LAN_LOBBY: adapter={} endpoint={}:{} discovery={} transport=guest-UDP/VDP protocol=LAN02",node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
       rex::cvar::Query<std::string>("lan_host_ip").empty()?"automatic":"direct-IP fallback");
 #else

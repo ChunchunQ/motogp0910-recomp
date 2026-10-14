@@ -6,10 +6,12 @@ foundation package is incompatible.
 
 This build connects the original title's session and UDP/VDP socket imports to
 our native LAN transport. It is ready for a first **user gameplay test**, not a
-claim that synchronized racing has been verified. At the user's request, new
-runtime, regression, and two-PC tests were skipped for this delivery. Windows
-EXEs compiled successfully; packaging verifies the matching runtime DLL hashes
-and ZIP integrity. Earlier foundation tests do not validate these new paths.
+claim that synchronized racing has been verified. The initial LAN integration
+delivery skipped new runtime/gameplay tests at the user's request. The subsequent [launcher startup fix](lan-startup-fix.md) passed
+17 targeted real-SDK Windows/Wine checks. [Crash diagnostics](crash-reports.md)
+passed 9 native process/fault scenarios. Windows EXEs compiled successfully;
+packaging verifies matching runtime DLL hashes and ZIP integrity. This does not
+validate two-PC racing or the rest of the new packet paths.
 
 ## Kullanım: iki Windows bilgisayarı
 
@@ -93,5 +95,5 @@ TCP-based multiplayer and blocking scalar receive are not implemented by this
 bridge; the inspected title VDP path uses events, overlapped receives and
 nonblocking sockets. No leaderboards, ranked arbitration, voice verification
 or host migration is claimed. Disabling LAN forwards original imports to the
-pinned runtime. Existing offline fixes were validated in earlier builds; no
-new regression run was performed for this ZIP.
+pinned runtime. Existing offline fixes were validated in earlier builds; the
+startup fix passed 17 targeted checks, but no broad new gameplay/regression run was performed.

@@ -25,6 +25,7 @@
 #include "display_settings.h"
 #include "window_icons.h"
 #include "lan/runtime.h"
+#include "crash_report.h"
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -107,6 +108,7 @@ class Motogp0910App : public rex::ReXApp {
     return false;
   }
   void OnPreSetup(rex::RuntimeConfig& config) override {
+    motogp::crash::Install();
     motogp::ApplyDisplayStartupFlags();
     ApplyMotogpInputDefaults();
     ApplyMotogpAudioSettings();
@@ -120,7 +122,15 @@ class Motogp0910App : public rex::ReXApp {
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
     motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
-    motogp::lan::Start(runtime()->kernel_state());
+    try {
+      motogp::lan::Start(runtime()->kernel_state());
+    } catch(const std::exception& error) {
+      motogp::lan::Stop();
+      REXLOG_ERROR("LAN_STARTUP_FAILED: {}. Continuing in offline mode.",error.what());
+      rex::ShowSimpleMessageBox(rex::SimpleMessageBoxType::Error,
+          std::string("LAN could not start: ")+error.what()+
+          "\n\nThe game will continue in OFFLINE mode. Close it and correct the LAN settings in the launcher before trying multiplayer again.");
+    }
     motogp::ApplyHostDisplay(window());
     motogp::wide::Start(window());
     motogp::livery::Initialize();
