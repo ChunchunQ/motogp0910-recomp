@@ -1,5 +1,27 @@
 # MotoGP 09/10 geliştirme notları
 
+## Güncel arayüz işleri — 14 Ekim 2026
+
+Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edilir;
+önceki iş gösterilmeden sonraki iş başlatılmaz.
+
+1. **Klavye tuş simgeleri:** koyu tuş kapakları, turuncu MotoGP detayları ve
+   daha okunaklı yazı. Kullanıcı bu görünümü seçti; [uygulama ve Windows testleri](keyboard-prompts.md) tamamlandı. Kullanıcının görsel testi bekleniyor.
+2. **Oyun içinden canlı ayarlar:** F4 menüsüne benzer veya mevcut menü içinden
+   launcher ayarlarına erişim. Canlı değişebilen ayarlar ile yeniden başlatma
+   gerektirenler doğru ayrılacak; uygulama henüz başlamadı.
+3. **Achievement arayüzü:** F7 listesi ve sağ alttaki bildirimler; sade,
+   MotoGP renk temasına uygun tasarım. Henüz başlamadı.
+4. **Launcher Controls:** daha basit düzen. Bu aşamaya gelince kullanıcıya
+   tasarım ve kapsam detayları sorulacak; henüz başlamadı.
+5. **Launcher genel tasarımı:** en son yapılacak. Detaylar kullanıcıdan
+   alınacak; henüz başlamadı.
+
+FPS/fizik incelemesi kullanıcı tarafından iptal edildi; o incelemenin
+tanılama/test kodları geri alındı. LAN/lobi düzeltmeleri korundu. Kullanıcı
+iki oyunculu Radmin yarışının çalıştığını bildirdi; son lobi giriş düzeltmesi
+ayrı build olarak teslim edildi.
+
 13 Ekim 2026 kullanıcı talepleri. Ana platform **Windows 10/11**, SDK
 **ReXGlue Nightly 0.10.0.24-dev.gbd833a2**. Kullanıcı yarış başlangıcı düzeltmesinin ardından oyunun
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün

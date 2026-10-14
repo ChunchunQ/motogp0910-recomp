@@ -113,6 +113,37 @@ int main(int argc,char** argv) {
         }
         ++checks;
       }
+      // Real saved bindings, including punctuation and long modifier names,
+      // must fit the native prompt width without losing the game's fade.
+      const auto previous_binding=rex::cvar::Query<std::string>("keybind_a");
+      for(const char* binding:{"Space","Quote","Semicolon","Ctrl+Shift+PageDown","Alt+Backspace"})
+        for(uint32_t alpha:{0u,0x40u,0xFFu}){
+          rex::cvar::SetFlagByName("keybind_a",binding);
+          const auto label=motogp::prompts::PrimaryLabel(binding);
+          const auto width=.25f*motogp::prompts::LabelAspect(label);
+          for(unsigned v=0;v<4;++v){
+            rex::memory::store_and_swap<float>(base+vertices[v],1.f+((v==1||v==2)?width:0));
+            write(vertices[v]+12,(alpha<<24)|0xFFFFFF);
+          }
+          std::array<std::array<uint8_t,24>,4> original;
+          for(unsigned v=0;v<4;++v)std::memcpy(original[v].data(),base+vertices[v],24);
+          write(count_address,0);write(buffer_address,allocation+0x4000);write(texture_address,0);
+          PPCContext ctx{};ctx.r1.u64=allocation+0x3000;ctx.lr=0xABCD1234;
+          ctx.r3.u64=vertices[0];ctx.r4.u64=vertices[1];ctx.r5.u64=vertices[2];ctx.r6.u64=vertices[3];ctx.r7.u64=allocation+0x2000;
+          if(!motogp::prompts::DrawReplacement(ctx,base,motogp::prompts::Style::Keyboard))throw std::runtime_error("Custom keyboard prompt not drawn");
+          const auto count=rex::memory::load_and_swap<uint32_t>(base+count_address);
+          if(!count || count>=8192 || ctx.r1.u32!=allocation+0x3000 || ctx.lr!=0xABCD1234)throw std::runtime_error("Long keyboard prompt lost native batch/ABI");
+          for(unsigned v=0;v<count;++v){
+            const auto p=allocation+0x4000+v*24;
+            const auto x=rex::memory::load_and_swap<float>(base+p),y=rex::memory::load_and_swap<float>(base+p+4);
+            if(!std::isfinite(x)||!std::isfinite(y)||x<.9999f||x>1.f+width+.0001f||y<1.9999f||y>2.2501f||
+                (rex::memory::load_and_swap<uint32_t>(base+p+12)>>24)!=alpha)throw std::runtime_error("Custom keyboard cap escaped layout/fade");
+          }
+          for(unsigned v=0;v<4;++v)if(std::memcmp(original[v].data(),base+vertices[v],24))throw std::runtime_error("Custom cap changed native source vertices");
+          ++checks;
+        }
+      rex::cvar::SetFlagByName("keybind_a",previous_binding);
+      for(unsigned v=0;v<4;++v)std::memcpy(base+vertices[v],saved_vertices[v].data(),24);
       for(auto style:{motogp::prompts::Style::Xbox,motogp::prompts::Style::Keyboard}) {
         PPCContext context{};context.r7.u64=style==motogp::prompts::Style::Xbox?0x44440000:0x11112222;
         if(motogp::prompts::DrawReplacement(context,base,style))throw std::runtime_error("Passthrough texture was replaced");

@@ -4,6 +4,9 @@ Registered prompts switch between Xbox, PlayStation and saved keyboard
 bindings. PlayStation prompts now use the original PS3 controller textures
 supplied by the user, replacing the previous drawn symbols.
 
+Keyboard prompts now use dark rounded keycaps, orange MotoGP accents and
+Open Sans Semibold lettering. [Design, coverage and validation](keyboard-prompts.md).
+
 ## Installation and use
 
 Extract the complete Windows ZIP. Replace the EXEs and both runtime DLLs,

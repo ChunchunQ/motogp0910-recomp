@@ -1,0 +1,5 @@
+Open Sans Semibold
+Digitized data copyright (c) 2010-2011, Google Corporation.
+Licensed under the Apache License, Version 2.0.
+Source: https://www.opensans.com/
+The keyboard prompt font data is rasterized and quantized from this font.

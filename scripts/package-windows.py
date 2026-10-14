@@ -51,6 +51,8 @@ def main():
     shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/tomlplusplus-LICENSE.txt", STAGE / "licenses/tomlplusplus-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/stb/LICENSE.txt", STAGE / "licenses/stb-LICENSE.txt")
+    shutil.copy2(ROOT / "third_party/open-sans/LICENSE.txt", STAGE / "licenses/OpenSans-LICENSE.txt")
+    shutil.copy2(ROOT / "third_party/open-sans/NOTICE.txt", STAGE / "licenses/OpenSans-NOTICE.txt")
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
@@ -74,6 +76,7 @@ def main():
         shutil.copy2(ROOT / "docs/lan-startup-fix.md", STAGE / "lan-startup-fix.txt")
         shutil.copy2(ROOT / "docs/lan-lobby-stability.md", STAGE / "lan-lobby-fix.txt")
     shutil.copy2(ROOT / "docs/crash-reports.md", STAGE / "crash-readme.txt")
+    shutil.copy2(ROOT / "docs/keyboard-prompts.md", STAGE / "keyboard-prompts-readme.txt")
     if args.include_one_pc_test:
         shutil.copy2(ROOT / "scripts/test-lan-one-pc.ps1", STAGE / "test-lan-one-pc.ps1")
         shutil.copy2(ROOT / "docs/lan-one-pc-test.md", STAGE / "lan-one-pc-readme.txt")
@@ -153,6 +156,9 @@ def main():
         "This build pads rows without changing any visible compressed pixel block.\n\n"
         "IN-GAME PROMPTS: Automatically switch Xbox / PlayStation / keyboard\n"
         "symbols after meaningful input. Keyboard caps show your actual saved bindings.\n"
+        "KEYBOARD UPDATE: Rounded dark keycaps, orange MotoGP accents and Open Sans Semibold.\n"
+        "The font is embedded; no font installation or additional texture pack is needed.\n"
+        "Native Windows/Wine drawing, fade, replay and input checks passed; local visuals need testing.\n"
         "PlayStation: A=cross, B=circle, X=square, Y=triangle; L1/R1 and L2/R2.\n"
         "Original PS3 stick, stick direction, D-pad and SELECT artwork is included.\n"
         "The Second Chance/replay LT/RT/LB/RB/B row also switches styles.\n"
