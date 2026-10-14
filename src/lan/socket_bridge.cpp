@@ -217,7 +217,7 @@ struct SocketBridge::Impl {
     rex::system::object_ref<rex::system::XEvent> notify;
     if(event){notify=kernel->object_table()->LookupObject<rex::system::XEvent>(event);if(!notify)return kInvalid;}
     std::vector<std::optional<Room>> results(count);
-    if(!service){auto rooms=guest.Network().Rooms();if(auto current=guest.Network().CurrentRoom())rooms.push_back(*current);
+    if(!service){auto rooms=guest.KnownRooms();
       for(unsigned i=0;i<count;++i){const auto xnaddr=U32(Ptr(ctx.r5.u32+i*4)),kid=U32(Ptr(ctx.r6.u32+i*4)),key=U32(Ptr(ctx.r7.u32+i*4));
         if(!Valid(xnaddr,36) || !Valid(kid,8) || !Valid(key,16))return kFault;
         const auto peer=U64(Ptr(xnaddr+16)),id=U64(Ptr(kid));
@@ -256,13 +256,13 @@ bool SocketBridge::Handle(std::string_view name,PPCContext& ctx,uint8_t* base){
     if(name=="NetDll_XNetXnAddrToInAddr"){
       if(!p.Valid(ctx.r4.u32,36) || !p.Valid(ctx.r5.u32,8) || !p.Valid(ctx.r6.u32,4,true)){ctx.r3.u64=kFault;return true;}
       const auto peer=U64(p.Ptr(ctx.r4.u32+16)),id=U64(p.Ptr(ctx.r5.u32));bool known=false;
-      auto rooms=p.guest.Network().Rooms();if(auto current=p.guest.Network().CurrentRoom())rooms.push_back(*current);
+      auto rooms=p.guest.KnownRooms();
       for(const auto& room:rooms)if(room.id==id && (room.host==peer || p.guest.Network().Connected(peer) || peer==p.guest.Network().Identity()))known=true;
       if(!known){ctx.r3.u64=kInvalid;return true;}W32(p.Ptr(ctx.r6.u32),p.Alias(peer));ctx.r3.u64=0;return true;
     }
     if(name=="NetDll_XNetConnect"){
       const auto peer=p.Peer(ctx.r4.u32);if(!peer){ctx.r3.u64=kInvalid;return true;}
-      if(!p.guest.Network().Connected(peer)){auto rooms=p.guest.Network().Rooms();auto found=std::find_if(rooms.begin(),rooms.end(),[&](const Room& r){return r.host==peer;});
+      if(!p.guest.Network().Connected(peer)){auto rooms=p.guest.KnownRooms();auto found=std::find_if(rooms.begin(),rooms.end(),[&](const Room& r){return r.host==peer;});
         if(found==rooms.end() || !p.guest.Network().Join(*found)){ctx.r3.u64=10060;return true;}}
       ctx.r3.u64=0;return true;
     }

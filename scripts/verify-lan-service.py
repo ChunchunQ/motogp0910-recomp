@@ -24,7 +24,7 @@ def main():
         command.append(guest_path(args.game_root.resolve(strict=True)))
 
     subprocess.run(command, check=True, timeout=30)
-    for mode in ("automatic", "direct"):
+    for mode in (("automatic", "direct", "delayed") if args.game_root else ("automatic", "direct")):
         with tempfile.TemporaryDirectory(prefix="motogp-lan-") as directory:
             root = Path(directory).resolve()
             ready, stop = root / "ready.txt", root / "stop.txt"

@@ -62,7 +62,9 @@ def main():
         "No Xbox Live login or dedicated server. Offline remains the default.\n"
         "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
         "Empty Auto-IP command-line values no longer swallow the next option.\n"
-        "Native Windows Radmin host lobby was reached; inter-PC joining and racing are UNVERIFIED.\n"
+        "The user reported successful two-PC Radmin racing with the previous executable.\n"
+        "LOBBY FIX: Retain selected search results; accept null join-only slots on leave.\n"
+        "Targeted Windows regressions passed; revised Radmin gameplay needs user testing.\n"
         "Read lan-readme.txt for the exact two-PC steps and unsupported features.\n\n"
         "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
         "the supplied MotoGP logo. Both embed seven Windows icon sizes (16-256 px).\n\n"
@@ -70,6 +72,7 @@ def main():
     if args.lan_preview:
         shutil.copy2(ROOT / "docs/lan-multiplayer-test.md", STAGE / "lan-readme.txt")
         shutil.copy2(ROOT / "docs/lan-startup-fix.md", STAGE / "lan-startup-fix.txt")
+        shutil.copy2(ROOT / "docs/lan-lobby-stability.md", STAGE / "lan-lobby-fix.txt")
     shutil.copy2(ROOT / "docs/crash-reports.md", STAGE / "crash-readme.txt")
     if args.include_one_pc_test:
         shutil.copy2(ROOT / "scripts/test-lan-one-pc.ps1", STAGE / "test-lan-one-pc.ps1")
@@ -89,7 +92,7 @@ def main():
         "FILETIME calendar conversions preserve the 1601 epoch and 100 ns precision.\n"
         "Unpinned CPU updates avoid host topology queries and repeated warnings.\n"
         "FPS pacing and ultrawide HUD diagnostics avoid redundant hot-path work.\n"
-        "Earlier Windows CPU/UI regressions passed under Wine; LAN racing remains unverified.\n\n"
+        "Earlier Windows CPU/UI regressions passed under Wine; revised LAN fix needs native testing.\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"

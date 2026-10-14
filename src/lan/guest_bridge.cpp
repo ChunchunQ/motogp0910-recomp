@@ -82,6 +82,17 @@ void GuestBridge::WriteInfo(uint32_t output,const Room& room)const{
   auto* p=kernel_->memory()->TranslateVirtual(output);Store64(p,room.id);
   WriteAddress(output+8,room.host,room.endpoint);std::copy(room.key.begin(),room.key.end(),p+44);
 }
+std::vector<Room> GuestBridge::KnownRooms()const{
+  std::lock_guard lock(mutex_);
+  auto rooms=node_->Rooms();
+  if(auto current=node_->CurrentRoom())rooms.push_back(*current);
+  for(const auto& cached:search_results_){
+    if(std::none_of(rooms.begin(),rooms.end(),[&](const Room& room){
+      return room.id==cached.id && room.host==cached.host;
+    }))rooms.push_back(cached);
+  }
+  return rooms;
+}
 std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,uint32_t size){
   const unsigned needed=message==0xB0006?24:message==0xB0007?28:message==0xB0010?28:
       message==0xB0012||message==0xB0013?20:message==0xB001C?36:
@@ -173,6 +184,7 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
         }
         if(!data.contexts.empty()){Store32(p+88,cursor);for(auto [id,value]:data.contexts){auto* c=mem->TranslateVirtual(cursor);Store32(c,id);Store32(c+4,value);cursor+=8;}}
       }
+      search_results_=std::move(selected);
       return 0;
     }
     const auto pointer=Load32(b);
@@ -192,6 +204,10 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
         room=node_->Host(room_name_,pub+priv,flags,EncodeMetadata(metadata_),{},priv);
       }else{
         auto* data=mem->TranslateVirtual(info);auto rooms=node_->Rooms();if(auto current=node_->CurrentRoom())rooms.push_back(*current);
+        // Results on the guest search screen remain valid join candidates after
+        // the short discovery cache expires. A real keyed handshake still
+        // decides whether the selected host is alive and accepts membership.
+        rooms.insert(rooms.end(),search_results_.begin(),search_results_.end());
         auto found=std::find_if(rooms.begin(),rooms.end(),[&](const Room& r){return r.id==Load64(data) &&
           std::equal(r.key.begin(),r.key.end(),data+44);});
         if(found==rooms.end() || !node_->Join(*found))return Error(1168);
@@ -210,14 +226,17 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
     }
     if(message==0xB0012 || message==0xB0013){
       const auto count=Load32(b+4),xuids=Load32(b+8),indices=Load32(b+12),private_slots=Load32(b+16);
-      if(!count || count>20 || !Valid(private_slots,count*4) ||
+      const bool joining=message==0xB0012;
+      // The original local/remote leave wrappers pass NULL for private slots.
+      // That array belongs only to the join request, despite the shared layout.
+      if(!count || count>20 || (joining && !Valid(private_slots,count*4)) ||
           (xuids?!Valid(xuids,count*8):!Valid(indices,count*4)))return kInvalid;
       auto updated=xuids?session->remote:session->local;
       for(unsigned i=0;i<count;++i){
         const auto index=xuids?0:Load32(mem->TranslateVirtual(indices+i*4));if(index!=0)return kInvalid;
         const auto id=xuids?Load64(mem->TranslateVirtual(xuids+i*8)):node_->Identity();
         if(!id)return kInvalid;
-        const auto private_value=Load32(mem->TranslateVirtual(private_slots+i*4));if(private_value>1)return kInvalid;
+        const auto private_value=joining?Load32(mem->TranslateVirtual(private_slots+i*4)):0;if(private_value>1)return kInvalid;
         if(message==0xB0012){if(xuids && !node_->Connected(id))return Error(1168);updated[id]=private_value!=0;}else updated.erase(id);
       }
       unsigned used_public=0,used_private=0;

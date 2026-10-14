@@ -11,8 +11,11 @@ class GuestBridge {
   rex::system::KernelState* kernel_;
   std::shared_ptr<Node> node_;
   std::string direct_ip_, room_name_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   Metadata metadata_;
+  // Keep the copied, bounded search result until the next successful search.
+  // The title can leave its result screen open longer than discovery expiry.
+  std::vector<Room> search_results_;
  public:
   GuestBridge(rex::system::KernelState*,std::shared_ptr<Node>,std::string direct_ip={},
               std::string room_name="MotoGP room");
@@ -22,6 +25,7 @@ class GuestBridge {
   std::optional<uint32_t> Dispatch(uint32_t message,uint32_t buffer,uint32_t size);
   void WriteAddress(uint32_t output,uint64_t identity,Endpoint)const;
   void WriteInfo(uint32_t output,const Room&)const;
+  std::vector<Room> KnownRooms()const;
   Node& Network()const{return *node_;}
   rex::system::KernelState* Kernel()const{return kernel_;}
 };

@@ -5,13 +5,24 @@ Protocol: **LAN02**; both PCs must use this exact package. The older LAN
 foundation package is incompatible.
 
 This build connects the original title's session and UDP/VDP socket imports to
-our native LAN transport. It is ready for a first **user gameplay test**, not a
-claim that synchronized racing has been verified. The initial LAN integration
+our native LAN transport. The user has now reported a successful two-player
+Radmin race; early lobby retries remain a known issue addressed in the
+[lobby stability fix](lan-lobby-stability.md). The initial LAN integration
 delivery skipped new runtime/gameplay tests at the user's request. The subsequent [launcher startup fix](lan-startup-fix.md) passed
 17 targeted real-SDK Windows/Wine checks. [Crash diagnostics](crash-reports.md)
 passed 9 native process/fault scenarios. Windows EXEs compiled successfully;
 packaging verifies matching runtime DLL hashes and ZIP integrity. This does not
-validate two-PC racing or the rest of the new packet paths.
+replace native two-PC gameplay checks for the revised executable.
+
+## Two-player Windows observations — 14 October 2026
+
+The user found and joined a room using two local instances, then connected two
+PCs through Radmin and reported stable racing. Logs show real bidirectional
+guest packet exchange, two-member sessions and successful session starts.
+Early attempts include a discovery-cache timeout and invalid leave parameters;
+the latest patch fixes these and adds targeted Windows regression coverage.
+Native Radmin testing of the revised patch is pending. Larger grids, poor
+network conditions, reconnects and extended gameplay are not yet validated.
 
 ## Native Windows host observation — 14 October 2026
 
@@ -96,12 +107,11 @@ kanıtlamaz. Loglar yerel/Radmin IP'leri içerebilir.
 
 ## Remaining verification and limits
 
-The user has verified native Windows Radmin adapter selection and the rendered
-host lobby. Client admission, racing synchronization and inter-PC Radmin
-broadcast/routing remain **unverified**. Wine in this cloud reports no physical
-IP Helper adapters; earlier network checks used loopback. Actual Windows GPU
-and two-PC play need the user's machines. This is the first experimental
-integration, so additional title-specific hooks may be needed after that test.
+The user has verified local discovery/join and reported successful two-player
+Radmin racing with the preceding executable. Lobby retry regressions are now
+tested under Wine; native testing of the updated fix is pending. Wine in this
+cloud reports no physical IP Helper adapters, so its network checks use
+loopback and cannot substitute for Radmin routing/gameplay checks.
 
 Initial use is two players. Multi-client mesh and private slots have code
 paths but are not validated in this delivery. Nonzero WSA completion routines,

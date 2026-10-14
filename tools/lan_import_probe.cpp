@@ -14,6 +14,8 @@ REX_EXTERN(__imp__XMsgInProcessCall);
 REX_EXTERN(__imp__XMsgStartIORequest);
 REX_EXTERN(sub_825D9668);
 REX_EXTERN(sub_825D9DA8);
+REX_EXTERN(sub_825D9A28);
+REX_EXTERN(sub_825D9AD0);
 namespace {
 unsigned checks=0;
 void Check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);++checks;}
@@ -70,6 +72,32 @@ struct Fixture {
     __imp__XMsgInProcessCall(ctx,Base());Check(ctx.r3.u32==0 && !motogp::lan::CurrentRoom(),"Actual XGI delete closes session");
     runtime.kernel_state()->object_table()->ReleaseHandle(handle);runtime.kernel_state()->object_table()->ReleaseHandle(handle);
   }
+  void LeaveMembers(){
+    motogp::lan::Options options;options.bind_ip="127.0.0.1";
+    motogp::lan::Node client(options);
+    Check(client.Join(*motogp::lan::CurrentRoom()),"Leave fixture performs real remote join");
+    auto ctx=Context();ctx.r3.u64=handle;ctx.r4.u64=allocation+8;
+    __imp__XamSessionRefObjByHandle(ctx,Base());Check(ctx.r3.u32==0,"Reference session for membership regression");
+    const auto object=Get(8);
+    rex::memory::store_and_swap<uint64_t>(Base()+allocation+2048,client.Identity());Put(2064,0);Put(2068,0);
+    for(bool remote:{false,true}){
+      Put(256,object);Put(260,1);Put(264,remote?allocation+2048:0);Put(268,remote?0:allocation+2064);Put(272,allocation+2068);
+      ctx=Context();ctx.r3.u64=0xFB;ctx.r4.u64=0xB0012;ctx.r5.u64=allocation+256;ctx.r6.u64=20;
+      __imp__XMsgInProcessCall(ctx,Base());Check(ctx.r3.u32==0,"Admit real local/remote fixture member");
+    }
+    for(bool remote:{true,false}){
+      event->Reset();Put(140,event->handle());
+      ctx=Context();ctx.r3.u64=handle;ctx.r4.u64=1;ctx.r5.u64=remote?allocation+2048:allocation+2064;ctx.r6.u64=allocation+128;
+      if(remote)sub_825D9AD0(ctx,Base());else sub_825D9A28(ctx,Base());
+      Check(ctx.r3.u32==997 && Get(128)==0,"Original generated leave wrapper accepts its null private-slot field");
+      uint32_t type=0,state=0;event->Query(&type,&state);Check(state==1,"Original leave signals real completion event");
+      Put(256,object);Put(260,512);Put(264,allocation+12000);Put(268,0);Put(272,0);Put(276,0);
+      ctx=Context();ctx.r3.u64=0xFB;ctx.r4.u64=0xB001D;ctx.r5.u64=allocation+256;ctx.r6.u64=24;
+      __imp__XMsgInProcessCall(ctx,Base());Check(ctx.r3.u32==0 && Get(12000+32)==(remote?1:0),"Original leave updates actual session membership");
+    }
+    runtime.kernel_state()->object_table()->ReleaseHandle(handle);
+    client.Leave();
+  }
 };
 }
 int main(int argc,char** argv){try{
@@ -105,7 +133,7 @@ int main(int argc,char** argv){try{
  if(argc==2){
    auto ctx=fixture.Context();ctx.r3.u64=fixture.allocation+32;__imp__XamSessionCreateHandle(ctx,fixture.Base());
    Check(ctx.r3.u32==0 && fixture.Get(32)==0xCAFEDEAD,"Disabled LAN preserves original SDK import behavior");
-   fixture.Start();fixture.Create(true);fixture.Delete();motogp::lan::Stop();
+   fixture.Start();fixture.Create(true);fixture.LeaveMembers();fixture.Delete();motogp::lan::Stop();
    ctx=fixture.Context();ctx.r3.u64=fixture.allocation+32;__imp__XamSessionCreateHandle(ctx,fixture.Base());
    Check(ctx.r3.u32==0 && fixture.Get(32)==0xCAFEDEAD,"Stopped bridge restores original imports");
  }else if(argc==5 && std::string(argv[2])=="host"){
@@ -117,7 +145,9 @@ int main(int argc,char** argv){try{
    }
    Check(joined,"Actual guest host observed real client membership");fixture.Delete();
  }else if(argc==4 && std::string(argv[2])=="client"){
-   fixture.Start(std::string(argv[3])=="direct"?"127.0.0.1":"");fixture.Search();fixture.Create(false);
+   fixture.Start(std::string(argv[3])=="direct"?"127.0.0.1":"");fixture.Search();
+   if(std::string(argv[3])=="delayed")std::this_thread::sleep_for(std::chrono::milliseconds(3800));
+   fixture.Create(false);
    std::this_thread::sleep_for(std::chrono::milliseconds(100));fixture.Delete();
  }else throw std::runtime_error("Unknown test mode");
  std::cout<<checks<<" actual MotoGP generated-wrapper/LAN import checks passed\n";return 0;
