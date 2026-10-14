@@ -4,7 +4,7 @@ Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
 The interface uses charcoal cards with amber/red accents inspired by the MotoGP
 09/10 cover palette, an original vector racing ribbon and sidebar navigation.
 No reference launcher design, source code or artwork is copied.
-The default language is English; **General → Launcher language → Türkçe** switches the whole
+The launcher opens on **General** every time. The default language is English; **General → Launcher language → Türkçe** switches the whole
 interface immediately and retains the choice in `motogp0910-launcher.toml`.
 File names stay English. No CMD file is required.
 

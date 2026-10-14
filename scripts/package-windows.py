@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
     parser.add_argument('--archive',default='MotoGP0910-Windows-x64-stability-update.zip')
     parser.add_argument('--lan-preview',action='store_true',help='Include the experimental LAN multiplayer integration and Windows test instructions')
+    parser.add_argument('--include-one-pc-test', action='store_true', help='Include optional loopback test helpers; omitted from clean two-PC packages')
     args=parser.parse_args();BUILD=args.build_dir.resolve()
     if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
         parser.error('--archive must be a ZIP filename')
@@ -61,7 +62,7 @@ def main():
         "No Xbox Live login or dedicated server. Offline remains the default.\n"
         "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
         "Empty Auto-IP command-line values no longer swallow the next option.\n"
-        "This build is compiled, but synchronized racing and real Radmin are UNVERIFIED.\n"
+        "Native Windows Radmin host lobby was reached; inter-PC joining and racing are UNVERIFIED.\n"
         "Read lan-readme.txt for the exact two-PC steps and unsupported features.\n\n"
         "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
         "the supplied MotoGP logo. Both embed seven Windows icon sizes (16-256 px).\n\n"
@@ -70,6 +71,10 @@ def main():
         shutil.copy2(ROOT / "docs/lan-multiplayer-test.md", STAGE / "lan-readme.txt")
         shutil.copy2(ROOT / "docs/lan-startup-fix.md", STAGE / "lan-startup-fix.txt")
     shutil.copy2(ROOT / "docs/crash-reports.md", STAGE / "crash-readme.txt")
+    if args.include_one_pc_test:
+        shutil.copy2(ROOT / "scripts/test-lan-one-pc.ps1", STAGE / "test-lan-one-pc.ps1")
+        shutil.copy2(ROOT / "docs/lan-one-pc-test.md", STAGE / "lan-one-pc-readme.txt")
+    one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
         "CRASH REPORTS: General > Extended crash diagnostics (default ON).\n"
@@ -95,7 +100,8 @@ def main():
         "Quality modes resample the resolved scene; FSR 1 remains the safe default.\n"
         "ULTRAWIDE: Auto / 16:9 / 21:9 / 32:9, horizontal-plus camera and central HUD.\n"
         "Wide modes are experimental; broad gameplay and Windows GPU testing is pending.\n\n"
-        "GENERAL: Game folder, Launcher language, Game language and Button prompts.\n"
+        "GENERAL: Opens on General every launch. Game folder, language and Button prompts.\n"
+        + one_pc_notes +
         "The folder and launcher-language controls appear only on General.\n"
         "Game languages: English, French, German, Spanish and Italian.\n"
         "Prompt styles: Automatic, PlayStation 3, Xbox 360 and Keyboard.\n"

@@ -13,6 +13,19 @@ passed 9 native process/fault scenarios. Windows EXEs compiled successfully;
 packaging verifies matching runtime DLL hashes and ZIP integrity. This does not
 validate two-PC racing or the rest of the new packet paths.
 
+## Native Windows host observation — 14 October 2026
+
+The user reached the rendered Player Match lobby without crashing. Their log
+confirms automatic selection of an active Famatech Radmin VPN adapter, native
+UDP bind on the discovery range, successful XGI create (`B0010`) and local join
+(`B0012`), each with result `0`, and one member. This validates this user's local
+host startup and lobby path. No second peer or game packet exchange appears in
+the supplied log. Remote discovery, client join and synchronized racing still
+need validation. Personal IPs, room IDs, original log and screenshots are not
+committed here.
+
+For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md).
+
 ## Kullanım: iki Windows bilgisayarı
 
 1. İki bilgisayara da aynı ZIP'in **tamamını** çıkar. Mevcut `game/` klasörünü,
@@ -83,7 +96,8 @@ kanıtlamaz. Loglar yerel/Radmin IP'leri içerebilir.
 
 ## Remaining verification and limits
 
-Rendered Player Match admission, racing synchronization and real Radmin
+The user has verified native Windows Radmin adapter selection and the rendered
+host lobby. Client admission, racing synchronization and inter-PC Radmin
 broadcast/routing remain **unverified**. Wine in this cloud reports no physical
 IP Helper adapters; earlier network checks used loopback. Actual Windows GPU
 and two-PC play need the user's machines. This is the first experimental

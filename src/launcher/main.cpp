@@ -53,7 +53,7 @@ struct App {
   std::pair<int,int> display_maximum=HardwareDisplayMaximum(Get<int64_t>(config.table,"monitor",0));
   std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum);
   std::vector<int> refresh_rates{0},fps_limits{0,30,60,90,120,144,165,180,240};
-  int current_page=0,binding_index=0;
+  int current_page=3,binding_index=0;
   bool filling_binding=false,capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{};
   HBRUSH background=CreateSolidBrush(kBackground),card=CreateSolidBrush(kCard),field=CreateSolidBrush(kField);
@@ -394,7 +394,7 @@ struct App {
     logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,576,806,126,38,kLogs);
     report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,712,806,130,38,kReport);
     play=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,858,800,230,50,kPlay);
-    Localize();SetControls(settings);ShowPage(0);ReadyStatus();
+    Localize();SetControls(settings);ShowPage(3);ReadyStatus();
   }
   COLORREF BackgroundFor(HWND control)const{
     RECT r;GetWindowRect(control,&r);MapWindowPoints(nullptr,window,reinterpret_cast<POINT*>(&r),2);
