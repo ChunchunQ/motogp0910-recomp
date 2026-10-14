@@ -28,11 +28,20 @@ set(CATCH_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(/workspace/shared/rexglue-sdk-nightly/thirdparty/catch2 catch2)
 add_executable(ppc_smoke generated/ppc_test_functions.cpp generated/ppc_test_cases.cpp
  /workspace/shared/rexglue-sdk-nightly/tests/unit/core/chrono_test.cpp)
-target_include_directories(ppc_smoke PRIVATE generated)
+target_include_directories(ppc_smoke PRIVATE generated /workspace/shared/rexglue-sdk-nightly/include)
 target_compile_options(ppc_smoke PRIVATE -msse4.1 -mssse3 -ffp-model=strict)
 target_link_libraries(ppc_smoke PRIVATE rex::runtime Catch2::Catch2WithMain)
+add_executable(chrono_range_probe /workspace/motogp0910-recomp/tools/chrono_range_probe.cpp)
+target_include_directories(chrono_range_probe PRIVATE /workspace/shared/rexglue-sdk-nightly/include)
+target_link_libraries(chrono_range_probe PRIVATE rex::runtime)
+option(REX_SMOKE_SANITIZERS "Enable UBSan when the compiler runtime is installed" OFF)
+if(REX_SMOKE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+  target_compile_options(chrono_range_probe PRIVATE -fsanitize=undefined -fno-sanitize-recover=undefined)
+  target_link_options(chrono_range_probe PRIVATE -fsanitize=undefined -fno-sanitize-recover=undefined)
+endif()
 EOF
 cmake -S out/smoke -B out/smoke/build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="$CXX"
 cmake --build out/smoke/build --parallel 4
 out/smoke/build/ppc_smoke
+out/smoke/build/chrono_range_probe

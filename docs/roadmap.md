@@ -1,7 +1,7 @@
 # MotoGP 09/10 geliştirme notları
 
 13 Ekim 2026 kullanıcı talepleri. Ana platform **Windows 10/11**, SDK
-**ReXGlue v0.10.0**. Kullanıcı yarış başlangıcı düzeltmesinin ardından oyunun
+**ReXGlue Nightly 0.10.0.24-dev.gbd833a2**. Kullanıcı yarış başlangıcı düzeltmesinin ardından oyunun
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
@@ -12,7 +12,7 @@ tamamlandığı anlamına gelmez.
 | EXE yanında `game/` veri klasörü | Tamamlandı: game önceliği, paket klasörü ve Windows yol/TU kontrolleri. | 1 |
 | Windows launcher | Genişletildi: İngilizce/Türkçe, grafik/GPU/MSAA/FSR 1/CAS/FXAA, gerçek ses düzeyi, 25 düzenlenebilir klavye eşlemesi; test ve paket mevcut. | 1 |
 | Cihaza göre oyun içi tuş simgeleri | Native çizim ve otomatik giriş seçimi uygulandı. [Kapsam ve testler](controller-prompts.md). | Yerel Windows görsel testi |
-| Stabilite ve kalite kontrol | Sürekli test ve düzeltme yapılabilir; tüm olası hatalar için mutlak garanti verilemez. | Her aşama |
+| Stabilite ve kalite kontrol | Runtime bellek/thread/yol düzeltmeleri ve Windows CPU/UI regresyonu tamamlandı. [Kapsam](stability-quality-control.md). Tam pist/mod GPU taraması bekliyor. | Her aşama |
 | Xbox Live multiplayer akışının LAN üzerinden çalışması | Araştırmaya bağlı, kapsamlı geliştirme; hazır SDK desteği yeterli değil. | 3 |
 
 ## Doğrudan EXE açılışı
@@ -26,7 +26,7 @@ yönergeler `readme.txt` ve `game/readme.txt` adlarıyla dağıtılır. Bundan s
 ## Launcher
 
 İlk sürüm: [kullanım ve doğrulama](launcher.md). Dosya adı `motogp0910-launcher.exe`;
-varsayılan dil İngilizce, Language / Dil menüsünden Türkçe seçilir. Controller
+varsayılan dil İngilizce, General > Launcher language menüsünden Türkçe seçilir. Controller
 veritabanı EXE yanında paketlenir. Launcher teslim edilmeden sonraki genel kalite
 kontrol veya LAN aşamasına geçilmez.
 

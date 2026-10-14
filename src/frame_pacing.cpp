@@ -7,7 +7,7 @@ namespace motogp {
 void PaceGameFrame() {
   thread_local FrameSchedule schedule;
   const auto now=FrameSchedule::Clock::now();
-  const auto target=schedule.Next(now,rex::cvar::Query<int32_t>("fps_limit"));
+  const auto target=schedule.Next(now,REXCVAR_GET(fps_limit));
   if(target>now)std::this_thread::sleep_until(target);
 }
 }

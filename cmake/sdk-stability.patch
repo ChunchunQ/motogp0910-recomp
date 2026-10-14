@@ -1,0 +1,173 @@
+diff --git a/include/rex/chrono/chrono.h b/include/rex/chrono/chrono.h
+index d876846..cd3d672 100644
+--- a/include/rex/chrono/chrono.h
++++ b/include/rex/chrono/chrono.h
+@@ -72,19 +72,16 @@ struct NtSystemClock {
+
+   // To convert XSystemClock to sys, do clock_cast<WinSystemTime>(tp) first
+   // Only available for Host domain (Guest time must be converted via clock_cast)
+-  static constexpr std::chrono::system_clock::time_point to_sys(const time_point& tp)
++  // Keep FILETIME precision/range. POSIX system_clock commonly uses signed
++  // nanoseconds, which cannot represent the NT epoch or far-future dates.
++  static constexpr std::chrono::sys_time<duration> to_sys(const time_point& tp)
+     requires(domain_ == Domain::Host)
+   {
+-    using sys_duration = std::chrono::system_clock::duration;
+-    using sys_time = std::chrono::system_clock::time_point;
+-
+-    auto dp = tp;
+-    dp += unix_epoch_delta();
+-    auto cdp = std::chrono::time_point_cast<sys_duration>(dp);
+-    return sys_time{cdp.time_since_epoch()};
++    return std::chrono::sys_time<duration>{tp.time_since_epoch() + unix_epoch_delta()};
+   }
+
+-  static constexpr time_point from_sys(const std::chrono::system_clock::time_point& tp)
++  template <typename SysDuration>
++  static constexpr time_point from_sys(const std::chrono::sys_time<SysDuration>& tp)
+     requires(domain_ == Domain::Host)
+   {
+     auto ctp = std::chrono::time_point_cast<duration>(tp);
+diff --git a/src/core/threading.cpp b/src/core/threading.cpp
+index fd06c66..2a6ec5c 100644
+--- a/src/core/threading.cpp
++++ b/src/core/threading.cpp
+@@ -20,10 +20,12 @@ namespace rex::thread {
+ // =============================================================================
+
+ uint32_t logical_processor_count() {
+-  static uint32_t value = 0;
+-  if (!value) {
+-    value = std::thread::hardware_concurrency();
+-  }
++  // C++ local-static initialization is synchronized between callers. A
++  // hardware_concurrency result of zero means unknown, not zero usable CPUs.
++  static const uint32_t value = [] {
++    const auto count = std::thread::hardware_concurrency();
++    return count ? count : 1u;
++  }();
+   return value;
+ }
+
+diff --git a/src/graphics/d3d12/texture_cache.cpp b/src/graphics/d3d12/texture_cache.cpp
+index 2be0e8e..d33bb62 100644
+--- a/src/graphics/d3d12/texture_cache.cpp
++++ b/src/graphics/d3d12/texture_cache.cpp
+@@ -1634,14 +1634,14 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+     host_x_blocks_per_thread *= block_width;
+   }
+   UINT64 copy_buffer_size = 0;
+-  D3D12_PLACED_SUBRESOURCE_FOOTPRINT host_slice_layout_base;
+-  UINT64 host_slice_size_base;
++  D3D12_PLACED_SUBRESOURCE_FOOTPRINT host_slice_layout_base{};
++  UINT64 host_slice_size_base = 0;
+   // Indexing is the same as for guest stored mips:
+   // 1...min(level_last, level_packed) if level_packed is not 0, or only 0 if
+   // level_packed == 0.
+   D3D12_PLACED_SUBRESOURCE_FOOTPRINT
+-  host_slice_layouts_mips[xenos::kTextureMaxMips];
+-  UINT64 host_slice_sizes_mips[xenos::kTextureMaxMips];
++  host_slice_layouts_mips[xenos::kTextureMaxMips]{};
++  UINT64 host_slice_sizes_mips[xenos::kTextureMaxMips]{};
+   // Using custom calculations instead of GetCopyableFootprints because
+   // shaders may unconditionally copy multiple blocks along X per thread for
+   // simplicity, to make sure all rows (also including the last one -
+diff --git a/src/kernel/xam/xam_info.cpp b/src/kernel/xam/xam_info.cpp
+index 1fda053..80a0869 100644
+--- a/src/kernel/xam/xam_info.cpp
++++ b/src/kernel/xam/xam_info.cpp
+@@ -268,7 +268,8 @@ void XamLoaderLaunchTitle_entry(mapped_string raw_name_ptr, u32 flags) {
+
+   // Translate the launch path to a full path.
+   if (raw_name_ptr) {
+-    auto path = raw_name_ptr.value();
++    // Own the path: joining below produces a temporary std::string.
++    std::string path(raw_name_ptr.value());
+     if (path.empty()) {
+       loader_data.launch_path = "game:\\default.xex";
+     } else {
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp b/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
+index 8b862fc..955c66b 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
+@@ -494,7 +494,7 @@ u32 RtlTimeFieldsToTime_entry(ppc_ptr_t<X_TIME_FIELDS> time_fields_ptr, mapped_u
+     return 0;
+   }
+   auto dp = static_cast<std::chrono::sys_days>(year_month_day);
+-  std::chrono::system_clock::time_point time = dp;
++  std::chrono::sys_time<WinSystemClock::duration> time = dp;
+   time += std::chrono::hours{time_fields_ptr->hour};
+   time += std::chrono::minutes{time_fields_ptr->minute};
+   time += std::chrono::seconds{time_fields_ptr->second};
+diff --git a/src/system/xthread.cpp b/src/system/xthread.cpp
+index 77bce25..a86b178 100644
+--- a/src/system/xthread.cpp
++++ b/src/system/xthread.cpp
+@@ -51,7 +51,7 @@ const uint32_t XAPC::kDummyRundownRoutine;
+
+ using namespace rex::literals;
+
+-uint32_t next_xthread_id_ = 0;
++std::atomic<uint32_t> next_xthread_id_{0};
+
+ XThread::XThread(KernelState* kernel_state)
+     : XObject(kernel_state, kObjectType), guest_thread_(true) {}
+@@ -894,17 +894,27 @@ void XThread::SetActiveCpu(uint8_t cpu_index) {
+     pcr.prcb_data.current_cpu = cpu_index;
+   }
+
++  // Guest CPU metadata still changes when host pinning is disabled. Avoid
++  // querying the host topology (and emitting a warning) on this frequent path.
++  if (REXCVAR_GET(ignore_thread_affinities)) {
++    return;
++  }
+   if (rex::thread::logical_processor_count() >= 6) {
+-    if (!REXCVAR_GET(ignore_thread_affinities)) {
+-      thread_->set_affinity_mask(uint64_t(1) << cpu_index);
+-    }
++    thread_->set_affinity_mask(uint64_t(1) << cpu_index);
+   } else {
+-    REXSYS_WARN("Too few processor cores - scheduling will be wonky");
++    static std::once_flag affinity_warning;
++    std::call_once(affinity_warning, [] {
++      REXSYS_WARN("Fewer than six host processors; guest affinity is not pinned");
++    });
+   }
+ }
+
+ bool XThread::GetTLSValue(uint32_t slot, uint32_t* value_out) {
+-  if (slot * 4 > tls_total_size_) {
++  // Static TLS precedes the dynamic slots in this allocation. Divide before
++  // comparing to reject both one-past-end slots and overflowing slot * 4.
++  const uint32_t dynamic_offset = tls_dynamic_address_ - tls_static_address_;
++  if (dynamic_offset > tls_total_size_ ||
++      slot >= (tls_total_size_ - dynamic_offset) / sizeof(uint32_t)) {
+     return false;
+   }
+
+@@ -914,7 +924,11 @@ bool XThread::GetTLSValue(uint32_t slot, uint32_t* value_out) {
+ }
+
+ bool XThread::SetTLSValue(uint32_t slot, uint32_t value) {
+-  if (slot * 4 >= tls_total_size_) {
++  // Static TLS precedes the dynamic slots in this allocation. Divide before
++  // comparing to reject both one-past-end slots and overflowing slot * 4.
++  const uint32_t dynamic_offset = tls_dynamic_address_ - tls_static_address_;
++  if (dynamic_offset > tls_total_size_ ||
++      slot >= (tls_total_size_ - dynamic_offset) / sizeof(uint32_t)) {
+     return false;
+   }
+
+diff --git a/tests/unit/core/chrono_test.cpp b/tests/unit/core/chrono_test.cpp
+index dbd4caa..ddbbad2 100644
+--- a/tests/unit/core/chrono_test.cpp
++++ b/tests/unit/core/chrono_test.cpp
+@@ -228,7 +228,7 @@ static uint64_t recompose(int y, unsigned m, unsigned d, int hour, int min, int
+   if (!ymd.ok())
+     return 0;
+   auto dp = static_cast<std::chrono::sys_days>(ymd);
+-  std::chrono::system_clock::time_point time = dp;
++  std::chrono::sys_time<WinSystemClock::duration> time = dp;
+   time += std::chrono::hours{hour};
+   time += std::chrono::minutes{min};
+   time += std::chrono::seconds{sec};

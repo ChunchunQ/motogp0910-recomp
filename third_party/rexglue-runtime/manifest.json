@@ -2,10 +2,10 @@
   "sdk_version": "0.10.0.24-dev.gbd833a2",
   "source_commit": "bd833a2ab69d305f99ddf57418fc38ffec8af93d",
   "archive": "rexglue-0.10.0.24-dev.gbd833a2-custom-windows-x64.zip",
-  "sha256": "ded497ba774b835c0329d5a76d77a285d3e9b28f19327206bdca070cdae47f21",
+  "sha256": "e5c1c2d76f0185a2965006d45f60cd869ee9f454c43de97cfdb9f52706de976c",
   "dll_sha256": {
-    "rexruntime.dll": "b69f23f11486a6e4b69f96cc22af257b230e38877317e64ea577fc57b8c0b080",
-    "rexgpu-xenos.dll": "15a7f476462d67eacf362489f935e119040ed09459ba774944dfb925bf424f63",
+    "rexruntime.dll": "808bc629871630b9080ed87dbaf2b12658f69ea801bf5b28aebe5a781f66b1a0",
+    "rexgpu-xenos.dll": "bc343d689980d056dfa28990a9ed457575ce38fe10d0ad1a15594c40a777f9f7",
     "amd_fidelityfx_dx12.dll": "12a5081257ec95b0b53ad51b4a87fb3c03f97fe0bbb59f9496968f8d50ef93a6"
   },
   "features": [
@@ -17,6 +17,8 @@
     "shared SDL startup host display modes and monitor refresh API v1",
     "experimental D3D12 FSR 2.3.3 and FSR 3.1.4 provider selection, typed neutral depth/motion, conservative frame reset",
     "atomic presentation aspect override API v1",
-    "nightly radial deadzone sign correction; regenerated guest atomics and sync fences"
+    "nightly radial deadzone sign correction; regenerated guest atomics and sync fences",
+    "TLS bounds and slot overflow protection; atomic thread IDs; owned launch paths; range-safe FILETIME conversion; quiet unpinned affinity updates",
+    "thread-safe host processor count cache with unknown-count fallback"
   ]
 }

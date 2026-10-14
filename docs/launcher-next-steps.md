@@ -20,27 +20,22 @@ Completed:
 - Advanced page with actual title hooks: speed blur, depth of field, dynamic
   shadows (game default/off), and scoped shadow distance (default/45/90/180).
 
-Remaining, in increasing complexity:
-2. Aspect ratio: auto / 4:3 / 16:9 / 21:9 / 32:9. Clarify camera/FOV versus
-   presentation-only behavior before implementing if uncertain.
-   Confirmed: preserve Auto / 16:9 now; test real ultrawide at the end of the queue.
-3. Further Advanced controls beyond the four completed fields. The supplied Downpour
-   example includes motion blur, bloom, ambient occlusion, light shafts,
-   distortion, lens flares, fog, radial blur, shadow quality/resolution,
-   anisotropy, detail/LOD, decals and dynamic lights. MotoGP is not UE3;
-   only verified equivalent controls should be offered.
-4. FSR 2/3 upscaling suspended pending the user’s preference. v0.10.0 binds
-   the color resource as both depth and motion inputs, uses zero jitter, and
-   resets history every frame. This is not a genuine temporal integration.
-   The user was asked whether to research proper temporal inputs or provide an
-   explicitly experimental build. FSR 1/CAS remains the current working path.
-5. Frame generation dropped: v0.10.0 explicitly disables its FidelityFX
-   frame-generation provider and the presenter has no frame-interpolation path.
-   The user asked to abandon this if no working integration is available.
-   The current release implements spatial FSR 1 and CAS; it does not claim FSR 2/3.
+Current rendering work:
+- Experimental FSR 2.3.3 / FSR 3.1.4 providers and six quality modes are included.
+  Typed neutral depth/motion inputs and per-frame history reset are temporary;
+  proper temporal reconstruction remains incomplete. FSR 1/CAS is the safe path.
+- Experimental Auto / 16:9 / 21:9 / 32:9 horizontal-plus camera and central HUD
+  are included; broad native Windows GPU/ultrawide gameplay testing is pending.
+- Frame generation is excluded at the user's request.
+- The exact SDK pin is now Nightly 0.10.0.24-dev.gbd833a2. Stable v0.10.0 remains
+  available as a separate rollback package.
+- Further Advanced controls require verified equivalents in MotoGP's engine;
+  Downpour's UE3 controls cannot be copied directly.
+See [rendering scope](experimental-rendering.md), [migration](sdk-nightly-migration.md)
+and [stability work](stability-quality-control.md).
 
 While the user is away, suspend ambiguous work, continue independent tasks,
 and perform a consolidated verification at the end.
 
-Keep ReXGlue v0.10.0 pinned and preserve the career, collision and PS3/replay
+Keep the exact SDK pin in sdk-version.json and preserve the career, collision and PS3/replay
 repairs. Generated filenames remain English. Do not commit preview screenshots.

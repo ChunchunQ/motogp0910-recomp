@@ -20,7 +20,7 @@ def main():
     global BUILD
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
-    parser.add_argument('--archive',default='MotoGP0910-Windows-x64-fsr-ultrawide-nightly.zip')
+    parser.add_argument('--archive',default='MotoGP0910-Windows-x64-stability-update.zip')
     args=parser.parse_args();BUILD=args.build_dir.resolve()
     if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
         parser.error('--archive must be a ZIP filename')
@@ -53,7 +53,13 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        f"MotoGP 09/10 - Windows x64 Experimental FSR and ultrawide update - ReXGlue {sdk['version']}\n\n"
+        f"MotoGP 09/10 - Windows x64 Stability update - ReXGlue {sdk['version']}\n\n"
+        "STABILITY: Reject out-of-range/overflowing TLS slots, preserve owned launch paths,\n"
+        "use unique atomic thread IDs and a thread-safe host processor count cache.\n"
+        "FILETIME calendar conversions preserve the 1601 epoch and 100 ns precision.\n"
+        "Unpinned CPU updates avoid host topology queries and repeated warnings.\n"
+        "FPS pacing and ultrawide HUD diagnostics avoid redundant hot-path work.\n"
+        "Windows CPU/UI regressions passed under Wine; GPU gameplay needs native Windows.\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"
@@ -104,7 +110,7 @@ def main():
         "Right-click a binding to unbind it or restore its action default.\n"
         "Examples: Space, Return, Ctrl+K, Shift+Up, Q,I. Esc cancels capture.\n"
         "Saved settings apply on next launch, including direct motogp0910.exe launch.\n"
-        "Keep both runtime DLLs: this v0.10.0 pair enables spatial FSR and shared SDL input.\n\n"
+        "Keep both matching runtime DLLs for this nightly stability build.\n\n"
         "REPLAY REPAIR: Replace the upper controller row, preserving the lower media row.\n"
         "All eight full-replay controller sprites now switch Xbox/PS/keyboard styles.\n"
         "The v2 build incorrectly replaced rewind/camera icons instead of the button row.\n\n"

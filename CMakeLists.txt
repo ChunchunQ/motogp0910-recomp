@@ -90,6 +90,10 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    add_executable(runtime_stability_probe EXCLUDE_FROM_ALL tools/runtime_stability_probe.cpp)
+    target_include_directories(runtime_stability_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(runtime_stability_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(runtime_stability_probe)
     add_executable(game_language_probe EXCLUDE_FROM_ALL tools/game_language_probe.cpp src/game_language.cpp)
     target_include_directories(game_language_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(game_language_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -154,7 +158,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -164,7 +168,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -200,4 +204,14 @@ if(NOT WIN32 AND MOTOGP_RUNTIME_LIBRARY)
                     "$<TARGET_FILE_DIR:${stage_target}>/librexruntime.so" VERBATIM)
         endif()
     endforeach()
+endif()
+
+# Build the CPU/UI suite explicitly; probes stay out of ordinary release builds.
+if(WIN32 AND TARGET motogp0910_recomp)
+    add_custom_target(windows_validation_probes DEPENDS
+        motogp0910 runtime_stability_probe nightly_input_probe fsr_provider_probe
+        engine_settings_probe game_language_probe physics_asset_probe
+        button_prompt_probe livery_readback_probe motogp_headless_probe
+        launcher_runtime_probe display_settings_probe button_prompt_input_probe
+        launcher_probe launcher_layout_probe input_defaults_probe)
 endif()

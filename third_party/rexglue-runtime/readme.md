@@ -14,6 +14,11 @@ generation. See [practical limits](../../docs/experimental-rendering.md).
 
 The nightly explicit-video-mode patch preserves native 720p source priority.
 The nightly deadzone patch corrects negative-direction radial cutoffs.
+The stability patch rejects dynamic TLS overruns and slot multiplication overflow,
+owns title launch paths, assigns atomic thread IDs, safely initializes the host
+processor cache, and preserves FILETIME precision/range. Disabled host affinity
+avoids topology lookup and warning spam. Texture footprint initialization is
+explicit (defensive cleanup, not a confirmed career rendering fix).
 The ultrawide patch adds an atomic presentation aspect bridge; title hooks
 adjust camera projection and central HUD batching.
 

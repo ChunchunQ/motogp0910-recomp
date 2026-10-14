@@ -1,4 +1,4 @@
-// Compiled into the pinned v0.10.0 GPU plugin, not into the application.
+// Compiled into the pinned SDK GPU plugin, not into the application.
 #include <rex/system/gpu_plugin.h>
 #include <atomic>
 #include <cstdint>

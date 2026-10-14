@@ -5,6 +5,7 @@
 #include <rex/ui/window_listener.h>
 #include <atomic>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <numeric>
 #include <stdexcept>
@@ -66,7 +67,7 @@ void DrawUiQuad(PPCContext& ctx,uint8_t* base){
   if(scale==1){__imp__sub_82388C38(ctx,base);return;}
   const std::array<uint32_t,4> vertices{ctx.r3.u32,ctx.r4.u32,ctx.r5.u32,ctx.r6.u32};
   static std::atomic<bool> logged{false};
-  if(!logged.exchange(true))REXLOG_INFO("ULTRAWIDE_UI: first native quad x={},{}",rex::memory::load_and_swap<float>(base+vertices[0]),rex::memory::load_and_swap<float>(base+vertices[1]));
+  if(!logged.load(std::memory_order_relaxed) && !logged.exchange(true,std::memory_order_relaxed))REXLOG_INFO("ULTRAWIDE_UI: first native quad x={},{}",rex::memory::load_and_swap<float>(base+vertices[0]),rex::memory::load_and_swap<float>(base+vertices[1]));
   std::array<uint32_t,4> saved{};
   for(unsigned i=0;i<4;++i)saved[i]=rex::memory::load_and_swap<uint32_t>(base+vertices[i]);
   for(unsigned i=0;i<4;++i){const auto x=std::bit_cast<float>(saved[i]);

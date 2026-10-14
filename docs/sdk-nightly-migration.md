@@ -60,5 +60,6 @@ menu-ribbon artifact is still present, as it was on the stable baseline.
 This is not a full race/career/ultrawide gameplay sweep. Windows GPU/FSR dispatch
 could not be exercised because cloud Wine has no suitable D3D12 adapter.
 No migration regression was found in these checks, so the nightly pin is retained.
-The older SDK chrono 1601-epoch overflow finding remains outside this change.
+The previously recorded chrono 1601-epoch overflow has subsequently been fixed
+in the [stability update](stability-quality-control.md).
 Screenshots and runtime logs stay under ignored out/; none are committed.

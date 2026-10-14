@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the pinned v0.10.0 spatial FSR runtime after CMake copies SDK DLLs."""
+"""Stage the pinned custom runtime after CMake copies SDK DLLs."""
 import hashlib
 import json
 from pathlib import Path

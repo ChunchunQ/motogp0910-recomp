@@ -1,4 +1,4 @@
-// Compiled into the pinned v0.10.0 runtime, not the game executable.
+// Compiled into the pinned SDK runtime, not the game executable.
 #include "shared_sdl.h"
 #include <cmath>
 
@@ -22,8 +22,16 @@ extern "C" __declspec(dllexport) int32_t Motogp_ConfigureHostDisplay(
   if(version!=1 || kind<0 || kind>2 || width<0 || height<0 || hz<0 || hz>1000)return -1;
   if(!hwnd)return -2;
   int count=0;SDL_Window** windows=SDL_GetWindows(&count);SDL_Window* window=nullptr;
-  if(windows){for(int i=0;i<count;++i)if(SDL_GetPointerProperty(SDL_GetWindowProperties(windows[i]),
-      SDL_PROP_WINDOW_WIN32_HWND_POINTER,nullptr)==hwnd){window=windows[i];break;}SDL_free(windows);}
+  if(windows) {
+    for(int i=0;i<count;++i) {
+      if(SDL_GetPointerProperty(SDL_GetWindowProperties(windows[i]),
+          SDL_PROP_WINDOW_WIN32_HWND_POINTER,nullptr)==hwnd) {
+        window=windows[i];
+        break;
+      }
+    }
+    SDL_free(windows);
+  }
   if(!window)return -2;
   SDL_DisplayMode chosen{};const SDL_DisplayMode* fullscreen=nullptr;
   if(kind==2){

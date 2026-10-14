@@ -36,7 +36,7 @@ def main():
     revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != manifest['source_commit']:
         raise SystemExit('SDK source must match the exact pinned commit in sdk-version.json.')
-    for name in ['sdk-nightly-explicit-video-mode.patch','sdk-nightly-symmetric-deadzone.patch','sdk-livery-readback.patch','sdk-experimental-temporal-fsr.patch','sdk-ultrawide-presentation.patch']:
+    for name in ['sdk-stability.patch','sdk-nightly-explicit-video-mode.patch','sdk-nightly-symmetric-deadzone.patch','sdk-livery-readback.patch','sdk-experimental-temporal-fsr.patch','sdk-ultrawide-presentation.patch']:
         patch = ROOT/'cmake'/name
         reversed_check = subprocess.run(['git','apply','--reverse','--check',str(patch)], cwd=source,
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
