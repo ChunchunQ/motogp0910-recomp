@@ -33,6 +33,16 @@ add_library(motogp_lan_guest STATIC src/lan/guest_bridge.cpp src/lan/socket_brid
 target_link_libraries(motogp_lan_guest PUBLIC motogp_lan rex::runtime)
 rexglue_apply_target_settings(motogp_lan_guest)
 
+add_library(motogp_achievements STATIC src/achievement_ui.cpp src/achievement_sound.cpp)
+target_link_libraries(motogp_achievements PUBLIC rex::runtime)
+rexglue_apply_target_settings(motogp_achievements)
+if(WIN32)
+    target_link_libraries(motogp_achievements PUBLIC winmm)
+endif()
+add_executable(achievement_ui_probe EXCLUDE_FROM_ALL tools/achievement_ui_probe.cpp)
+target_link_libraries(achievement_ui_probe PRIVATE motogp_achievements)
+rexglue_apply_target_settings(achievement_ui_probe)
+
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
@@ -107,7 +117,12 @@ else()
 endif()
 
 rexglue_setup_target(motogp0910 GPU_PLUGINS xenos)
-target_link_libraries(motogp0910 PRIVATE motogp_lan_guest)
+add_custom_command(TARGET motogp0910 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:motogp0910>/resources/ui"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/open-sans/OpenSans-Semibold.ttf"
+        "$<TARGET_FILE_DIR:motogp0910>/resources/ui/OpenSans-Semibold.ttf")
+target_link_libraries(motogp0910 PRIVATE motogp_lan_guest motogp_achievements)
 
 add_executable(button_prompt_input_probe EXCLUDE_FROM_ALL tools/button_prompt_input_probe.cpp)
 target_link_libraries(button_prompt_input_probe PRIVATE rex::runtime)
@@ -159,7 +174,7 @@ if(TARGET motogp0910_recomp)
     rexglue_apply_target_settings(button_prompt_window_probe)
     add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
-    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest)
+    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
     rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)
     if(WIN32)
@@ -261,5 +276,5 @@ if(WIN32 AND TARGET motogp0910_recomp)
         engine_settings_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
-        launcher_probe launcher_layout_probe input_defaults_probe)
+        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe)
 endif()

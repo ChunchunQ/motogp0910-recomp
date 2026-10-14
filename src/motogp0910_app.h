@@ -26,6 +26,9 @@
 #include "window_icons.h"
 #include "lan/runtime.h"
 #include "crash_report.h"
+#include "achievement_ui.h"
+#include <imgui.h>
+#include <rex/ui/keybinds.h>
 
 class Motogp0910App : public rex::ReXApp {
  public:
@@ -134,13 +137,34 @@ class Motogp0910App : public rex::ReXApp {
     motogp::ApplyHostDisplay(window());
     motogp::wide::Start(window());
     motogp::livery::Initialize();
+    achievement_preferences_->Load(user_data_root(), rex::filesystem::GetExecutableFolder());
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::StartInputObserver(window());
   }
-  // std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override;
-  // std::unique_ptr<rex::ui::AchievementNotificationDialog>
-  // CreateAchievementNotificationDialog() override;
+  void OnConfigureFonts(ImFontAtlas* atlas) override {
+    static const ImWchar ranges[] = {0x20, 0x1ff, 0};
+    const auto path = rex::filesystem::GetExecutableFolder()/"resources/ui/OpenSans-Semibold.ttf";
+    if(std::filesystem::is_regular_file(path)) {
+      achievement_font_ = atlas->AddFontFromFileTTF(path.string().c_str(),17.f,nullptr,ranges);
+      achievement_heading_font_ = atlas->AddFontFromFileTTF(path.string().c_str(),30.f,nullptr,ranges);
+    }
+    else REXLOG_WARN("Achievement font is missing; extract the complete build including resources/ui");
+  }
+  std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override {
+    if(!imgui_drawer() || !runtime()) return nullptr;
+    return motogp::achievements::CreateMenu(imgui_drawer(), immediate_drawer(), runtime(),
+        achievements(), achievement_font_, achievement_heading_font_, achievement_preferences_, [this](std::weak_ptr<void> lifetime) {
+      // ReXApp owns the dialog in a unique_ptr. Never call ImGuiDialog::Close(),
+      // which self-deletes. Dispatch the current F7 binding after this draw.
+      motogp::achievements::RequestClose(app_context(),window(),lifetime);
+    });
+  }
+  std::unique_ptr<rex::ui::AchievementNotificationDialog> CreateAchievementNotificationDialog() override {
+    if(!imgui_drawer() || !runtime()) return nullptr;
+    return motogp::achievements::CreateNotifications(imgui_drawer(), immediate_drawer(), runtime(),
+        achievement_font_, achievement_preferences_);
+  }
   void OnShutdown() override {
     motogp::lan::Stop();
     motogp::wide::Stop();
@@ -162,4 +186,8 @@ class Motogp0910App : public rex::ReXApp {
       }
     }
   }
+ private:
+  ImFont* achievement_font_ = nullptr;
+  ImFont* achievement_heading_font_ = nullptr;
+  std::shared_ptr<motogp::achievements::Preferences> achievement_preferences_ = std::make_shared<motogp::achievements::Preferences>();
 };

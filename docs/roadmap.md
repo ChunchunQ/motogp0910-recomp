@@ -7,16 +7,17 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 
 1. **Klavye tuş simgeleri:** koyu tuş kapakları, turuncu MotoGP detayları ve
    daha okunaklı yazı. Kullanıcı bu görünümü seçti; [uygulama ve Windows testleri](keyboard-prompts.md) tamamlandı. Kullanıcının görsel testi bekleniyor.
-2. **Oyun içinden canlı ayarlar:** F4 menüsüne benzer veya mevcut menü içinden
-   launcher ayarlarına erişim. Canlı değişebilen ayarlar ile yeniden başlatma
-   gerektirenler doğru ayrılacak; uygulama henüz başlamadı.
-3. **Achievement arayüzü:** F7 listesi ve sağ alttaki bildirimler; sade,
-   MotoGP renk temasına uygun tasarım. Henüz başlamadı.
-4. **Launcher Controls:** daha basit düzen. Bu aşamaya gelince kullanıcıya
-   tasarım ve kapsam detayları sorulacak; henüz başlamadı.
-5. **Launcher genel tasarımı:** en son yapılacak. Detaylar kullanıcıdan
-   alınacak; henüz başlamadı.
+2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
+   MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [280 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
+3. **Acil çıkış menüleri:** ana menüde Quit game; Press Start ekranında geri
+   tuşuyla çıkış onayı. Kullanıcının son ek isteği; henüz başlamadı.
+4. **Oyun içinden canlı ayarlar:** launcher seçeneklerine oyun içinden erişim;
+   canlı değişebilen ve yeniden başlatma gerektiren ayarlar doğru ayrılacak.
+5. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
+6. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
 
+[Güncel durum ve kanıt sınırları](project-status.md) geçmiş aşama notlarının
+üzerindeki güncel kaynaktır.
 FPS/fizik incelemesi kullanıcı tarafından iptal edildi; o incelemenin
 tanılama/test kodları geri alındı. LAN/lobi düzeltmeleri korundu. Kullanıcı
 iki oyunculu Radmin yarışının çalıştığını bildirdi; son lobi giriş düzeltmesi
@@ -27,7 +28,7 @@ ayrı build olarak teslim edildi.
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
-İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN keşif/oturum altyapısından sonra [deneysel XNet/WSA ve launcher entegrasyonu](lan-multiplayer-test.md) eklendi; yeni testler kullanıcının isteğiyle atlandı, gerçek Radmin/yarış doğrulaması bekliyor.
+İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN keşif/oturum altyapısından sonra [deneysel XNet/WSA ve launcher entegrasyonu](lan-multiplayer-test.md) eklendi; kullanıcı iki Windows cihazında Radmin yarışını doğruladı. Son lobi giriş düzeltmesinin native tekrar testi bekliyor.
 
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
@@ -35,7 +36,7 @@ tamamlandığı anlamına gelmez.
 | Windows launcher | Genişletildi: İngilizce/Türkçe, grafik/GPU/MSAA/FSR 1/CAS/FXAA, gerçek ses düzeyi, 25 düzenlenebilir klavye eşlemesi; test ve paket mevcut. | 1 |
 | Cihaza göre oyun içi tuş simgeleri | Native çizim ve otomatik giriş seçimi uygulandı. [Kapsam ve testler](controller-prompts.md). | Yerel Windows görsel testi |
 | Stabilite ve kalite kontrol | Runtime bellek/thread/yol düzeltmeleri ve Windows CPU/UI regresyonu tamamlandı. [Kapsam](stability-quality-control.md). Tam pist/mod GPU taraması bekliyor. | Her aşama |
-| Xbox Live multiplayer akışının LAN üzerinden çalışması | [İlk keşif/oturum altyapısı](lan-lobby-preview.md) ve iki Windows süreciyle test hazır. XNet/WSA oyun paket entegrasyonu ve launcher LAN ayarları eklendi; [yeni build](lan-multiplayer-test.md) gerçek iki-PC yarış doğrulaması bekliyor. | 3 |
+| Xbox Live multiplayer akışının LAN üzerinden çalışması | [İlk keşif/oturum altyapısı](lan-lobby-preview.md) ve iki Windows süreciyle test hazır. XNet/WSA oyun paket entegrasyonu ve launcher LAN ayarları eklendi; kullanıcı önceki buildle iki-PC Radmin yarışını doğruladı; son [lobi giriş düzeltmesinin](lan-lobby-stability.md) native tekrar testi bekliyor. | 3 |
 
 ## Doğrudan EXE açılışı
 
@@ -110,7 +111,7 @@ koruma doğrulanır; eski düzende açılış da desteklenir.
 keşfi ve host/join; yedek seçenek olarak IP ile bağlanma**. Ayrı merkezi sunucu zorunluluğu yok. [Kaynak incelemesi ve uygulama
 rotası](lan-research.md) tamamlandı; DBZ Burst Limit'in Radmin/LAN yolu ve diğer
 ReXGlue ağ katmanları incelendi. [Keşif/guest oturum köprüsü](lan-lobby-preview.md)
-ilk aşaması uygulandı. Oynanabilir LAN yarışı ve oyun içi lobby UI testi henüz tamamlanmadı.
+ilk aşaması ve oyun entegrasyonu uygulandı. Kullanıcı iki Windows cihazında Radmin lobisine bağlanıp yarıştı; bu, tüm bağlantı kopması/yeniden katılma senaryolarının tamamlandığı anlamına gelmez.
 
 Kullanıcının tercihi: **aynı yerel ağda, ayrı bir merkezi/dedicated sunucu
 zorunluluğu olmadan** oynama. Bir oyuncunun oda açması ve diğerlerinin ona

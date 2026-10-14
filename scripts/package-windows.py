@@ -56,6 +56,9 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
+    (STAGE / "resources/ui").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ROOT / "third_party/open-sans/OpenSans-Semibold.ttf", STAGE / "resources/ui/OpenSans-Semibold.ttf")
+    shutil.copy2(ROOT / "docs/achievements.md", STAGE / "achievements-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
@@ -83,6 +86,12 @@ def main():
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
+        "ACHIEVEMENTS: F7 opens the dark MotoGP list with search, unlocked/locked filters,\n"
+        "progress and original achievement icons. Esc or Close returns to the game.\n"
+        "Unlock notifications fade in at the bottom right with a soft 450 ms cue.\n"
+        "F7 > Unlock sound / volume can disable or adjust it; game master/mute applies.\n"
+        "English/Turkish follows Launcher language at game startup.\n"
+        "Keep resources/ui with the complete build. See achievements-readme.txt.\n\n"
         "CRASH REPORTS: General > Extended crash diagnostics (default ON).\n"
         "The separate monitor captures fatal errors including fast-fail 0xC0000409.\n"
         "Reports: logs/crash-*/report.txt and crash.dmp, with latest log and settings.\n"
