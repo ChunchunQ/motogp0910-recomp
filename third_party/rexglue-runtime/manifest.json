@@ -1,11 +1,11 @@
 {
-  "sdk_version": "0.10.0",
-  "source_commit": "f5337cdc947ff6d4c4196737e2c807a48f2a1fc2",
-  "archive": "rexglue-v0.10.0-spatial-fsr-windows-x64.zip",
-  "sha256": "cdf785b605a361e383a9d32d8753c3c5917e39a49c60c5bd93da33fa611329f5",
+  "sdk_version": "0.10.0.24-dev.gbd833a2",
+  "source_commit": "bd833a2ab69d305f99ddf57418fc38ffec8af93d",
+  "archive": "rexglue-0.10.0.24-dev.gbd833a2-custom-windows-x64.zip",
+  "sha256": "ded497ba774b835c0329d5a76d77a285d3e9b28f19327206bdca070cdae47f21",
   "dll_sha256": {
-    "rexruntime.dll": "bfe568b8e765304cb19ab0ee7fb829bc73bb0f86345a01a6a64f674856036cf5",
-    "rexgpu-xenos.dll": "3c4ad892cddf453e72058735db453d54502f260087588e4a788ee71d1e6ffb52",
+    "rexruntime.dll": "b69f23f11486a6e4b69f96cc22af257b230e38877317e64ea577fc57b8c0b080",
+    "rexgpu-xenos.dll": "15a7f476462d67eacf362489f935e119040ed09459ba774944dfb925bf424f63",
     "amd_fidelityfx_dx12.dll": "12a5081257ec95b0b53ad51b4a87fb3c03f97fe0bbb59f9496968f8d50ef93a6"
   },
   "features": [
@@ -16,6 +16,7 @@
     "scoped synchronous career livery resolve readback API v1",
     "shared SDL startup host display modes and monitor refresh API v1",
     "experimental D3D12 FSR 2.3.3 and FSR 3.1.4 provider selection, typed neutral depth/motion, conservative frame reset",
-    "atomic presentation aspect override API v1"
+    "atomic presentation aspect override API v1",
+    "nightly radial deadzone sign correction; regenerated guest atomics and sync fences"
   ]
 }

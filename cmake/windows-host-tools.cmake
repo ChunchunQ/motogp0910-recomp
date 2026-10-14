@@ -1,9 +1,13 @@
-# Keep libraries in the Windows SDK; codegen runs with the matching host SDK.
+# Cross builds execute codegen from the matching Linux host SDK.
+set(MOTOGP_HOST_CODEGEN "$ENV{REXGLUE_SDK}/bin/rexglue" CACHE FILEPATH "Matching host SDK codegen executable")
 function(motogp_host_tools)
   if(TARGET rex::rexglue)
-    set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION "/workspace/shared/rexglue-install/linux-amd64/bin/rexglue")
+    if(NOT EXISTS "${MOTOGP_HOST_CODEGEN}")
+      message(FATAL_ERROR "MOTOGP_HOST_CODEGEN must point to matching host rexglue")
+    endif()
+    set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION "${MOTOGP_HOST_CODEGEN}")
     foreach(config RELEASE DEBUG RELWITHDEBINFO)
-      set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION_${config} "/workspace/shared/rexglue-install/linux-amd64/bin/rexglue")
+      set_property(TARGET rex::rexglue PROPERTY IMPORTED_LOCATION_${config} "${MOTOGP_HOST_CODEGEN}")
     endforeach()
   endif()
 endfunction()

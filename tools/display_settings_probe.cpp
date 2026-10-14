@@ -40,7 +40,7 @@ int main(){
     Check(!rex::cvar::SetFlagByName("fps_limit","1001"),"Production frame-limit range enforced");
     rex::ui::SDLWindowedAppContext context;Check(context.Initialize(),"Actual runtime SDL video initialized");
     rex::cvar::SetFlagByName("window_width","800");rex::cvar::SetFlagByName("window_height","500");
-    auto window=rex::ui::Window::Create(context,"Display settings test",800,500);
+    auto window=rex::ui::Window::Create(context,"Display settings test");
     Check(window && window->Open(),"Actual SDK host window opened");
     using Configure=int32_t(*)(uint32_t,void*,int32_t,int32_t,int32_t,int32_t);
     const auto configure=reinterpret_cast<Configure>(GetProcAddress(GetModuleHandleW(L"rexruntime.dll"),"Motogp_ConfigureHostDisplay"));

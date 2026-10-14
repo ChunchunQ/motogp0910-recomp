@@ -43,9 +43,9 @@ if [[ ! -f "$base/windows-sysroot/.motogp-verified" ]]; then
   touch "$base/windows-sysroot/.motogp-verified"
 fi
 
-download_checked "$base/downloads/rexglue-sdk-0.10.0-win-amd64.zip" \
-  https://github.com/rexglue/rexglue-sdk/releases/download/v0.10.0/rexglue-sdk-0.10.0-win-amd64.zip \
-  ad4485da853fbe932e9f5dbb643f9b5fe85dc73775ebbad4df6879fe6df0c11b
+download_checked "$base/downloads/rexglue-sdk-0.10.0.24-dev.gbd833a2-win-amd64.zip" \
+  https://github.com/rexglue/rexglue-sdk/releases/download/nightly-20261002-bd833a2a/rexglue-sdk-0.10.0.24-dev.gbd833a2-win-amd64.zip \
+  1e19d7ec9be0d9d7e1a0088a34a33b068d4dea520181e81318528ef3b37627e7
 download_checked "$base/downloads/msvc-14.44-redist-x64.vsix" \
   https://download.visualstudio.microsoft.com/download/pr/45d3b8dd-bced-4b37-9974-142f748d710c/2076c0dc32095338841011431766d532479b50e1c37f17638325c792f37f9fdb/Microsoft.VC.14.44.17.14.CRT.Redist.x64.OneCore.Desktop.base.vsix \
   2076c0dc32095338841011431766d532479b50e1c37f17638325c792f37f9fdb
@@ -54,7 +54,7 @@ from pathlib import Path
 import zipfile
 base = Path('/workspace/shared')
 for archive, destination in [
-    ('rexglue-sdk-0.10.0-win-amd64.zip', 'rexglue-win-sdk'),
+    ('rexglue-sdk-0.10.0.24-dev.gbd833a2-win-amd64.zip', 'rexglue-nightly-packages'),
     ('msvc-14.44-redist-x64.vsix', 'msvc-redist'),
 ]:
     root = base / destination

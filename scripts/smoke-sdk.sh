@@ -3,7 +3,7 @@ set -euo pipefail
 project_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$project_dir"
 source scripts/cloud-env.sh
-[[ "$(rexglue --version)" == "0.10.0" ]]
+[[ "$(rexglue --version)" == "0.10.0.24-dev.gbd833a2" ]]
 mkdir -p out/smoke/asm out/smoke/bin out/smoke/generated
 for name in instr_add instr_addic instr_fadd; do
   cp "$REXGLUE_SOURCE/tests/ppc/asm/$name.s" "out/smoke/asm/$name.s"
@@ -23,11 +23,11 @@ cat > out/smoke/CMakeLists.txt <<'EOF'
 cmake_minimum_required(VERSION 3.25)
 project(ReXGlueSmoke LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
-find_package(rexglue 0.10.0 EXACT REQUIRED CONFIG)
+find_package(rexglue 0.10.0.24 EXACT REQUIRED CONFIG)
 set(CATCH_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(/workspace/shared/rexglue-sdk/thirdparty/catch2 catch2)
+add_subdirectory(/workspace/shared/rexglue-sdk-nightly/thirdparty/catch2 catch2)
 add_executable(ppc_smoke generated/ppc_test_functions.cpp generated/ppc_test_cases.cpp
- /workspace/shared/rexglue-sdk/tests/unit/core/chrono_test.cpp)
+ /workspace/shared/rexglue-sdk-nightly/tests/unit/core/chrono_test.cpp)
 target_include_directories(ppc_smoke PRIVATE generated)
 target_compile_options(ppc_smoke PRIVATE -msse4.1 -mssse3 -ffp-model=strict)
 target_link_libraries(ppc_smoke PRIVATE rex::runtime Catch2::Catch2WithMain)

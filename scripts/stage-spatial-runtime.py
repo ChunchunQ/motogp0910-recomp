@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parent.parent
 def stage(destination):
     folder = ROOT / 'third_party/rexglue-runtime'
     manifest = json.loads((folder / 'manifest.json').read_text())
-    if manifest['sdk_version'] != '0.10.0':
-        raise ValueError('This project requires ReXGlue v0.10.0')
+    sdk=json.loads((ROOT/'sdk-version.json').read_text())
+    if manifest['sdk_version'] != sdk['version'] or manifest['source_commit'] != sdk['source_commit']:
+        raise ValueError('Runtime must match the SDK version and source pin in sdk-version.json')
     archive = folder / manifest['archive']
     if hashlib.sha256(archive.read_bytes()).hexdigest() != manifest['sha256']:
         raise ValueError('Spatial runtime archive SHA-256 mismatch')
@@ -35,7 +36,7 @@ def stage(destination):
         finally:
             temporary.unlink(missing_ok=True)
     shutil.copytree(folder/'licenses', destination/'licenses', dirs_exist_ok=True)
-    print('Staged ReXGlue v0.10.0 spatial FSR runtime:', destination)
+    print('Staged verified matching ReXGlue runtime:', destination)
 
 if __name__ == '__main__':
     stage(sys.argv[1] if len(sys.argv)>1 else ROOT / 'out/build/windows-cross-release')

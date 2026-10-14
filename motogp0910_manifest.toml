@@ -1,6 +1,7 @@
 # MotoGP 09/10 with supplied title update, version 0.0.1.1.
 # The original XEX and sibling default.xexp are loaded by ReXGlue together.
 [project]
+# The SDK stamps its API floor here; sdk-version.json pins the exact nightly.
 name = "motogp0910"
 sdk_version = "0.10.0"
 game_root = "assets/game-tu"

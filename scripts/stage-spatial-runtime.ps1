@@ -4,7 +4,8 @@ Set-StrictMode -Version Latest
 $Root = Split-Path -Parent $PSScriptRoot
 $Folder = Join-Path $Root 'third_party/rexglue-runtime'
 $Manifest = Get-Content -LiteralPath (Join-Path $Folder 'manifest.json') -Raw | ConvertFrom-Json
-if ($Manifest.sdk_version -ne '0.10.0') { throw 'This project requires ReXGlue v0.10.0.' }
+$Sdk = Get-Content -LiteralPath (Join-Path $Root 'sdk-version.json') -Raw | ConvertFrom-Json
+if ($Manifest.sdk_version -ne $Sdk.version -or $Manifest.source_commit -ne $Sdk.source_commit) { throw 'Runtime must match sdk-version.json.' }
 $Archive = Join-Path $Folder $Manifest.archive
 if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Manifest.sha256) {
     throw 'Spatial runtime archive SHA-256 mismatch.'
@@ -47,5 +48,5 @@ try {
             Copy-Item -LiteralPath $_.FullName -Destination $Licenses -Force
         }
     } finally { if ($Acquired) { $Mutex.ReleaseMutex() }; $Mutex.Dispose() }
-    Write-Host "Staged ReXGlue v0.10.0 spatial FSR runtime: $Destination"
+    Write-Host "Staged verified matching ReXGlue runtime: $Destination"
 } finally { $Zip.Dispose() }

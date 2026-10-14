@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce the FSR/shared-SDL DLL pair from the pinned v0.10.0 source + patch."""
+"""Reproduce the FSR/shared-SDL DLL pair from the pinned SDK source + project patches."""
 import argparse
 import json
 import hashlib
@@ -28,15 +28,15 @@ def main():
         if hashlib.sha256((vendor/name).read_bytes()).hexdigest()!=digest:
             raise SystemExit(f'FidelityFX provider checksum mismatch: {name}')
     source = args.sdk_source.resolve()
-    manifest = json.loads((ROOT/'third_party/rexglue-runtime/manifest.json').read_text())
+    manifest = json.loads((ROOT/'sdk-version.json').read_text())
     if not source.exists():
         source.parent.mkdir(parents=True, exist_ok=True)
-        run('git', 'clone', '--branch', 'v0.10.0', '--recursive',
+        run('git', 'clone', '--branch', manifest['release_tag'], '--recursive',
             'https://github.com/rexglue/rexglue-sdk.git', source)
     revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != manifest['source_commit']:
-        raise SystemExit('SDK source must match the exact v0.10.0 source commit in manifest.json.')
-    for name in ['sdk-explicit-video-mode.patch','sdk-livery-readback.patch','sdk-experimental-temporal-fsr.patch','sdk-ultrawide-presentation.patch']:
+        raise SystemExit('SDK source must match the exact pinned commit in sdk-version.json.')
+    for name in ['sdk-nightly-explicit-video-mode.patch','sdk-nightly-symmetric-deadzone.patch','sdk-livery-readback.patch','sdk-experimental-temporal-fsr.patch','sdk-ultrawide-presentation.patch']:
         patch = ROOT/'cmake'/name
         reversed_check = subprocess.run(['git','apply','--reverse','--check',str(patch)], cwd=source,
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -57,7 +57,7 @@ def main():
     run(*command)
     run(args.cmake, '--build', args.build_dir.resolve(), '--target', 'rexruntime',
         'rexgpu-xenos', '--parallel', args.jobs)
-    print('Built runtime pair:', source/('out/linux-amd64' if args.vulkan else 'out/win-amd64'))
+    print('Built matching runtime:', source/('out/linux-amd64' if args.vulkan else 'out/win-amd64'))
     print('These local DLLs have compiler-specific checksums; the packaged pair remains pinned separately.')
 
 if __name__ == '__main__':

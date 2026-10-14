@@ -22,7 +22,7 @@ int main() {
     rex::cvar::SetFlagByName("button_prompt_style","auto");
     rex::ui::SDLWindowedAppContext context;
     require(context.Initialize(),"SDK desktop initialization");
-    auto window=rex::ui::Window::Create(context,"Button prompt transition probe",640,360);
+    auto window=rex::ui::Window::Create(context,"Button prompt transition probe");
     require(window && window->Open(),"Real SDK window opens");
     auto* native=static_cast<rex::ui::WindowSDL*>(window.get());
     auto focus=[&](bool value) {

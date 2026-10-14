@@ -39,3 +39,5 @@ engine controls remain pending, not advertised as completed features.
 The experimental FSR/ultrawide milestone is documented in
 [experimental-rendering.md](experimental-rendering.md). Linux reached Main Menu
 at 21:9; Windows GPU initialization is unavailable in the cloud Wine environment.
+
+Exact Nightly migration passed the checks in [sdk-nightly-migration.md](sdk-nightly-migration.md).

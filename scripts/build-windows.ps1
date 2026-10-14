@@ -94,21 +94,24 @@ $PatchHash = '0419205ba10dc65eaa7b0bb62abc64cada46119ece5ed749e4ba20c06a6bc079'
 Assert-Hash -Path $Xex -Expected $XexHash
 Assert-Hash -Path $TitleUpdatePath -Expected $TuHash
 
-$SdkRoot = Join-Path $ProjectRoot 'out/sdk-0.10.0'
-$Archive = Join-Path $ProjectRoot 'out/rexglue-sdk-0.10.0-win-amd64.zip'
+$SdkMetadata = Get-Content -LiteralPath (Join-Path $ProjectRoot 'sdk-version.json') -Raw | ConvertFrom-Json
+$SdkVersion = $SdkMetadata.version
+$SdkPackage = $SdkMetadata.packages.'win-amd64'
+$SdkRoot = Join-Path $ProjectRoot "out/sdk-$SdkVersion"
+$Archive = Join-Path $ProjectRoot ("out/" + $SdkPackage.name)
 New-Item -ItemType Directory -Force (Join-Path $ProjectRoot 'out') | Out-Null
 if (!(Test-Path -LiteralPath $Archive)) {
-    Invoke-WebRequest -Uri 'https://github.com/rexglue/rexglue-sdk/releases/download/v0.10.0/rexglue-sdk-0.10.0-win-amd64.zip' -OutFile "$Archive.part"
+    Invoke-WebRequest -Uri $SdkPackage.url -OutFile "$Archive.part"
     Move-Item -LiteralPath "$Archive.part" -Destination $Archive
 }
-Assert-Hash -Path $Archive -Expected 'ad4485da853fbe932e9f5dbb643f9b5fe85dc73775ebbad4df6879fe6df0c11b'
+Assert-Hash -Path $Archive -Expected $SdkPackage.sha256
 if (!(Test-Path -LiteralPath $SdkRoot)) {
     Expand-Archive -LiteralPath $Archive -DestinationPath $SdkRoot
 }
 $Sdk = Join-Path $SdkRoot 'win-amd64'
 $RexGlue = Join-Path $Sdk 'bin/rexglue.exe'
-if ((& $RexGlue --version) -ne '0.10.0' -or $LASTEXITCODE -ne 0) {
-    throw 'The installed SDK must be exactly 0.10.0.'
+if ((& $RexGlue --version) -ne $SdkVersion -or $LASTEXITCODE -ne 0) {
+    throw "The installed SDK must be exactly $SdkVersion."
 }
 
 Push-Location $ProjectRoot
@@ -125,7 +128,7 @@ try {
     Stage-File -Source $Xex -Destination (Join-Path $Staged 'default.xex') -Expected $XexHash
     Stage-File -Source (Join-Path $Extracted 'default.xexp') -Destination (Join-Path $Staged 'default.xexp') -Expected $PatchHash
     Invoke-Native -Command $RexGlue -Arguments @('codegen', '--ignore-stamp', 'motogp0910_manifest.toml')
-    Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk")
+    Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk", "-DREXSDK_VERSION=$($SdkMetadata.cmake_version)")
     Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--parallel', "$Jobs")
     $ExeDirectory = Join-Path $ProjectRoot 'out/build/win-amd64-release'
     $ControllerDb = Join-Path $ProjectRoot 'third_party/SDL_GameControllerDB'

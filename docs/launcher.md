@@ -21,6 +21,8 @@ File names stay English. No CMD file is required.
 | Internal resolution | 720p (native), 1440p / 2K, or 4K; exact 1× / 2× / 3× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
 | AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
+| AMD FSR 2 / 3 | Experimental D3D12 upscalers with neutral motion/depth inputs and per-frame history reset; six quality modes |
+| Camera aspect | Auto, 16:9, 21:9, 32:9; horizontal-plus wide modes remain Experimental |
 | AMD CAS | Contrast-adaptive sharpening; the SDK also uses CAS when FSR has no enlargement to perform |
 | Sharpness | FSR RCAS reduction mapped from 0–100% strength; CAS uses its own 0–1 coefficient |
 | Anisotropic filtering | Game setting, off, or 1×–16× |
@@ -28,11 +30,11 @@ File names stay English. No CMD file is required.
 | VSync / aspect ratio / dithering | Actual presentation flags |
 | Shader cache | SDK persistent shader storage; changing this does not delete existing cache files |
 
-The package includes a matched modified **ReXGlue v0.10.0** runtime with its
+The current package includes a matched modified **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** runtime with its
 bundled FSR 1 / CAS shader bytecode enabled. Keep both included runtime DLLs;
 using the old official DLL makes the FSR setting unavailable. See
 [the pinned runtime and reproduction instructions](../third_party/rexglue-runtime/readme.md).
-There is no FSR 2/3 or frame generation in this launcher.
+FSR 2/3 and quality modes are available as Experimental options. Frame generation remains excluded. See [sources and limitations](experimental-rendering.md).
 
 FSR 1 is a final-image upscaler; it does not add temporal anti-aliasing or invent
 extra detail. For example, 1× native rendering to a 1920×1080 window allows

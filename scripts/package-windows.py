@@ -5,6 +5,7 @@ import hashlib
 import shutil
 import zipfile
 import json
+import argparse
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "out/build/windows-cross-release"
@@ -16,6 +17,14 @@ RUNTIME = (
 )
 
 def main():
+    global BUILD
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
+    parser.add_argument('--archive',default='MotoGP0910-Windows-x64-fsr-ultrawide-nightly.zip')
+    args=parser.parse_args();BUILD=args.build_dir.resolve()
+    if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
+        parser.error('--archive must be a ZIP filename')
+    sdk=json.loads((ROOT/'sdk-version.json').read_text())
     # Recreate only our packaging directory so previous checksums or stale
     # files cannot leak into a new release.
     if STAGE.exists():
@@ -31,10 +40,10 @@ def main():
         if not source.is_file():
             raise SystemExit(f"Missing build output: {name}")
         shutil.copy2(source, STAGE / name)
-    licenses = Path("/workspace/shared/rexglue-win-sdk/win-amd64/licenses")
+    licenses = Path("/workspace/shared/rexglue-nightly-packages/win-amd64/licenses")
     if licenses.is_dir():
         shutil.copytree(licenses, STAGE / "licenses", dirs_exist_ok=True)
-    shutil.copy2("/workspace/shared/rexglue-sdk/LICENSE", STAGE / "licenses/ReXGlue-LICENSE.txt")
+    shutil.copy2("/workspace/shared/rexglue-sdk-nightly/LICENSE", STAGE / "licenses/ReXGlue-LICENSE.txt")
     controller_db = ROOT / "third_party/SDL_GameControllerDB"
     shutil.copy2(controller_db / "gamecontrollerdb.txt", STAGE / "gamecontrollerdb.txt")
     shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
@@ -44,7 +53,7 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 Experimental FSR and ultrawide update - ReXGlue v0.10.0\n\n"
+        f"MotoGP 09/10 - Windows x64 Experimental FSR and ultrawide update - ReXGlue {sdk['version']}\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"
@@ -148,7 +157,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-fsr-ultrawide-stable.zip"
+    archive = DIST / args.archive
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

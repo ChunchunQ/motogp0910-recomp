@@ -53,7 +53,7 @@ int main() {
     Check(rex::cvar::SetFlagByName("present_effect","fsr"),"DLL accepts FSR1 selection");
     Check(rex::cvar::SetFlagByName("present_fsr_sharpness_reduction","0.54"),"DLL accepts RCAS tuning");
     rex::ui::SDLWindowedAppContext context;Check(context.Initialize(),"Real SDL desktop initialized");
-    auto window=rex::ui::Window::Create(context,"FSR CPU planner test",800,500);
+    auto window=rex::ui::Window::Create(context,"FSR CPU planner test");
     Check(window && window->Open(),"Real SDK host window opened");
     Dimensions dimensions;PaintPlanner planner;
     planner.SetWindowSurfaceFromUIThread(window.get(),&dimensions);

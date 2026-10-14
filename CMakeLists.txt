@@ -8,8 +8,15 @@ project(motogp0910 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(REXSDK_VERSION "0.10.0" CACHE STRING "Required ReXGlue SDK version")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/sdk-version.json" MOTOGP_SDK_METADATA)
+string(JSON MOTOGP_SDK_VERSION GET "${MOTOGP_SDK_METADATA}" version)
+string(JSON MOTOGP_SDK_CMAKE_VERSION GET "${MOTOGP_SDK_METADATA}" cmake_version)
+set(REXSDK_VERSION "${MOTOGP_SDK_CMAKE_VERSION}" CACHE STRING "Required ReXGlue SDK version")
 include(generated/rexglue.cmake)
+if(NOT REXGLUE_VERSION_STRING STREQUAL MOTOGP_SDK_VERSION)
+    message(FATAL_ERROR "SDK must match ${MOTOGP_SDK_VERSION}; found ${REXGLUE_VERSION_STRING}")
+endif()
+option(MOTOGP_STAGE_RUNTIME "Stage the verified matching Windows runtime" ON)
 
 # Sources
 set(MOTOGP0910_SOURCES
@@ -24,6 +31,10 @@ set(MOTOGP0910_SOURCES
     src/engine_settings.cpp
     src/ultrawide.cpp
 )
+
+add_executable(nightly_input_probe EXCLUDE_FROM_ALL tools/nightly_input_probe.cpp)
+target_link_libraries(nightly_input_probe PRIVATE rex::runtime)
+rexglue_apply_target_settings(nightly_input_probe)
 
 if(WIN32)
     add_executable(motogp0910 WIN32 ${MOTOGP0910_SOURCES})
@@ -138,12 +149,12 @@ foreach(artwork_target motogp0910 button_prompt_probe button_prompt_window_probe
 endforeach()
 
 # Keep the runtime pair consistent even when building directly from an IDE.
-# The official v0.10.0 code generator/import library remain pinned; the
-# separately verified runtime enables that version's bundled spatial shaders.
-if(WIN32)
+# The exact SDK code generator/import library remain pinned by sdk-version.json; the
+# separately verified runtime enables bundled spatial shaders and experimental AMD providers.
+if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -153,7 +164,7 @@ if(WIN32)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -165,7 +176,7 @@ if(WIN32)
     endif()
 endif()
 
-set(MOTOGP_LIVERY_GPU_PLUGIN "" CACHE FILEPATH "Linux v0.10.0 GPU plugin built with the career readback patch")
+set(MOTOGP_LIVERY_GPU_PLUGIN "" CACHE FILEPATH "Matching Linux GPU plugin built with the career readback patch")
 if(NOT WIN32 AND MOTOGP_LIVERY_GPU_PLUGIN)
     if(NOT EXISTS "${MOTOGP_LIVERY_GPU_PLUGIN}")
         message(FATAL_ERROR "MOTOGP_LIVERY_GPU_PLUGIN does not exist")

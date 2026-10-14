@@ -1,0 +1,15 @@
+diff --git a/src/input/input_system.cpp b/src/input/input_system.cpp
+index 40740ee..90f8dff 100644
+--- a/src/input/input_system.cpp
++++ b/src/input/input_system.cpp
+@@ -382,8 +382,8 @@ void InputSystem::AdjustDeadzoneLevels(uint32_t user_index, X_INPUT_GAMEPAD* gam
+     const double deadzone_x = max.first * percentage;
+     const double deadzone_y = max.second * percentage;
+     const double theta = std::atan2(static_cast<double>(axis_y), static_cast<double>(axis_x));
+-    const double cutoff_x = std::cos(theta) * deadzone_x;
+-    const double cutoff_y = std::sin(theta) * deadzone_y;
++    const double cutoff_x = std::abs(std::cos(theta)) * deadzone_x;
++    const double cutoff_y = std::abs(std::sin(theta)) * deadzone_y;
+     if (axis_x > -cutoff_x && axis_x < cutoff_x) {
+       axis_x = 0;
+     }

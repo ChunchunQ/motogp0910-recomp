@@ -1,0 +1,18 @@
+{
+  "version": "0.10.0.24-dev.gbd833a2",
+  "cmake_version": "0.10.0.24",
+  "source_commit": "bd833a2ab69d305f99ddf57418fc38ffec8af93d",
+  "release_tag": "nightly-20261002-bd833a2a",
+  "packages": {
+    "linux-amd64": {
+      "name": "rexglue-sdk-0.10.0.24-dev.gbd833a2-linux-amd64.zip",
+      "sha256": "0a56565221a4e75f91fc71f787d9299a0d0298127b970c8a88a292f8d3a3befe",
+      "url": "https://github.com/rexglue/rexglue-sdk/releases/download/nightly-20261002-bd833a2a/rexglue-sdk-0.10.0.24-dev.gbd833a2-linux-amd64.zip"
+    },
+    "win-amd64": {
+      "name": "rexglue-sdk-0.10.0.24-dev.gbd833a2-win-amd64.zip",
+      "sha256": "1e19d7ec9be0d9d7e1a0088a34a33b068d4dea520181e81318528ef3b37627e7",
+      "url": "https://github.com/rexglue/rexglue-sdk/releases/download/nightly-20261002-bd833a2a/rexglue-sdk-0.10.0.24-dev.gbd833a2-win-amd64.zip"
+    }
+  }
+}

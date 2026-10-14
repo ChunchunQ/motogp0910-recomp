@@ -1,27 +1,27 @@
-# ReXGlue v0.10.0: spatial FSR runtime
+# Pinned custom ReXGlue runtime
 
-This is a matched `rexruntime.dll` / `rexgpu-xenos.dll` pair compiled from
-ReXGlue v0.10.0, commit `f5337cdc947ff6d4c4196737e2c807a48f2a1fc2`.
-The official v0.10.0 code generator, headers and import library remain in use.
-`manifest.json` pins the archive and each DLL independently.
+The current runtime is built from exact Nightly **0.10.0.24-dev.gbd833a2**,
+commit `bd833a2ab69d305f99ddf57418fc38ffec8af93d`.
+`sdk-version.json` pins the official code generator/headers/import library;
+`manifest.json` verifies the custom archive and every DLL independently.
+The previous stable milestone is commit `faa34fb` and its separately named ZIP.
+Replace the complete EXE/DLL package together; stable and nightly C++ ABIs differ.
 
-The official Windows runtime was built without FidelityFX support. This pair
-turns on the **spatial FSR 1 EASU/RCAS and CAS shader bytecode already shipped
-in v0.10.0**, using `cmake/sdk-spatial-fsr.cmake`. It does not fetch or enable
-the separate temporal FidelityFX SDK: FSR 2/3, frame generation and vendor
-quality presets are not exposed by the MotoGP launcher.
+The runtime enables bundled FSR 1 / CAS shaders and the separate pinned AMD
+FSR 2.3.3 / FSR 3.1.4 providers using `cmake/sdk-temporal-fsr.cmake`.
+FSR 2/3 remains Experimental: neutral depth/motion, per-frame reset, no frame
+generation. See [practical limits](../../docs/experimental-rendering.md).
 
-The existing patch, `cmake/sdk-explicit-video-mode.patch`, makes the kernel respect
-an explicitly selected guest video mode even if it equals the compiled default.
-Without it, a 1280×720 selection could silently inherit a 1920×1080 host window
-size, defeating the distinction between native rendering and spatial upscaling.
-This is a modified v0.10.0 runtime, not a newer SDK version.
+The nightly explicit-video-mode patch preserves native 720p source priority.
+The nightly deadzone patch corrects negative-direction radial cutoffs.
+The ultrawide patch adds an atomic presentation aspect bridge; title hooks
+adjust camera projection and central HUD batching.
 
 `src/shared_sdl_bridge.cpp` also adds `Motogp_GetSharedSDL`, a versioned C
 function table for the runtime’s own SDL instance. This is necessary because
 Windows SDK consumers otherwise link an independent static SDL instance,
 whose event watches cannot observe the game’s controller input. The bridge
-is added by the same CMake include, without changing the existing C++ ABI.
+is added by the same CMake include, without additional changes to the selected SDK C++ ABI.
 It also exports `Motogp_ConfigureHostDisplay` v1 to select an actual SDL
 fullscreen mode/Hz, desktop borderless, or windowed mode on the UI thread.
 Invalid or unsupported modes are rejected before changing the window.
@@ -45,8 +45,8 @@ Python 3, CMake, Ninja and Clang 20+ available:
 python scripts/build-spatial-sdk.py --sdk-source out/rexglue-spatial-source --jobs 4
 ```
 
-The script verifies the exact source commit, initializes submodules, applies both
-checked patches idempotently and builds only `rexruntime` and `rexgpu-xenos`.
+The script verifies the exact source commit, initializes submodules, applies the
+checked project patches idempotently and builds only `rexruntime` and `rexgpu-xenos`.
 Output is under `out/rexglue-spatial-source/out/win-amd64`. Locally rebuilt
 DLLs can have different hashes with a different compiler; the checked-in
 archive is not silently replaced.
@@ -56,8 +56,8 @@ For the prepared cloud toolchain:
 ```bash
 source scripts/cloud-env.sh
 python3 scripts/build-spatial-sdk.py \
-  --sdk-source /workspace/shared/rexglue-sdk \
-  --build-dir /workspace/shared/rexglue-fsr-build \
+  --sdk-source /workspace/shared/rexglue-sdk-nightly \
+  --build-dir /workspace/shared/rexglue-nightly-windows-build \
   --toolchain cmake/windows-cross-toolchain.cmake
 ```
 
