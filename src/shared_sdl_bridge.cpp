@@ -34,7 +34,8 @@ extern "C" __declspec(dllexport) int32_t Motogp_ConfigureHostDisplay(
     const float wanted_hz=hz>0?static_cast<float>(hz):desktop->refresh_rate;
     if(!SDL_GetClosestFullscreenDisplayMode(display,wanted_width,wanted_height,wanted_hz,false,&chosen) ||
        chosen.w!=wanted_width || chosen.h!=wanted_height ||
-       (hz>0 && std::abs(chosen.refresh_rate-wanted_hz)>.5f))return -3;
+       // DEVMODE reports integer Hz (59 for a 59.94 Hz timing on some drivers).
+       (hz>0 && std::abs(chosen.refresh_rate-wanted_hz)>=1.0f))return -3;
     fullscreen=&chosen;
   }
   if(!SDL_SetWindowFullscreenMode(window,fullscreen) || !SDL_SetWindowFullscreen(window,kind!=0) ||

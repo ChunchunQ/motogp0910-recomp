@@ -17,7 +17,7 @@ File names stay English. No CMD file is required.
 | Output window size | Automatic or common sizes limited by the monitor native dimensions; borderless uses desktop size |
 | Display mode | Fullscreen with a selected monitor mode, desktop borderless, or windowed |
 | Refresh rate | Actual host Hz for fullscreen; desktop Hz in borderless/windowed |
-| FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change guest timing |
+| FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change the guest video-mode Hz |
 | Internal resolution | 720p (native), 1440p / 2K, or 4K; exact 1× / 2× / 3× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
 | AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
@@ -200,4 +200,42 @@ including borderless desktop bounds, fullscreen at the desktop mode, restoration
 of windowed decorations and rejection of unsupported modes. Physical 60/144 Hz
 monitor switching and Windows GPU gameplay are not verified by a virtual desktop.
 The four-page bilingual UI passed 46,119 layout/configuration assertions.
-86 launcher integration checks and 140 runtime planner checks passed.
+91 launcher integration checks and 140 runtime planner checks passed.
+
+
+## Advanced: native MotoGP engine controls
+
+Advanced is independent of Graphics. It exposes only identified MotoGP
+controls, rather than Unreal Engine configuration names:
+
+| Setting | Behavior |
+| --- | --- |
+| Motion blur (speed) | Game default or Off; affects the title's speed-blur enable byte |
+| Depth of field | Game default or Off; affects the native camera DOF enable byte |
+| Dynamic shadows | Game default or Off; scopes the title Shadows/Enabled flag while rendering |
+| Shadow render distance | Game default or 45 / 90 / 180; scopes Shadows/RenderDistance during the native shadow pass |
+
+The two camera effect overrides are applied after `0x82386158` copies camera
+settings and immediately before `0x8237FA00` consumes those settings. Other
+focus, blur and camera values are preserved. Shadow enable/distance overrides
+wrap `0x822ADAC0` / `0x8238CFD8`; initialized registry pointers are checked and
+the original values are restored on return, nested calls and exceptions.
+The original default.tweaks and game data files are not edited.
+
+All four defaults keep the original game behavior. Forced enable modes are
+not offered: disabling an effect is supported without inventing missing effect
+parameters. Bloom, AO, lens flares, LOD, decals and shadow texture resolution
+need separate native rendering analysis before they can be exposed reliably.
+
+The five-page English/Turkish production UI passed 50,408 layout/configuration
+assertions at 75–150% scales. The native engine probe passed 277 checks on Linux
+and Windows/Wine for actual camera flags, preservation of parameters and PPC
+ABI, scope nesting/exception restoration and the pinned shadow-distance consumer.
+These CPU checks do not prove every GPU rendering effect visually correct.
+
+FSR 2/3 remains suspended for clarification: the v0.10.0 compatibility path
+binds the color image as its depth/motion inputs, uses no camera jitter and
+resets history every frame. The current launcher still offers working spatial
+FSR 1 and CAS. Frame generation was dropped at the user's request; the SDK
+disables its frame-generation provider and contains no wired interpolation path.
+Auto/native 16:9 is preserved; actual ultrawide camera support remains a later task.

@@ -36,13 +36,16 @@ struct App {
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{};
-  std::array<HWND,4> navigation{};
+  std::array<HWND,5> navigation{};
+  std::array<HWND,kEngineEffects.size()> engine_choices{};
+  HWND shadow_distance{};
+  std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
   struct Placement {HWND control;int x,y,w,h;};
   std::vector<Label> labels;
   std::vector<Placement> placements;
-  std::array<std::vector<HWND>,4> pages;
+  std::array<std::vector<HWND>,5> pages;
   std::map<HWND,bool> checks;
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
@@ -129,7 +132,7 @@ struct App {
   }
   void ShowPage(int page){
     CancelCapture();current_page=page;
-    for(int i=0;i<4;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
+    for(int i=0;i<5;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
     Localize();InvalidateRect(window,nullptr,FALSE);
   }
   void UpdateSharpness(){
@@ -165,12 +168,12 @@ struct App {
   void Localize(){
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
-    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):T(L"General",L"Genel"));
+    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):T(L"Advanced",L"Gelişmiş"));
     SetWindowTextW(subtitle,current_page==0?T(L"Display, detail and upscaling.",L"Görüntü, detay ve ölçekleme."):
-        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):T(L"Your game preferences.",L"Oyun tercihlerin."));
+        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<4;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):T(L"General",L"Genel"));
+    for(int i=0;i<5;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):T(L"Advanced",L"Gelişmiş"));
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Keep aspect ratio",L"En-boy oranını koru"));
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
@@ -187,6 +190,10 @@ struct App {
     FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
     FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS"});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
+    for(auto c:engine_choices)FillCombo(c,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı")});
+    auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);SendMessageW(shadow_distance,CB_RESETCONTENT,0,0);
+    for(int distance:shadow_distances){auto text=distance?std::to_wstring(distance):T(L"Game default",L"Oyunun ayarı");SendMessageW(shadow_distance,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
+    SendMessageW(shadow_distance,CB_SETCURSEL,distance_index<0?0:distance_index,0);
     FillRenderPresets();
     auto fps_selection=SendMessageW(fps_limit,CB_GETCURSEL,0,0);SendMessageW(fps_limit,CB_RESETCONTENT,0,0);
     for(auto rate:fps_limits){auto label=rate?std::to_wstring(rate)+L" FPS":T(L"No added limit",L"Ek sınır yok");SendMessageW(fps_limit,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
@@ -217,6 +224,10 @@ struct App {
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
     if(found==dimensions.end())found=dimensions.begin();
     SendMessageW(size,CB_SETCURSEL,std::distance(dimensions.begin(),found),0);
+    for(size_t i=0;i<engine_choices.size();++i)SendMessageW(engine_choices[i],CB_SETCURSEL,s.engine_effects[i]=="off"?1:0,0);
+    auto shadow=std::find(shadow_distances.begin(),shadow_distances.end(),s.shadow_distance);
+    if(shadow==shadow_distances.end()){shadow_distances.push_back(s.shadow_distance);auto text=std::to_wstring(s.shadow_distance);SendMessageW(shadow_distance,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));shadow=shadow_distances.end()-1;}
+    SendMessageW(shadow_distance,CB_SETCURSEL,std::distance(shadow_distances.begin(),shadow),0);
     const auto mode=s.display_mode=="auto"?(s.fullscreen?"borderless":"windowed"):s.display_mode;
     SendMessageW(fullscreen,CB_SETCURSEL,mode=="fullscreen"?0:mode=="windowed"?2:1,0);
     RefreshRates(s.refresh_rate);
@@ -274,6 +285,8 @@ struct App {
     const auto glyph_mode=SendMessageW(prompt_style,CB_GETCURSEL,0,0);
     if(glyph_mode<0 || glyph_mode>3)throw std::runtime_error("Invalid prompt style selection");
     s.prompt_style=glyph_mode==1?"playstation":glyph_mode==2?"xbox":glyph_mode==3?"keyboard":"auto";
+    for(size_t i=0;i<engine_choices.size();++i){auto choice=SendMessageW(engine_choices[i],CB_GETCURSEL,0,0);if(choice<0 || choice>1)throw std::runtime_error("Invalid engine effect selection");s.engine_effects[i]=choice==1?"off":"game";}
+    auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);if(distance_index<0 || distance_index>=static_cast<LRESULT>(shadow_distances.size()))throw std::runtime_error("Invalid shadow distance");s.shadow_distance=shadow_distances[distance_index];
     s.bindings=edited_bindings;s.Validate();return s;
   }
   void ReadyStatus(){try{Validate(exe,GameRoot());Status(L"Ready to play · Title update 0.0.1.1",L"Başlatmaya hazır · Title update 0.0.1.1");}
@@ -281,7 +294,7 @@ struct App {
   void BuildControls(){
     CreateFonts();title=Control(L"STATIC",L"",0,242,28,610,46);SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     subtitle=Control(L"STATIC",L"",0,244,80,590,24);
-    for(int i=0;i<4;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,i==3?216:268+i*52,170,42,kNavGraphics+i);
+    for(int i=0;i<5;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,std::array{268,372,424,216,320}[i],170,42,kNavGraphics+i);
     folder_label=PageControl(3,L"STATIC",L"",0,260,130,700,22);SendMessageW(folder_label,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     path=PageControl(3,L"EDIT",ResolveGameRoot(exe,config.table).c_str(),WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,260,160,658,28,kPath);SendMessageW(path,EM_SETLIMITTEXT,32760,0);
     browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,932,158,138,32,kBrowse);
@@ -296,7 +309,7 @@ struct App {
     letterbox=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,621,374,28,kLetterbox);
     dither=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,659,374,28,kDither);
     shader_cache=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,697,374,28,kShaderCache);
-    LabelControl(0,L"Borderless and windowed use the desktop Hz.\nFPS limit does not change the game timing.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır.\nFPS sınırı, oyunun zamanlama ayarını değiştirmez.",260,748,374,66);
+    LabelControl(0,L"Borderless and windowed use the desktop Hz.\nFPS cap does not unlock the game’s own limit.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır.\nFPS sınırı, oyunun kendi sınırını kaldırmaz.",260,748,374,66);
     LabelControl(0,L"RENDER QUALITY",L"GÖRÜNTÜ KALİTESİ",696,247,374);
     LabelControl(0,L"Internal resolution",L"İç çözünürlük",696,290,374);render_resolution=combo(0,696,316,374,kRenderResolution);
     LabelControl(0,L"Texture filtering",L"Doku filtreleme",696,364,374);anisotropic=combo(0,696,390,374,kAnisotropic);
@@ -317,6 +330,14 @@ struct App {
     FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano"});
     LabelControl(3,L"Button prompts",L"Tuş simgeleri",260,462,374);prompt_style=combo(3,260,488,374,kPromptStyle);
     LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,798,38);
+    LabelControl(4,L"POST-PROCESSING",L"SON İŞLEME",260,247,374);
+    for(size_t i=0;i<2;++i){LabelControl(4,kEngineEffects[i].english,kEngineEffects[i].turkish,260,290+86*i,374);engine_choices[i]=combo(4,260,316+86*i,374,kEngineBase+i);}
+    LabelControl(4,L"SHADOWS",L"GÖLGELER",696,247,374);
+    LabelControl(4,kEngineEffects[2].english,kEngineEffects[2].turkish,696,290,374);engine_choices[2]=combo(4,696,316,374,kEngineBase+2);
+    LabelControl(4,L"Shadow render distance",L"Gölge çizim mesafesi",696,376,374);shadow_distance=combo(4,696,402,374,kShadowDistance);
+    LabelControl(4,L"Game default preserves the camera effects.\nOff disables the selected effect.",L"Oyunun ayarı, kamera efektlerini korur.\nKapalı seçimi ilgili efekti devre dışı bırakır.",260,458,374,66);
+    LabelControl(4,L"Game default keeps the original track setting.\nHigher distance can increase GPU work.",L"Oyunun ayarı, pistin mevcut ayarını korur.\nDaha yüksek mesafe GPU yükünü artırabilir.",696,458,374,66);
+    LabelControl(4,L"These settings apply on the next game launch.\nDefaults preserve the current game appearance.",L"Bu ayarlar oyunun sonraki açılışında uygulanır.\nVarsayılanlar, mevcut oyun görünümünü korur.",260,698,798,52);
     LabelControl(1,L"GAME AUDIO",L"OYUN SESİ",260,247,798);
     LabelControl(1,L"One level for music, engines and menu sounds.",L"Müzik, motor ve menü sesleri için toplam ses düzeyi.",260,292,798);
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",260,343,700);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,994,343,76,24);
@@ -398,6 +419,7 @@ struct App {
     auto box=[&](int x,int y,int w,int h){RECT r{S(x),S(y),S(x+w),S(y+h)};Rounded(dc,r,kCard,kBorder,16);};
     if(current_page==3){box(242,118,846,84);box(242,228,846,368);}
     else if(current_page==0){box(242,118,410,614);box(678,118,410,614);}
+    else if(current_page==4){box(242,118,410,414);box(678,118,410,414);box(242,558,846,124);}
     else if(current_page==1)box(242,118,846,368);
     else{box(242,118,846,72);box(242,212,410,410);box(678,212,410,410);}
     {Gdiplus::Graphics g(dc);g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);g.ScaleTransform(static_cast<float>(scale),static_cast<float>(scale));
@@ -411,7 +433,7 @@ struct App {
     SetTextColor(dc,kAccent);r={S(24),S(78),S(197),S(120)};DrawTextW(dc,L"09/10",-1,&r,DT_LEFT|DT_SINGLELINE);
     SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(25),S(138),S(197),S(157)};DrawTextW(dc,T(L"PC RECOMPILATION",L"PC YENİDEN DERLEME"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(26),S(184),S(197),S(204)};DrawTextW(dc,T(L"SETTINGS",L"AYARLAR"),-1,&r,DT_LEFT|DT_SINGLELINE);
-    r={S(25),S(429),S(185),S(483)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
+    r={S(25),S(493),S(185),S(547)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
     BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){
@@ -515,7 +537,7 @@ struct App {
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
         auto c=GetDlgItem(window,id);if(checks.contains(c)){SetCheck(c,!Checked(c));return;}
-        if(id>=kNavGraphics && id<=kNavGeneral){ShowPage(id-kNavGraphics);return;}
+        if(id>=kNavGraphics && id<=kNavAdvanced){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");

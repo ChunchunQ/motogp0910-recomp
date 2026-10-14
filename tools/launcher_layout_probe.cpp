@@ -59,9 +59,9 @@ int wmain(int argc,wchar_t** argv){
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;
-        for(int page=0;page<4;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+        for(int page=0;page<5;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           if(scale==1. || (scale==.75 && tr && page==2)){
-            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":L"general";
+            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":L"advanced";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);
           }
         }
@@ -103,6 +103,17 @@ int wmain(int argc,wchar_t** argv){
     Settings custom_rate;custom_rate.fps_limit=72;app.SetControls(custom_rate);app.Localize();
     CheckUI(app.GetControls().fps_limit==72,"Custom saved cap survives localization");
     app.Running(false);CheckUI(!IsWindowEnabled(app.refresh_rate),"Game exit keeps borderless Hz disabled");
+    app.SetControls(Settings{});
+    for(size_t field=0;field<kEngineEffects.size();++field){
+      SendMessageW(app.engine_choices[field],CB_SETCURSEL,1,0);auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+      CheckUI(Settings::Load(table).engine_effects[field]=="off","Engine effect saved and restored");
+      auto args=Arguments(game,chosen,table);CheckUI(std::count(args.begin(),args.end(),L"--"+Wide(kEngineEffects[field].key)+L"=off")==1,"Engine effect forwarded exactly once");
+      app.turkish=!app.turkish;app.Localize();CheckUI(app.GetControls().engine_effects[field]=="off","Language change preserves engine override");
+    }
+    for(size_t distance=0;distance<kShadowDistances.size();++distance){
+      SendMessageW(app.shadow_distance,CB_SETCURSEL,distance,0);auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+      CheckUI(Settings::Load(table).shadow_distance==kShadowDistances[distance],"Shadow distance round trip");
+    }
     app.SetControls(Settings{});
     for(unsigned preset=0;preset<kRenderPresets.size();++preset){
       SendMessageW(app.render_resolution,CB_SETCURSEL,preset,0);auto s=app.GetControls();

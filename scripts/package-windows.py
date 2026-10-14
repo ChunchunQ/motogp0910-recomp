@@ -44,7 +44,12 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 display settings - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 Advanced launcher update - ReXGlue v0.10.0\n\n"
+        "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
+        "Game default keeps the original behavior; Off disables the selected effect.\n"
+        "Shadow distance offers game default / 45 / 90 / 180.\n"
+        "The shadow override is scoped and preserves the original track tweak on return.\n"
+        "There is no frame generation; FSR 2/3 is pending proper temporal integration.\n\n"
         "GENERAL: Game folder, Launcher language, Game language and Button prompts.\n"
         "The folder and launcher-language controls appear only on General.\n"
         "Game languages: English, French, German, Spanish and Italian.\n"
@@ -138,7 +143,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-display-settings.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-advanced-launcher.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

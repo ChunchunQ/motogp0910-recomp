@@ -12,6 +12,7 @@
 #include <array>
 #include "keyboard_bindings.h"
 #include "render_presets.h"
+#include "engine_options.h"
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -139,6 +140,8 @@ struct Settings {
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
   std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto", display_mode = "auto";
   std::array<std::string,kBindings.size()> bindings{};
+  std::array<std::string,kEngineEffects.size()> engine_effects{"game","game","game"};
+  int shadow_distance=0;
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
     Settings s;
@@ -174,9 +177,13 @@ struct Settings {
     s.cas_sharpness = Get(t, "present_cas_additional_sharpness", 0.0);
     for(size_t i=0;i<s.bindings.size();++i)
       s.bindings[i]=Get(t,kBindings[i].key,std::string(kBindings[i].defaults));
+    for(size_t i=0;i<s.engine_effects.size();++i)s.engine_effects[i]=Get(t,kEngineEffects[i].key,std::string("game"));
+    s.shadow_distance=Get<int64_t>(t,"engine_shadow_distance",0);
     return s;
   }
   void Validate() const {
+    for(const auto& effect:engine_effects)if(effect!="game" && effect!="off")throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");
+    if(shadow_distance<0 || shadow_distance>180)throw Error(L"Shadow distance must be 0 to 180.",L"Gölge mesafesi 0 ile 180 arasında olmalı.");
     if(width<0 || height<0 || width>8192 || height>8192 ||
        guest_width<0 || guest_height<0 || guest_width>8192 || guest_height>8192 ||
        scale_x<1 || scale_x>8 || scale_y<1 || scale_y>8 ||
@@ -200,6 +207,8 @@ struct Settings {
   }
   void Store(toml::table& t) const {
     Validate();
+    for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
+    Put(t,"engine_shadow_distance",shadow_distance);
     Put(t, "window_width", width); Put(t, "window_height", height);
     if(guest_width)Put(t,"video_mode_width",guest_width);
     if(guest_height)Put(t,"video_mode_height",guest_height);
