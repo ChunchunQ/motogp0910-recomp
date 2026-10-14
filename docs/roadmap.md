@@ -84,13 +84,18 @@ koruma doğrulanır; eski düzende açılış da desteklenir.
 
 ## LAN multiplayer
 
+14 Ekim 2026: ilk hedef **Windows + Radmin VPN, aynı sanal ağda doğrudan IP ile
+host/join**. Ayrı merkezi sunucu zorunluluğu yok. [Kaynak incelemesi ve uygulama
+rotası](lan-research.md) tamamlandı; DBZ Burst Limit'in Radmin/LAN yolu ve diğer
+ReXGlue ağ katmanları incelendi. MotoGP ağ desteği henüz uygulanmadı.
+
 Kullanıcının tercihi: **aynı yerel ağda, ayrı bir merkezi/dedicated sunucu
 zorunluluğu olmadan** oynama. Bir oyuncunun oda açması ve diğerlerinin ona
 bağlanması hedeflenir. Uzak internet üzerinden bağlantı ayrı bir aşamadır;
 LAN çalışması tek başına NAT veya internet eşleştirme desteğini kanıtlamaz.
 
 İlk incelemede oyunun üretilmiş kodunda socket, XNet bağlantı/adres dönüşümü ve
-XAM oturum çağrıları bulundu. SDK v0.10.0'da temel socket altyapısı mevcut,
+XAM oturum çağrıları bulundu. Pinned Nightly SDK'da temel socket altyapısı mevcut,
 ancak örneğin `XNetConnect` ve bazı key/QoS işlevleri stub; XNet adres dönüşümleri
 başarısız dönüyor ve oturum oluşturma/arama/join akışlarının bazıları gerçek
 oturum verisi üretmeden başarı döndürüyor. LAN için yalnızca launcher'a bir
