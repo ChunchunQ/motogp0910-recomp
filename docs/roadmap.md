@@ -5,7 +5,7 @@
 düzgün çalıştığını bildirdi. Bu, tüm modların/pistlerin bağımsız kalite kontrolünün
 tamamlandığı anlamına gelmez.
 
-İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN keşif/oturum altyapısının ilk aşaması uygulandı; oynanabilir LAN yarışı henüz hazır değil.
+İşler kullanıcıya tek tek teslim edilir; önceki iş gösterilmeden sonrakine geçilmez. `game/` dosya düzeni bu teslimatta tamamlandı; [kullanım ve test notları](game-layout.md). İngilizce/Türkçe launcher ilk sürümü ayrı aşamada uygulandı; [teslimat ve testler](launcher.md). LAN keşif/oturum altyapısından sonra [deneysel XNet/WSA ve launcher entegrasyonu](lan-multiplayer-test.md) eklendi; yeni testler kullanıcının isteğiyle atlandı, gerçek Radmin/yarış doğrulaması bekliyor.
 
 | İstek | Durum / uygulanabilirlik | Öncelik |
 |---|---|---|
@@ -13,7 +13,7 @@ tamamlandığı anlamına gelmez.
 | Windows launcher | Genişletildi: İngilizce/Türkçe, grafik/GPU/MSAA/FSR 1/CAS/FXAA, gerçek ses düzeyi, 25 düzenlenebilir klavye eşlemesi; test ve paket mevcut. | 1 |
 | Cihaza göre oyun içi tuş simgeleri | Native çizim ve otomatik giriş seçimi uygulandı. [Kapsam ve testler](controller-prompts.md). | Yerel Windows görsel testi |
 | Stabilite ve kalite kontrol | Runtime bellek/thread/yol düzeltmeleri ve Windows CPU/UI regresyonu tamamlandı. [Kapsam](stability-quality-control.md). Tam pist/mod GPU taraması bekliyor. | Her aşama |
-| Xbox Live multiplayer akışının LAN üzerinden çalışması | [İlk keşif/oturum altyapısı](lan-lobby-preview.md) ve iki Windows süreciyle test hazır. XNet/WSA oyun paket entegrasyonu ve gerçek yarış bekliyor. | 3 |
+| Xbox Live multiplayer akışının LAN üzerinden çalışması | [İlk keşif/oturum altyapısı](lan-lobby-preview.md) ve iki Windows süreciyle test hazır. XNet/WSA oyun paket entegrasyonu ve launcher LAN ayarları eklendi; [yeni build](lan-multiplayer-test.md) gerçek iki-PC yarış doğrulaması bekliyor. | 3 |
 
 ## Doğrudan EXE açılışı
 

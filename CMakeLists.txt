@@ -29,7 +29,7 @@ else()
 endif()
 add_executable(lan_service_probe EXCLUDE_FROM_ALL tools/lan_service_probe.cpp)
 target_link_libraries(lan_service_probe PRIVATE motogp_lan)
-add_library(motogp_lan_guest STATIC src/lan/guest_bridge.cpp)
+add_library(motogp_lan_guest STATIC src/lan/guest_bridge.cpp src/lan/socket_bridge.cpp src/lan/metadata.cpp)
 target_link_libraries(motogp_lan_guest PUBLIC motogp_lan rex::runtime)
 rexglue_apply_target_settings(motogp_lan_guest)
 

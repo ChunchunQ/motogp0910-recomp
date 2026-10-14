@@ -78,14 +78,17 @@ std::vector<Adapter> Adapters(){
  std::stable_sort(result.begin(),result.end(),[](const Adapter& a,const Adapter& b){return a.radmin && !b.radmin;});return result;
 }
 struct Node::Impl {
- NetworkScope network;SocketOwner socket;Options options;Adapter adapter;Endpoint address;uint64_t identity=RandomId();
+ NetworkScope network;SocketOwner socket;Options options;Adapter adapter;Endpoint address;uint64_t identity=0x0009000000000000ull|(RandomId()&0x0000FFFFFFFFFFFFull);
  mutable std::mutex mutex;std::condition_variable changed;std::atomic<bool> stopping{false};std::thread worker;
  struct Seen {Room room;Clock::time_point seen;};
  using RoomKey=std::pair<uint64_t,uint64_t>; // session + host identity, not reply interface
  std::map<RoomKey,Seen> rooms;
- struct Member {Endpoint endpoint;Clock::time_point seen;};
+ struct Member {Endpoint endpoint;Clock::time_point seen;bool private_slot=false;};
  std::map<uint64_t,Member> members;
  std::map<uint64_t,Endpoint> peers;
+ std::map<uint64_t,Endpoint> roster;
+ bool own_private=false;
+ std::vector<uint8_t> local_qos;
  std::optional<Room> hosted,joined;
  std::deque<Datagram> datagrams;size_t queued_bytes=0;
  uint32_t pending_request=0;uint64_t pending_session=0,pending_peer=0;Endpoint pending_endpoint;bool pending_done=false,pending_ok=false;
@@ -121,7 +124,15 @@ struct Node::Impl {
   const auto bytes=Encode(packet);const auto native=Native(to);
   return sendto(socket.value,reinterpret_cast<const char*>(bytes.data()),static_cast<int>(bytes.size()),0,reinterpret_cast<const sockaddr*>(&native),sizeof(native))==static_cast<int>(bytes.size());
  }
- Room PublicRoom()const{auto room=*hosted;room.members=static_cast<uint32_t>(members.size()+1);room.endpoint=address;return room;}
+ Room PublicRoom()const{auto room=*hosted;room.members=static_cast<uint32_t>(members.size()+1);room.private_members=own_private?1:0;for(const auto& [id,m]:members)room.private_members+=m.private_slot;room.endpoint=address;return room;}
+ void Roster(Endpoint to){
+  if(!hosted)return;const auto room=PublicRoom();Writer w;
+  for(auto value:{room.flags,room.capacity,room.members,room.state,room.private_slots,room.private_members})w.U32(value);
+  w.U8(static_cast<uint8_t>(members.size()+1));w.U64(identity);w.U32(address.ip);w.U16(address.port);w.U8(own_private);
+  for(const auto& [id,m]:members){w.U64(id);w.U32(m.endpoint.ip);w.U16(m.endpoint.port);w.U8(m.private_slot);}
+  Send(to,{Kind::Roster,0,identity,room.id,std::move(w.bytes)});
+ }
+ void BroadcastRoster(){for(const auto& [id,m]:members)Roster(m.endpoint);}
  void Advert(Endpoint to,uint32_t request){if(hosted)Send(to,{Kind::Advert,request,identity,hosted->id,EncodeRoom(PublicRoom())});}
  void Process(const Packet& p,Endpoint from){
   if(p.peer==identity || !from.ip || !from.port)return;
@@ -145,30 +156,54 @@ struct Node::Impl {
        std::equal(p.payload.begin(),p.payload.end(),hosted->key.begin()) && hosted->state==0;
    if(ok && members.contains(p.peer) && !Same(members[p.peer].endpoint,from))ok=false;
    if(ok && !members.contains(p.peer) && members.size()+1>=hosted->capacity)ok=false;
-   if(ok){members[p.peer]={from,Clock::now()};peers[p.peer]=from;Send(from,{Kind::Joined,p.request,identity,hosted->id,EncodeRoom(PublicRoom())});}
-   else Send(from,{Kind::Reject,p.request,identity,p.session,{}});
+   if(ok){
+    const auto current=PublicRoom();
+    const bool priv=members.contains(p.peer)?members[p.peer].private_slot:
+        current.members-current.private_members>=current.capacity-current.private_slots;
+    if(priv && !members.contains(p.peer) && current.private_members>=current.private_slots)ok=false;
+    if(ok){members[p.peer]={from,Clock::now(),priv};peers[p.peer]=from;auto ack=EncodeRoom(PublicRoom());ack.push_back(priv);Send(from,{Kind::Joined,p.request,identity,hosted->id,std::move(ack)});BroadcastRoster();}
+   }
+   if(!ok)Send(from,{Kind::Reject,p.request,identity,p.session,{}});
    changed.notify_all();return;
   }
   if(p.kind==Kind::Joined || p.kind==Kind::Reject){
    if(!pending_request || p.request!=pending_request || p.session!=pending_session || p.peer!=pending_peer || from!=pending_endpoint)return;
-   auto room=p.kind==Kind::Joined?DecodeRoom(p.payload):std::nullopt;
+   auto room=p.kind==Kind::Joined && !p.payload.empty() && p.payload.back()<=1?DecodeRoom(std::span(p.payload).first(p.payload.size()-1)):std::nullopt;
    pending_ok=room && room->id==pending_session && room->host==pending_peer;
-   if(pending_ok){room->endpoint=from;joined=*room;joined_seen=Clock::now();peers[p.peer]=from;datagrams.clear();queued_bytes=0;}
+   if(pending_ok){room->endpoint=from;joined=*room;own_private=p.payload.back()!=0;joined_seen=Clock::now();peers[p.peer]=from;roster.clear();roster[p.peer]=from;datagrams.clear();queued_bytes=0;}
    pending_done=true;changed.notify_all();return;
   }
   if(p.kind==Kind::Leave){
-   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){members.erase(found);peers.erase(p.peer);Send(from,{Kind::Left,p.request,identity,p.session,{}});}}
+   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){members.erase(found);peers.erase(p.peer);Send(from,{Kind::Left,p.request,identity,p.session,{}});BroadcastRoster();}}
    return;
   }
-  if(p.kind==Kind::Left){if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint){peers.erase(joined->host);joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}return;}
+  if(p.kind==Kind::Left){if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint){peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}return;}
+  if(p.kind==Kind::Roster){
+   if(!joined || p.session!=joined->id || p.peer!=joined->host || from!=joined->endpoint)return;
+   try{Reader r(p.payload);auto room=*joined;room.flags=r.U32();room.capacity=r.U32();room.members=r.U32();room.state=r.U32();room.private_slots=r.U32();room.private_members=r.U32();
+    const auto count=r.U8();if(!count || count>20 || count!=room.members)return;EncodeRoom(room);
+    std::map<uint64_t,Endpoint> next;bool self=false;bool self_private=false;
+    for(unsigned i=0;i<count;++i){const auto id=r.U64();Endpoint ep;ep.ip=r.U32();ep.port=r.U16();const auto priv=r.U8();
+     if(!id || !ep.ip || !ep.port || priv>1 || next.contains(id))return;
+     if(id==identity){self=true;self_private=priv!=0;}next[id]=id==p.peer?from:ep;
+    }
+    if(!r.End() || !self || !next.contains(joined->host))return;
+    next.erase(identity);roster=std::move(next);own_private=self_private;joined=room;joined_seen=Clock::now();
+    for(const auto& [id,ep]:roster)peers[id]=ep;changed.notify_all();
+   }catch(const std::exception&){}return;
+  }
   if(p.kind==Kind::Heartbeat){
-   if(!p.payload.empty())return;
-   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){found->second.seen=Clock::now();Send(from,{Kind::Heartbeat,0,identity,p.session,{}});}}
+   if(p.payload.size()>1 || (!p.payload.empty() && p.payload[0]>1))return;
+   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){found->second.seen=Clock::now();
+    if(!p.payload.empty() && (p.payload[0]!=0)!=found->second.private_slot){const auto room=PublicRoom();const bool priv=p.payload[0]!=0;
+     if((priv && room.private_members<room.private_slots) || (!priv && room.members-room.private_members<room.capacity-room.private_slots))found->second.private_slot=priv;
+    }
+    Roster(from);}}
    else if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint)joined_seen=Clock::now();return;
   }
   if(p.kind==Kind::Data){
    const auto found=peers.find(p.peer);if(found==peers.end() || found->second!=from)return;
-   const auto session=hosted?hosted->id:joined?joined->id:0;if(!session || p.session!=session || (hosted && !members.contains(p.peer)) || (joined && joined->host!=p.peer))return;
+   const auto session=hosted?hosted->id:joined?joined->id:0;if(!session || p.session!=session || (hosted && !members.contains(p.peer)) || (joined && !roster.contains(p.peer)))return;
    try{Reader r(p.payload);Datagram d;d.peer=p.peer;d.source_port=r.U16();d.destination_port=r.U16();const auto bytes=r.Blob(kMaxPacket-56);if(!r.End() || !d.source_port || !d.destination_port)return;
     if(datagrams.size()>=512 || queued_bytes+bytes.size()>1024*1024)return;
     d.bytes=bytes;queued_bytes+=d.bytes.size();datagrams.push_back(std::move(d));changed.notify_all();
@@ -178,17 +213,17 @@ struct Node::Impl {
  void Tick(){
   std::lock_guard lock(mutex);const auto now=Clock::now();
   std::erase_if(rooms,[&](const auto& entry){return now-entry.second.seen>options.expiry;});
-  std::erase_if(members,[&](const auto& entry){if(now-entry.second.seen<=options.expiry)return false;peers.erase(entry.first);return true;});
+  if(std::erase_if(members,[&](const auto& entry){if(now-entry.second.seen<=options.expiry)return false;peers.erase(entry.first);return true;}))BroadcastRoster();
   std::erase_if(peers,[&](const auto& entry){
-   if(members.contains(entry.first) || (joined && joined->host==entry.first))return false;
+   if(members.contains(entry.first) || (joined && roster.contains(entry.first)))return false;
    return std::none_of(rooms.begin(),rooms.end(),[&](const auto& room){return room.second.room.host==entry.first;});
   });
   std::erase_if(datagrams,[&](const auto& packet){
-   if((hosted && members.contains(packet.peer)) || (joined && joined->host==packet.peer))return false;
+   if((hosted && members.contains(packet.peer)) || (joined && roster.contains(packet.peer)))return false;
    queued_bytes-=packet.bytes.size();return true;
   });
-  if(joined && now-joined_seen>options.expiry){peers.erase(joined->host);joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}
-  if(joined && now-last_heartbeat>std::min(std::chrono::milliseconds(500),options.expiry/3)){Send(joined->endpoint,{Kind::Heartbeat,0,identity,joined->id,{}});last_heartbeat=now;}
+  if(joined && now-joined_seen>options.expiry){peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}
+  if(joined && now-last_heartbeat>std::min(std::chrono::milliseconds(500),options.expiry/3)){Send(joined->endpoint,{Kind::Heartbeat,0,identity,joined->id,{static_cast<uint8_t>(own_private)}});last_heartbeat=now;}
  }
  void Run(){
   std::array<uint8_t,kMaxPacket+1> buffer{};
@@ -213,12 +248,12 @@ Node::~Node(){CloseRoom();Leave();}
 Endpoint Node::Address()const{return impl_->address;}
 uint64_t Node::Identity()const{return impl_->identity;}
 std::string Node::AdapterName()const{return impl_->adapter.name;}
-Room Node::Host(std::string name,uint32_t capacity,uint32_t flags,std::vector<uint8_t> properties,std::vector<uint8_t> qos){
+Room Node::Host(std::string name,uint32_t capacity,uint32_t flags,std::vector<uint8_t> properties,std::vector<uint8_t> qos,uint32_t private_slots){
  Room room;room.id=RandomId();room.host=Identity();room.endpoint=Address();room.name=std::move(name);room.capacity=capacity;room.flags=flags;room.properties=std::move(properties);room.qos=std::move(qos);RandomBytes(room.key);EncodeRoom(room);
- std::lock_guard lock(impl_->mutex);if(impl_->hosted || impl_->joined)throw std::runtime_error("Already in a LAN room");impl_->hosted=room;return room;
+ std::lock_guard lock(impl_->mutex);if(impl_->hosted || impl_->joined)throw std::runtime_error("Already in a LAN room");room.private_slots=private_slots;impl_->own_private=capacity==private_slots;room.private_members=impl_->own_private?1:0;if(room.qos.empty())room.qos=impl_->local_qos;EncodeRoom(room);impl_->hosted=room;return room;
 }
 void Node::CloseRoom(){std::lock_guard lock(impl_->mutex);if(impl_->hosted){for(const auto& [id,member]:impl_->members)impl_->Send(member.endpoint,{Kind::Left,0,Identity(),impl_->hosted->id,{}});impl_->hosted.reset();impl_->members.clear();impl_->peers.clear();impl_->datagrams.clear();impl_->queued_bytes=0;}}
-void Node::UpdateRoom(const Room& room){EncodeRoom(room);std::lock_guard lock(impl_->mutex);if(!impl_->hosted || impl_->hosted->id!=room.id || room.host!=Identity() || room.capacity<impl_->members.size()+1)throw std::runtime_error("Invalid room update");impl_->hosted=room;}
+void Node::UpdateRoom(const Room& room){EncodeRoom(room);std::lock_guard lock(impl_->mutex);if(!impl_->hosted || impl_->hosted->id!=room.id || room.host!=Identity() || room.capacity<impl_->members.size()+1)throw std::runtime_error("Invalid room update");const auto before=impl_->hosted;impl_->hosted=room;try{EncodeRoom(impl_->PublicRoom());}catch(...){impl_->hosted=before;throw;}impl_->BroadcastRoster();}
 void Node::Search(const std::string& direct_ip){
  std::vector<uint32_t> targets;
  if(!direct_ip.empty()){const auto ip=ParseIPv4(direct_ip);if(!ip || !*ip || *ip==UINT32_MAX)throw std::runtime_error("Invalid host IPv4");targets.push_back(*ip);}
@@ -233,7 +268,7 @@ std::vector<Room> Node::Rooms()const{std::lock_guard lock(impl_->mutex);std::vec
 std::optional<Room> Node::CurrentRoom()const{std::lock_guard lock(impl_->mutex);if(impl_->hosted)return impl_->PublicRoom();return impl_->joined;}
 bool Node::Join(const Room& room,std::chrono::milliseconds timeout){
  if(!room.id || !room.host || !room.endpoint.ip || !room.endpoint.port || timeout<=std::chrono::milliseconds(0) || timeout>std::chrono::seconds(10))return false;
- std::unique_lock lock(impl_->mutex);if(impl_->hosted || impl_->joined || impl_->pending_request)return false;
+ std::unique_lock lock(impl_->mutex);if(impl_->joined)return impl_->joined->id==room.id && impl_->joined->host==room.host && impl_->joined->key==room.key;if(impl_->hosted || impl_->pending_request)return false;
  impl_->pending_request=++impl_->next_request;if(!impl_->pending_request)impl_->pending_request=++impl_->next_request;
  impl_->pending_session=room.id;impl_->pending_peer=room.host;impl_->pending_endpoint=room.endpoint;impl_->pending_done=false;impl_->pending_ok=false;
  Packet packet{Kind::Join,impl_->pending_request,Identity(),room.id,{room.key.begin(),room.key.end()}};
@@ -241,15 +276,21 @@ bool Node::Join(const Room& room,std::chrono::milliseconds timeout){
  do {impl_->Send(room.endpoint,packet);impl_->changed.wait_for(lock,std::chrono::milliseconds(150),[&]{return impl_->pending_done;});}while(!impl_->pending_done && Clock::now()<deadline);
  const bool ok=impl_->pending_done && impl_->pending_ok;impl_->pending_request=0;return ok;
 }
-void Node::Leave(){std::lock_guard lock(impl_->mutex);if(impl_->joined){impl_->Send(impl_->joined->endpoint,{Kind::Leave,0,Identity(),impl_->joined->id,{}});impl_->peers.erase(impl_->joined->host);impl_->joined.reset();impl_->datagrams.clear();impl_->queued_bytes=0;}}
+void Node::Leave(){std::lock_guard lock(impl_->mutex);if(impl_->joined){impl_->Send(impl_->joined->endpoint,{Kind::Leave,0,Identity(),impl_->joined->id,{}});impl_->peers.clear();impl_->roster.clear();impl_->joined.reset();impl_->datagrams.clear();impl_->queued_bytes=0;}}
 uint32_t Node::Members()const{std::lock_guard lock(impl_->mutex);return impl_->hosted?static_cast<uint32_t>(impl_->members.size()+1):impl_->joined?impl_->joined->members:0;}
 std::optional<Endpoint> Node::Peer(uint64_t peer)const{std::lock_guard lock(impl_->mutex);const auto found=impl_->peers.find(peer);return found==impl_->peers.end()?std::nullopt:std::optional(found->second);}
-bool Node::Connected(uint64_t peer)const{std::lock_guard lock(impl_->mutex);return impl_->members.contains(peer) || (impl_->joined && impl_->joined->host==peer);}
+bool Node::Connected(uint64_t peer)const{std::lock_guard lock(impl_->mutex);return impl_->members.contains(peer) || (impl_->joined && impl_->roster.contains(peer));}
+std::vector<uint64_t> Node::ConnectedPeers()const{std::lock_guard lock(impl_->mutex);std::vector<uint64_t> out;if(impl_->hosted)for(const auto& [id,m]:impl_->members)out.push_back(id);else if(impl_->joined)for(const auto& [id,ep]:impl_->roster)out.push_back(id);return out;}
+void Node::SetPrivateSlot(bool value){std::lock_guard lock(impl_->mutex);const auto room=impl_->hosted?std::optional(impl_->PublicRoom()):impl_->joined;if(!room)return;
+ if(impl_->own_private==value)return;if((value && room->private_members>=room->private_slots) || (!value && room->members-room->private_members>=room->capacity-room->private_slots))throw std::runtime_error("Requested slot type is full");
+ impl_->own_private=value;if(impl_->hosted)impl_->BroadcastRoster();else impl_->Send(room->endpoint,{Kind::Heartbeat,0,Identity(),room->id,{static_cast<uint8_t>(value)}});
+}
+void Node::SetQos(std::span<const uint8_t> bytes){if(bytes.size()>kMaxQos)throw std::runtime_error("QoS payload too large");std::lock_guard lock(impl_->mutex);impl_->local_qos.assign(bytes.begin(),bytes.end());if(impl_->hosted)impl_->hosted->qos=impl_->local_qos;}
 void Node::RememberPeer(uint64_t peer,Endpoint endpoint){std::lock_guard lock(impl_->mutex);if(peer && endpoint.ip && endpoint.port && impl_->peers.size()<128)impl_->peers[peer]=endpoint;}
 bool Node::SendData(uint64_t peer,uint16_t source,uint16_t destination,std::span<const uint8_t> bytes){
  if(bytes.size()>kMaxPacket-56 || !source || !destination)return false;
  std::lock_guard lock(impl_->mutex);const auto found=impl_->peers.find(peer);const auto session=impl_->hosted?impl_->hosted->id:impl_->joined?impl_->joined->id:0;if(found==impl_->peers.end() || !session)return false;
  Writer w;w.U16(source);w.U16(destination);w.Blob(bytes);return impl_->Send(found->second,{Kind::Data,0,Identity(),session,std::move(w.bytes)});
 }
-std::optional<Datagram> Node::ReceiveData(){std::lock_guard lock(impl_->mutex);if(impl_->datagrams.empty())return {};auto result=std::move(impl_->datagrams.front());impl_->datagrams.pop_front();impl_->queued_bytes-=result.bytes.size();return result;}
+std::optional<Datagram> Node::ReceiveData(std::chrono::milliseconds wait){std::unique_lock lock(impl_->mutex);if(wait.count()>0 && impl_->datagrams.empty())impl_->changed.wait_for(lock,wait,[&]{return !impl_->datagrams.empty() || impl_->stopping.load();});if(impl_->datagrams.empty())return {};auto result=std::move(impl_->datagrams.front());impl_->datagrams.pop_front();impl_->queued_bytes-=result.bytes.size();return result;}
 }

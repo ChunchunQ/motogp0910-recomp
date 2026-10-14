@@ -21,7 +21,7 @@ class Node {
   Node(const Node&)=delete;Node& operator=(const Node&)=delete;
   Endpoint Address()const;uint64_t Identity()const;std::string AdapterName()const;
   Room Host(std::string name,uint32_t capacity=2,uint32_t flags=0,
-            std::vector<uint8_t> properties={},std::vector<uint8_t> qos={});
+            std::vector<uint8_t> properties={},std::vector<uint8_t> qos={},uint32_t private_slots=0);
   void CloseRoom();void UpdateRoom(const Room&);
   void Search(const std::string& direct_ip={}); // nonblocking; direct and automatic share validation
   std::vector<Room> Rooms()const;std::optional<Room> CurrentRoom()const;
@@ -29,8 +29,11 @@ class Node {
   void Leave();uint32_t Members()const;
   std::optional<Endpoint> Peer(uint64_t)const;
   bool Connected(uint64_t)const;
+  std::vector<uint64_t> ConnectedPeers()const;
+  void SetPrivateSlot(bool);
+  void SetQos(std::span<const uint8_t>);
   void RememberPeer(uint64_t,Endpoint);
   bool SendData(uint64_t peer,uint16_t source,uint16_t destination,std::span<const uint8_t>);
-  std::optional<Datagram> ReceiveData();
+  std::optional<Datagram> ReceiveData(std::chrono::milliseconds wait={});
 };
 }

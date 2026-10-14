@@ -39,7 +39,7 @@ struct App {
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
   std::array<HWND,5> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND shadow_distance{};
+  HWND shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -185,6 +185,7 @@ struct App {
     SetWindowTextW(shader_cache,T(L"Shader cache",L"Shader önbelleği"));
     SetWindowTextW(dither,T(L"Reduce color banding",L"Renk bantlaşmasını azalt"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
+    SetWindowTextW(lan_enabled,T(L"Enable LAN (Experimental)",L"LAN’ı etkinleştir (Deneysel)"));
     SetWindowTextW(mute,T(L"Mute game audio",L"Oyun sesini kapat"));
     SetWindowTextW(save,T(L"Save settings",L"Ayarları kaydet"));
     SetWindowTextW(defaults,T(L"Restore defaults",L"Varsayılanlar"));
@@ -227,6 +228,9 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
+    SetCheck(lan_enabled,s.lan_enabled);
+    SetWindowTextW(lan_player,Wide(s.lan_player_name).c_str());SetWindowTextW(lan_room,Wide(s.lan_room_name).c_str());
+    SetWindowTextW(lan_adapter,Wide(s.lan_bind_ip).c_str());SetWindowTextW(lan_host,Wide(s.lan_host_ip).c_str());
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
@@ -268,7 +272,10 @@ struct App {
     filling_binding=false;UpdateSharpness();
   }
   Settings GetControls()const{
-    Settings s=settings;const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
+    Settings s=settings;
+    s.lan_enabled=Checked(lan_enabled);s.lan_player_name=Utf8(Text(lan_player));s.lan_room_name=Utf8(Text(lan_room));
+    s.lan_bind_ip=Utf8(Text(lan_adapter));s.lan_host_ip=Utf8(Text(lan_host));
+    const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);
     if(gpu<0 || gpu>static_cast<LRESULT>(adapters.size()))throw std::runtime_error("Invalid GPU selection");
@@ -334,7 +341,7 @@ struct App {
     sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,690,676,386,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     msaa=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,727,374,28,kMsaa);
     fsr_notice=PageControl(0,L"STATIC",L"",0,696,788,374,44);
-    LabelControl(3,L"GAME PREFERENCES",L"OYUN TERCİHLERİ",260,247,798);
+    LabelControl(3,L"GAME PREFERENCES",L"OYUN TERCİHLERİ",260,247,374);
     LabelControl(3,L"Launcher language",L"Launcher dili",260,290,374);
     language=combo(3,260,316,374,kLanguage);
     SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));
@@ -344,7 +351,15 @@ struct App {
     game_language=combo(3,260,402,374,kGameLanguage);
     FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano"});
     LabelControl(3,L"Button prompts",L"Tuş simgeleri",260,462,374);prompt_style=combo(3,260,488,374,kPromptStyle);
-    LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,798,38);
+    LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,374,92);
+    lan_enabled=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,245,374,28,kLanEnabled);
+    const auto lan_field=[&](int y,int id,int limit){auto c=PageControl(3,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,696,y,374,28,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
+    LabelControl(3,L"Player name",L"Oyuncu adı",696,290,374);lan_player=lan_field(316,kLanPlayer,15);
+    LabelControl(3,L"Room name (host)",L"Oda adı (kurucu)",696,364,374);lan_room=lan_field(390,kLanRoom,31);
+    LabelControl(3,L"Local IPv4 (empty = Auto / Radmin)",L"Yerel IPv4 (boş = Otomatik / Radmin)",696,438,374);lan_adapter=lan_field(464,kLanAdapter,15);
+    LabelControl(3,L"Host IPv4 (empty = automatic discovery)",L"Kurucu IPv4 (boş = otomatik oda arama)",696,512,374);lan_host=lan_field(538,kLanHost,15);
+    LabelControl(3,L"Same build on both PCs. Use Player Match.\nJoin the same LAN / Radmin network.\nRanked matches and Xbox Live are unsupported.\nGameplay verification is pending.",
+        L"İki PC’de aynı build: Player Match kullan.\nAynı LAN / Radmin ağına bağlan.\nRanked ve Xbox Live desteklenmiyor.\nOyun içi doğrulama henüz yapılmadı.",696,590,374,106);
     LabelControl(4,L"POST-PROCESSING",L"SON İŞLEME",260,247,374);
     for(size_t i=0;i<2;++i){LabelControl(4,kEngineEffects[i].english,kEngineEffects[i].turkish,260,290+86*i,374);engine_choices[i]=combo(4,260,316+86*i,374,kEngineBase+i);}
     LabelControl(4,L"SHADOWS",L"GÖLGELER",696,247,374);
@@ -432,7 +447,7 @@ struct App {
     RECT client;GetClientRect(window,&client);auto dc=CreateCompatibleDC(target);auto bitmap=CreateCompatibleBitmap(target,client.right,client.bottom);auto old=SelectObject(dc,bitmap);
     FillRect(dc,&client,background);RECT side{0,0,S(210),client.bottom};auto b=CreateSolidBrush(kSidebar);FillRect(dc,&side,b);DeleteObject(b);
     auto box=[&](int x,int y,int w,int h){RECT r{S(x),S(y),S(x+w),S(y+h)};Rounded(dc,r,kCard,kBorder,16);};
-    if(current_page==3){box(242,118,846,84);box(242,228,846,368);}
+    if(current_page==3){box(242,118,846,84);box(242,228,846,504);}
     else if(current_page==0){box(242,118,410,614);box(678,118,410,614);}
     else if(current_page==4){box(242,118,410,414);box(678,118,410,414);box(242,558,846,124);}
     else if(current_page==1)box(242,118,846,368);

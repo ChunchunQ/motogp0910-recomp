@@ -134,6 +134,8 @@ class Config {
 };
 struct Settings {
   std::string aspect="auto";
+  bool lan_enabled=false;
+  std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
   int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
@@ -146,6 +148,10 @@ struct Settings {
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
     Settings s;
+    s.lan_enabled=Get(t,"lan_enabled",false);
+    s.lan_player_name=Get(t,"lan_player_name",std::string("Player"));
+    s.lan_room_name=Get(t,"lan_room_name",std::string("MotoGP room"));
+    s.lan_bind_ip=Get(t,"lan_bind_ip",std::string{});s.lan_host_ip=Get(t,"lan_host_ip",std::string{});
     s.width = Get<int64_t>(t, "window_width", 0);
     s.height = Get<int64_t>(t, "window_height", 0);
     s.guest_width=Get<int64_t>(t,"video_mode_width",0);
@@ -185,6 +191,18 @@ struct Settings {
     return s;
   }
   void Validate() const {
+    const auto ipv4=[](const std::string& value){
+      if(value.empty())return true;unsigned parts=0,number=0,digits=0;uint32_t address=0;
+      for(char c:value){if(c=='.'){if(!digits || number>255 || ++parts>3)return false;address=(address<<8)|number;number=digits=0;}
+        else if(c>='0' && c<='9'){if(++digits>3)return false;number=number*10+(c-'0');}else return false;}
+      address=(address<<8)|number;return parts==3 && digits && number<=255 && address!=0 && address!=UINT32_MAX;
+    };
+    if(lan_player_name.empty() || lan_player_name.size()>15 || lan_player_name.find('\0')!=std::string::npos ||
+       lan_room_name.empty() || lan_room_name.size()>31 || lan_room_name.find('\0')!=std::string::npos ||
+       !ipv4(lan_bind_ip) || !ipv4(lan_host_ip))throw Error(
+          L"LAN: player name must be 1-15 UTF-8 bytes, room name 1-31 bytes; use a valid IPv4 or leave it empty.",
+          L"LAN: oyuncu adı 1-15 UTF-8 bayt, oda adı 1-31 bayt olmalı; geçerli IPv4 yaz veya boş bırak.");
+    Wide(lan_player_name);Wide(lan_room_name);
     if(aspect!="auto" && aspect!="16:9" && aspect!="21:9" && aspect!="32:9")throw Error(L"Unsupported aspect ratio.",L"Desteklenmeyen en-boy oranı.");
     for(const auto& effect:engine_effects)if(effect!="game" && effect!="off")throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");
     if(shadow_distance<0 || shadow_distance>180)throw Error(L"Shadow distance must be 0 to 180.",L"Gölge mesafesi 0 ile 180 arasında olmalı.");
@@ -212,6 +230,8 @@ struct Settings {
   }
   void Store(toml::table& t) const {
     Validate();
+    Put(t,"lan_enabled",lan_enabled);Put(t,"lan_player_name",lan_player_name);Put(t,"lan_room_name",lan_room_name);
+    Put(t,"lan_bind_ip",lan_bind_ip);Put(t,"lan_host_ip",lan_host_ip);
     for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
     Put(t,"aspect_ratio",aspect);
     Put(t,"engine_shadow_distance",shadow_distance);

@@ -9,7 +9,8 @@ ranked services, friends, voice and leaderboards are outside this first stage.
 
 The research baseline was stability commit `bcef3c9`. The subsequent
 [first lobby foundation](lan-lobby-preview.md) implements and checks native
-discovery and guest session calls; playable LAN racing remains unfinished. SDK
+discovery and guest session calls. The subsequent [experimental integration](lan-multiplayer-test.md)
+wires guest XNet/UDP/VDP and launcher settings; real racing remains unverified. SDK
 `0.10.0.24-dev.gbd833a2`, patched title version `0.0.1.1`.
 
 ## Existing ReXGlue examples

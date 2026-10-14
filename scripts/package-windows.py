@@ -21,7 +21,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
     parser.add_argument('--archive',default='MotoGP0910-Windows-x64-stability-update.zip')
-    parser.add_argument('--lan-preview',action='store_true',help='Label the first LAN foundation milestone; multiplayer racing is unfinished')
+    parser.add_argument('--lan-preview',action='store_true',help='Include the experimental LAN multiplayer integration and Windows test instructions')
     args=parser.parse_args();BUILD=args.build_dir.resolve()
     if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
         parser.error('--archive must be a ZIP filename')
@@ -53,20 +53,20 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
-    milestone="LAN foundation preview" if args.lan_preview else "Stability update"
+    milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
-        "LAN FOUNDATION: This build does NOT yet provide playable LAN multiplayer.\n"
-        "Offline play remains the default. Do not enable lan_enabled for racing yet.\n"
-        "Native discovery, real room/session keys, join/leave and guest session calls\n"
-        "were tested with two Windows processes under Wine, by automatic and direct IP.\n"
-        "The service's opaque packet channel is not yet wired to the game's WSA APIs.\n"
-        "Player Match UI, live admission, XNet/QoS and Radmin races remain unfinished.\n"
-        "See lan-readme.txt for exact scope and tests.\n\n"
+        "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
+        "General > Enable LAN (Experimental); automatic rooms, optional host IPv4 fallback.\n"
+        "Use the same package on both PCs and unranked Player Match on LAN / Radmin.\n"
+        "No Xbox Live login or dedicated server. Offline remains the default.\n"
+        "New runtime/gameplay/regression tests were skipped at the user's request.\n"
+        "This build is compiled, but synchronized racing and real Radmin are UNVERIFIED.\n"
+        "Read lan-readme.txt for the exact two-PC steps and unsupported features.\n\n"
         "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
         "the supplied MotoGP logo. Both embed seven Windows icon sizes (16-256 px).\n\n"
     ) if args.lan_preview else ""
     if args.lan_preview:
-        shutil.copy2(ROOT / "docs/lan-lobby-preview.md", STAGE / "lan-readme.txt")
+        shutil.copy2(ROOT / "docs/lan-multiplayer-test.md", STAGE / "lan-readme.txt")
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
         "STABILITY: Reject out-of-range/overflowing TLS slots, preserve owned launch paths,\n"
@@ -74,7 +74,7 @@ def main():
         "FILETIME calendar conversions preserve the 1601 epoch and 100 ns precision.\n"
         "Unpinned CPU updates avoid host topology queries and repeated warnings.\n"
         "FPS pacing and ultrawide HUD diagnostics avoid redundant hot-path work.\n"
-        "Windows CPU/UI regressions passed under Wine; GPU gameplay needs native Windows.\n\n"
+        "Earlier Windows CPU/UI regressions passed under Wine; this new LAN integration is untested.\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"

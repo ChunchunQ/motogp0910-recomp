@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "socket_bridge.h"
 #include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/system/xevent.h>
@@ -8,7 +9,7 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
-REXCVAR_DEFINE_BOOL(lan_enabled,false,"LAN","Experimental native LAN lobby bridge; offline is the default")
+REXCVAR_DEFINE_BOOL(lan_enabled,false,"LAN","Experimental LAN multiplayer; offline is the default")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REXCVAR_DEFINE_STRING(lan_bind_ip,"","LAN","Local adapter IPv4; empty automatically prefers Radmin VPN")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
@@ -16,10 +17,13 @@ REXCVAR_DEFINE_STRING(lan_host_ip,"","LAN","Optional fallback host IPv4; empty u
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REXCVAR_DEFINE_STRING(lan_room_name,"MotoGP room","LAN","Advertised room name, maximum 31 UTF-8 bytes")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
+REXCVAR_DEFINE_STRING(lan_player_name,"Player","LAN","LAN player name, maximum 15 UTF-8 bytes")
+    .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 namespace motogp::lan {
 namespace {
 std::shared_mutex bridge_mutex;
 std::unique_ptr<GuestBridge> bridge;
+std::unique_ptr<SocketBridge> sockets;
 #ifdef _WIN32
 void Original(const char* name,PPCContext& ctx,uint8_t* base){
   const auto module=GetModuleHandleW(L"rexruntime.dll");
@@ -53,6 +57,11 @@ bool Message(PPCContext& ctx,uint8_t* base,bool async){
   }
   const auto result=bridge->Dispatch(ctx.r4.u32,async?ctx.r6.u32:ctx.r5.u32,async?ctx.r7.u32:ctx.r6.u32);
   if(!result)return false;
+  if(ctx.r4.u32!=0xB0006 && ctx.r4.u32!=0xB0007){
+    const auto room=bridge->Network().CurrentRoom();
+    REXLOG_INFO("LAN_SESSION: message={:08X} result={:08X} room={:016X} members={}",ctx.r4.u32,*result,room?room->id:0,room?room->members:0);
+  }
+  if(ctx.r4.u32==0xB0011 && *result==0 && sockets)sockets->CancelSessionReceives();
   if(overlapped){
     if(rex::system::XThread::IsInThread())kernel->CompleteOverlappedImmediate(overlapped,*result);
     else kernel->CompleteOverlappedEx(overlapped,*result,*result,*result?UINT32_MAX:0);
@@ -61,25 +70,123 @@ bool Message(PPCContext& ctx,uint8_t* base,bool async){
   if(rex::system::XThread::IsInThread())rex::system::XThread::SetLastError(*result?(*result&0xFFFF):0);
   return true;
 }
+uint32_t Parent(PPCContext& ctx,uint8_t* base){
+  const auto address=uint64_t(ctx.r1.u32)+88;
+  return address<=UINT32_MAX && bridge->Valid(static_cast<uint32_t>(address),4)?rex::memory::load_and_swap<uint32_t>(base+address):0;
+}
+bool NetworkXuidCaller(PPCContext& ctx,uint8_t* base){
+  if(ctx.r4.u32==2 || ctx.r4.u32==4)return true;
+  if(ctx.lr!=0x8239CA18)return false;
+  const auto parent=Parent(ctx,base);
+  // The title's session host/join, local-member predicate and online refresh.
+  // Profile/save caller 0x8224A838 and all other callers keep the original XUID.
+  return parent==0x823042D0 || parent==0x82305844 || parent==0x822FE560 || parent==0x822FF960;
+}
+std::string PlayerName(){
+  auto name=rex::cvar::Query<std::string>("lan_player_name");
+  if(name=="Player"){const auto id=bridge->Network().Identity();static constexpr char hex[]="0123456789ABCDEF";name+=" ";for(int shift=12;shift>=0;shift-=4)name+=hex[(id>>shift)&15];}
+  return name;
+}
 #endif
 }
 void Start(rex::system::KernelState* kernel){
   std::unique_lock lock(bridge_mutex);
+  sockets.reset();
   bridge.reset();
   if(!rex::cvar::Query<bool>("lan_enabled"))return;
 #ifdef _WIN32
   Options options;options.bind_ip=rex::cvar::Query<std::string>("lan_bind_ip");
+  const auto player=rex::cvar::Query<std::string>("lan_player_name");
+  if(player.empty() || player.size()>15 || player.find('\0')!=std::string::npos)throw std::runtime_error("LAN player name must contain 1-15 UTF-8 bytes");
   auto node=std::make_shared<Node>(options);
   bridge=std::make_unique<GuestBridge>(kernel,node,rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"));
-  REXLOG_INFO("LAN_LOBBY: adapter={} endpoint={}:{} discovery={} race_transport=unfinished",node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
+  sockets=std::make_unique<SocketBridge>(*bridge);
+  REXLOG_INFO("LAN_LOBBY: adapter={} endpoint={}:{} discovery={} transport=guest-UDP/VDP protocol=LAN02",node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
       rex::cvar::Query<std::string>("lan_host_ip").empty()?"automatic":"direct-IP fallback");
 #else
   (void)kernel;throw std::runtime_error("The LAN preview targets Windows");
 #endif
 }
-void Stop(){std::unique_lock lock(bridge_mutex);bridge.reset();}
+void Stop(){
+  {std::shared_lock lock(bridge_mutex);if(sockets)sockets->Shutdown();}
+  std::unique_lock lock(bridge_mutex);sockets.reset();bridge.reset();
+}
 std::optional<Room> CurrentRoom(){std::shared_lock lock(bridge_mutex);return bridge?bridge->Network().CurrentRoom():std::nullopt;}
 #ifdef _WIN32
+REX_HOOK_RAW(__imp__XamUserGetSigninState){
+  std::shared_lock lock(bridge_mutex);if(bridge && ctx.r3.u32==0)ctx.r3.u64=2;else Original("__imp__XamUserGetSigninState",ctx,base);
+}
+REX_HOOK_RAW(__imp__XamUserCheckPrivilege){
+  std::shared_lock lock(bridge_mutex);
+  if(bridge && (ctx.r3.u32==0 || ctx.r3.u32==0xFF) && (ctx.r4.u32==254 || ctx.r4.u32==252 || ctx.r4.u32==251 || ctx.r4.u32==247)){
+    if(!bridge->Valid(ctx.r5.u32,4,true)){ctx.r3.u64=87;return;}
+    rex::memory::store_and_swap<uint32_t>(base+ctx.r5.u32,1);ctx.r3.u64=0;
+  }else Original("__imp__XamUserCheckPrivilege",ctx,base);
+}
+REX_HOOK_RAW(__imp__XamUserGetXUID){
+  std::shared_lock lock(bridge_mutex);
+  if(bridge && ctx.r3.u32==0 && NetworkXuidCaller(ctx,base)){
+    if(!bridge->Valid(ctx.r5.u32,8,true)){ctx.r3.u64=0x80070057;return;}
+    rex::memory::store_and_swap<uint64_t>(base+ctx.r5.u32,bridge->Network().Identity());ctx.r3.u64=0;
+  }else Original("__imp__XamUserGetXUID",ctx,base);
+}
+REX_HOOK_RAW(__imp__XamUserGetSigninInfo){
+  std::shared_lock lock(bridge_mutex);const auto user=ctx.r3.u32,flags=ctx.r4.u32,info=ctx.r5.u32;
+  if(bridge && !bridge->Valid(info,40,true)){ctx.r3.u64=0x80070057;return;}
+  const bool network=bridge && ((flags&2) || (ctx.lr==0x8239C480 && Parent(ctx,base)==0x8230382C));
+  Original("__imp__XamUserGetSigninInfo",ctx,base);
+  if(bridge && user==0 && ctx.r3.u32==0){
+    rex::memory::store_and_swap<uint32_t>(base+info+8,1);rex::memory::store_and_swap<uint32_t>(base+info+12,2);
+    if(network){rex::memory::store_and_swap<uint64_t>(base+info,bridge->Network().Identity());const auto name=PlayerName();std::memset(base+info+24,0,16);std::copy(name.begin(),name.end(),base+info+24);}
+  }
+}
+REX_HOOK_RAW(__imp__XamUserGetName){
+  std::shared_lock lock(bridge_mutex);
+  if(bridge && ctx.r3.u32==0){const auto name=PlayerName();if(ctx.r5.u32<=name.size() || !bridge->Valid(ctx.r4.u32,ctx.r5.u32,true)){ctx.r3.u64=87;return;}std::copy(name.begin(),name.end(),base+ctx.r4.u32);base[ctx.r4.u32+name.size()]=0;ctx.r3.u64=0;}
+  else Original("__imp__XamUserGetName",ctx,base);
+}
+REX_HOOK_RAW(__imp__XNetLogonGetTitleID){std::shared_lock lock(bridge_mutex);if(bridge)ctx.r3.u64=kTitle;else Original("__imp__XNetLogonGetTitleID",ctx,base);}
+REX_HOOK_RAW(__imp__XamUserGetMembershipTierFromXUID){
+  std::shared_lock lock(bridge_mutex);if(bridge)ctx.r3.u64=(ctx.r3.u64==bridge->Network().Identity() || bridge->Network().Connected(ctx.r3.u64))?6:0;else Original("__imp__XamUserGetMembershipTierFromXUID",ctx,base);
+}
+#define MOTOGP_NET_IMPORT(name) \
+REX_HOOK_RAW(__imp__##name){ \
+  std::shared_lock lock(bridge_mutex); \
+  if(!sockets || !sockets->Handle(#name,ctx,base))Original("__imp__" #name,ctx,base); \
+}
+MOTOGP_NET_IMPORT(NetDll_socket)
+MOTOGP_NET_IMPORT(NetDll_bind)
+MOTOGP_NET_IMPORT(NetDll_ioctlsocket)
+MOTOGP_NET_IMPORT(NetDll_closesocket)
+MOTOGP_NET_IMPORT(NetDll_shutdown)
+MOTOGP_NET_IMPORT(NetDll_connect)
+MOTOGP_NET_IMPORT(NetDll_listen)
+MOTOGP_NET_IMPORT(NetDll_accept)
+MOTOGP_NET_IMPORT(NetDll_send)
+MOTOGP_NET_IMPORT(NetDll_sendto)
+MOTOGP_NET_IMPORT(NetDll_recv)
+MOTOGP_NET_IMPORT(NetDll_recvfrom)
+MOTOGP_NET_IMPORT(NetDll_WSASendTo)
+MOTOGP_NET_IMPORT(NetDll_WSASend)
+MOTOGP_NET_IMPORT(NetDll_WSARecvFrom)
+MOTOGP_NET_IMPORT(NetDll_WSARecv)
+MOTOGP_NET_IMPORT(NetDll_WSAGetOverlappedResult)
+MOTOGP_NET_IMPORT(NetDll_WSACancelOverlappedIO)
+MOTOGP_NET_IMPORT(NetDll_WSAGetLastError)
+MOTOGP_NET_IMPORT(NetDll_WSASetLastError)
+MOTOGP_NET_IMPORT(NetDll_XNetRandom)
+MOTOGP_NET_IMPORT(NetDll_XNetGetTitleXnAddr)
+MOTOGP_NET_IMPORT(NetDll_XNetGetEthernetLinkStatus)
+MOTOGP_NET_IMPORT(NetDll_XNetXnAddrToInAddr)
+MOTOGP_NET_IMPORT(NetDll_XNetConnect)
+MOTOGP_NET_IMPORT(NetDll_XNetGetConnectStatus)
+MOTOGP_NET_IMPORT(NetDll_XNetUnregisterInAddr)
+MOTOGP_NET_IMPORT(NetDll_XNetQosListen)
+MOTOGP_NET_IMPORT(NetDll_XNetQosLookup)
+MOTOGP_NET_IMPORT(NetDll_XNetQosServiceLookup)
+MOTOGP_NET_IMPORT(NetDll_XNetQosRelease)
+MOTOGP_NET_IMPORT(NtClose)
+#undef MOTOGP_NET_IMPORT
 REX_HOOK_RAW(__imp__XamSessionCreateHandle){
   std::shared_lock lock(bridge_mutex);
   if(bridge)ctx.r3.u64=bridge->CreateHandle(ctx.r3.u32);else Original("__imp__XamSessionCreateHandle",ctx,base);

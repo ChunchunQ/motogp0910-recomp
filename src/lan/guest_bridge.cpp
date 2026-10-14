@@ -93,61 +93,85 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
   auto* b=kernel_->memory()->TranslateVirtual(buffer);
   const auto mem=kernel_->memory();
   try{
-    if(message==0xB0007)return Error(50); // Property serialization is a later stage.
-    if(message==0xB0006){
-      if(Load32(b)!=0 || (contexts_.size()>=32 && !contexts_.contains(Load32(b+16))))return kInvalid;
-      contexts_[Load32(b+16)]=Load32(b+20);
-      if(auto room=node_->CurrentRoom();room && room->host==node_->Identity()){
-        Writer w;w.U16(static_cast<uint16_t>(contexts_.size()));for(auto [id,value]:contexts_){w.U32(id);w.U32(value);}
-        room->properties=std::move(w.bytes);node_->UpdateRoom(*room);
+    if(message==0xB0006 || message==0xB0007){
+      if(Load32(b)!=0)return kInvalid;
+      auto next=metadata_;const auto id=Load32(b+16);
+      if(message==0xB0006)next.contexts[id]=Load32(b+20);
+      else{
+        const auto bytes=Load32(b+20),value=Load32(b+24);
+        if(!bytes)next.properties.erase(id);
+        else{
+          if(bytes>512 || !Valid(value,bytes))return kInvalid;
+          std::span<const uint8_t> data(mem->TranslateVirtual(value),bytes);
+          if(!ValidProperty(id,data))return kInvalid;
+          next.properties[id]={data.begin(),data.end()};
+        }
       }
-      return 0;
+      auto encoded=EncodeMetadata(next);
+      if(auto room=node_->CurrentRoom();room && room->host==node_->Identity()){
+        room->properties=std::move(encoded);node_->UpdateRoom(*room);
+      }
+      metadata_=std::move(next);return 0;
     }
     if(message==0xB001C || message==0xB0016){
       const auto maximum=Load32(b+8),bytes=Load32(b+24),output=Load32(b+28);
+      const auto num_properties=rex::memory::load_and_swap<uint16_t>(b+12);
       const auto num_contexts=rex::memory::load_and_swap<uint16_t>(b+14);
-      if(rex::memory::load_and_swap<uint16_t>(b+12))return Error(50);
-      const auto context_array=Load32(b+20);
-      if(Load32(b+4)!=0 || !maximum || maximum>64 || num_contexts>32 ||
-         (num_contexts && !Valid(context_array,num_contexts*8)))return kInvalid;
-      // Each record fits the original title's own 1326-byte-per-result query.
+      const auto property_array=Load32(b+16),context_array=Load32(b+20);
+      if(Load32(b+4)!=0 || !maximum || maximum>64 || num_properties>32 || num_contexts>32 ||
+         (num_contexts && !Valid(context_array,num_contexts*8)) ||
+         (num_properties && !Valid(property_array,num_properties*24)))return kInvalid;
+      Metadata filters;
+      for(unsigned i=0;i<num_contexts;++i){auto* c=mem->TranslateVirtual(context_array+i*8);filters.contexts[Load32(c)]=Load32(c+4);}
+      for(unsigned i=0;i<num_properties;++i){auto* p=mem->TranslateVirtual(property_array+i*24);const auto id=Load32(p),type=id>>28;
+        if(p[8]!=type)return kInvalid;
+        uint32_t address=property_array+i*24+16,length=type==1 || type==5?4:8;
+        if(type==4 || type==6){length=Load32(p+16);address=Load32(p+20);}
+        if(length>512 || (length && !Valid(address,length)))return kInvalid;
+        std::span<const uint8_t> value(length?mem->TranslateVirtual(address):nullptr,length);
+        if(!ValidProperty(id,value))return kInvalid;
+        filters.properties[id]={value.begin(),value.end()};
+      }
       if(bytes<8+maximum*92)return kInsufficient;
       if(!Valid(output,bytes,true))return kInvalid;
       node_->Search(direct_ip_);std::this_thread::sleep_for(std::chrono::milliseconds(300));
       auto rooms=node_->Rooms();
-      std::vector<std::map<uint32_t,uint32_t>> contexts;
-      std::vector<std::u16string> names;
-      std::vector<Room> selected;
+      std::vector<Metadata> fields;std::vector<Room> selected;
       for(const auto& room:rooms){
-        std::map<uint32_t,uint32_t> values;
-        try{if(!room.properties.empty()){
-          Reader r(room.properties);const auto count=r.U16();if(count>32)continue;
-          for(unsigned n=0;n<count;++n){auto id=r.U32();values[id]=r.U32();}if(!r.End())continue;
-        }}catch(const std::exception&){continue;}
-        bool match=true;
-        for(unsigned i=0;i<num_contexts;++i){const auto* c=mem->TranslateVirtual(context_array+i*8);
-          const auto id=Load32(c);const auto v=values.find(id);if(v==values.end() || v->second!=Load32(c+4))match=false;}
-        if(!match || (message==0xB001C && Load32(b+32)>room.capacity-room.members))continue;
-        std::u16string name;
-        try{name=rex::string::to_utf16(room.name);}catch(const std::exception&){continue;}
-        selected.push_back(room);names.push_back(std::move(name));contexts.push_back(std::move(values));if(selected.size()==maximum)break;
+        auto data=DecodeMetadata(room.properties);if(!data)continue;bool match=true;
+        for(auto [id,value]:filters.contexts){auto found=data->contexts.find(id);if(value!=UINT32_MAX && (found==data->contexts.end() || found->second!=value))match=false;}
+        for(const auto& [id,value]:filters.properties){auto found=data->properties.find(id);
+          const bool wildcard=(id>>28)==1 && value==std::vector<uint8_t>(4,255);
+          if(!wildcard && (found==data->properties.end() || found->second!=value))match=false;}
+        const auto public_free=room.capacity-room.private_slots-(room.members-room.private_members);
+        if(!match || (message==0xB001C && Load32(b+32)>public_free))continue;
+        const auto name=rex::string::to_utf16(room.name);std::vector<uint8_t> host_name((name.size()+1)*2,0);
+        for(size_t i=0;i<name.size();++i)rex::memory::store_and_swap<uint16_t>(host_name.data()+i*2,name[i]);
+        data->properties[0x40008109]=std::move(host_name);
+        selected.push_back(room);fields.push_back(std::move(*data));if(selected.size()==maximum)break;
       }
       size_t total=8+selected.size()*92;
-      for(size_t i=0;i<selected.size();++i)total+=24+(((names[i].size()+1)*2+3)&~size_t(3))+contexts[i].size()*8;
+      for(const auto& data:fields){total+=data.properties.size()*24+data.contexts.size()*8;
+        for(const auto& [id,value]:data.properties)if((id>>28)==4 || (id>>28)==6)total+=(value.size()+3)&~size_t(3);}
       if(total>bytes)return kInsufficient;
       auto* out=mem->TranslateVirtual(output);std::memset(out,0,total);
       Store32(out,static_cast<uint32_t>(selected.size()));Store32(out+4,selected.empty()?0:output+8);
       uint32_t cursor=output+8+static_cast<uint32_t>(selected.size())*92;
       for(size_t i=0;i<selected.size();++i){
         const auto row=output+8+static_cast<uint32_t>(i)*92;WriteInfo(row,selected[i]);
-        auto* p=mem->TranslateVirtual(row);Store32(p+60,selected[i].capacity-selected[i].members);Store32(p+68,selected[i].members);
-        Store32(p+76,1);Store32(p+80,static_cast<uint32_t>(contexts[i].size()));Store32(p+84,cursor);
-        auto* property=mem->TranslateVirtual(cursor);Store32(property,0x40008109);property[8]=4;
-        const auto chars=static_cast<uint32_t>(names[i].size());Store32(property+16,(chars+1)*2);Store32(property+20,cursor+24);
-        for(unsigned n=0;n<chars;++n)rex::memory::store_and_swap<uint16_t>(property+24+n*2,names[i][n]);
-        cursor+=24+(((chars+1)*2+3)&~uint32_t(3));
-        if(!contexts[i].empty()){Store32(p+88,cursor);for(auto [id,value]:contexts[i]){
-          auto* c=mem->TranslateVirtual(cursor);Store32(c,id);Store32(c+4,value);cursor+=8;}}
+        const auto& room=selected[i];const auto& data=fields[i];auto* p=mem->TranslateVirtual(row);
+        Store32(p+60,room.capacity-room.private_slots-(room.members-room.private_members));Store32(p+64,room.private_slots-room.private_members);
+        Store32(p+68,room.members-room.private_members);Store32(p+72,room.private_members);
+        Store32(p+76,static_cast<uint32_t>(data.properties.size()));Store32(p+80,static_cast<uint32_t>(data.contexts.size()));
+        if(!data.properties.empty())Store32(p+84,cursor);
+        uint32_t property_cursor=cursor;cursor+=static_cast<uint32_t>(data.properties.size())*24;
+        for(const auto& [id,value]:data.properties){auto* property=mem->TranslateVirtual(property_cursor);const auto type=id>>28;Store32(property,id);property[8]=static_cast<uint8_t>(type);
+          if(type==4 || type==6){Store32(property+16,static_cast<uint32_t>(value.size()));Store32(property+20,value.empty()?0:cursor);
+            if(!value.empty())std::copy(value.begin(),value.end(),mem->TranslateVirtual(cursor));cursor+=static_cast<uint32_t>((value.size()+3)&~size_t(3));}
+          else std::copy(value.begin(),value.end(),property+16);
+          property_cursor+=24;
+        }
+        if(!data.contexts.empty()){Store32(p+88,cursor);for(auto [id,value]:data.contexts){auto* c=mem->TranslateVirtual(cursor);Store32(c,id);Store32(c+4,value);cursor+=8;}}
       }
       return 0;
     }
@@ -159,16 +183,15 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
     if(!session || session->guest_object()!=pointer)return kBadHandle;
     if(message==0xB0010){
       const auto flags=Load32(b+4),pub=Load32(b+8),priv=Load32(b+12),info=Load32(b+20),nonce=Load32(b+24);
-      if(session->room || Load32(b+16)!=0 || !pub || pub>20 || priv>20-pub ||
+      if(session->room || Load32(b+16)!=0 || (!pub && !priv) || pub>20 || priv>20-pub ||
          !Valid(info,60,true) || !Valid(nonce,8,true))return kInvalid;
-      if(priv)return Error(50); // Only public lobby slots are advertised by this preview.
+      if(flags&16)return Error(50); // Ranked arbitration requires Xbox Live services.
       const auto session_nonce=RandomId();
       Room room;
       if(flags&1){
-        Writer w;w.U16(static_cast<uint16_t>(contexts_.size()));for(auto [id,value]:contexts_){w.U32(id);w.U32(value);}
-        room=node_->Host(room_name_,pub+priv,flags,std::move(w.bytes));
+        room=node_->Host(room_name_,pub+priv,flags,EncodeMetadata(metadata_),{},priv);
       }else{
-        auto* data=mem->TranslateVirtual(info);auto rooms=node_->Rooms();
+        auto* data=mem->TranslateVirtual(info);auto rooms=node_->Rooms();if(auto current=node_->CurrentRoom())rooms.push_back(*current);
         auto found=std::find_if(rooms.begin(),rooms.end(),[&](const Room& r){return r.id==Load64(data) &&
           std::equal(r.key.begin(),r.key.end(),data+44);});
         if(found==rooms.end() || !node_->Join(*found))return Error(1168);
@@ -200,17 +223,17 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
       unsigned used_public=0,used_private=0;
       for(const auto* list:{&updated,xuids?&session->local:&session->remote})for(auto [id,priv]:*list){if(priv)++used_private;else ++used_public;}
       if(used_public>session->public_slots || used_private>session->private_slots)return Error(112);
+      if(!xuids && message==0xB0012 && updated.contains(node_->Identity()))node_->SetPrivateSlot(updated.at(node_->Identity()));
       (xuids?session->remote:session->local)=std::move(updated);return 0;
     }
     unsigned used_public=0,used_private=0;
     for(const auto* list:{&session->local,&session->remote})for(auto [id,priv]:*list){if(priv)++used_private;else ++used_public;}
     if(message==0xB0018){
       const auto pub=Load32(b+8),priv=Load32(b+12);
-      if(!pub || pub>20 || priv>20-pub || pub<used_public || priv<used_private)return kInvalid;
-      if(priv)return Error(50);
+      if((!pub && !priv) || pub>20 || priv>20-pub || pub<used_public || priv<used_private)return kInvalid;
       auto room=node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
       auto flags=(Load32(b+4)&~1u)|(session->flags&1);
-      if(session->flags&1){room->capacity=pub+priv;room->flags=flags;node_->UpdateRoom(*room);}
+      if(session->flags&1){room->capacity=pub+priv;room->private_slots=priv;room->flags=flags;node_->UpdateRoom(*room);}
       session->public_slots=pub;session->private_slots=priv;session->flags=flags;return 0;
     }
     if(message==0xB001D){

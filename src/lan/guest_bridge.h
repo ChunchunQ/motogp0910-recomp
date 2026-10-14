@@ -1,5 +1,6 @@
 #pragma once
 #include "node.h"
+#include "metadata.h"
 #include <rex/system/kernel_state.h>
 #include <map>
 #include <mutex>
@@ -11,7 +12,7 @@ class GuestBridge {
   std::shared_ptr<Node> node_;
   std::string direct_ip_, room_name_;
   std::mutex mutex_;
-  std::map<uint32_t,uint32_t> contexts_;
+  Metadata metadata_;
  public:
   GuestBridge(rex::system::KernelState*,std::shared_ptr<Node>,std::string direct_ip={},
               std::string room_name="MotoGP room");
@@ -22,5 +23,6 @@ class GuestBridge {
   void WriteAddress(uint32_t output,uint64_t identity,Endpoint)const;
   void WriteInfo(uint32_t output,const Room&)const;
   Node& Network()const{return *node_;}
+  rex::system::KernelState* Kernel()const{return kernel_;}
 };
 }

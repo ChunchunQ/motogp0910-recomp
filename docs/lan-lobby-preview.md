@@ -1,5 +1,9 @@
 # LAN lobby foundation — 14 October 2026
 
+Historical foundation milestone: for the later guest socket/XNet integration and
+current user-test build, see [Windows LAN multiplayer](lan-multiplayer-test.md).
+The tests below apply to the foundation revision, not the untested integration.
+
 This first implementation milestone adds a native UDP discovery/session
 service and a bridge for MotoGP's original XAM session calls. **It is not yet
 playable multiplayer.** The regular Windows game and launcher keep offline

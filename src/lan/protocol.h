@@ -9,10 +9,10 @@ namespace motogp::lan {
 constexpr uint32_t kTitle = 0x434307F0;
 // Protocol title tag: build 1, qfe 1 (not the packed XEX version word).
 constexpr uint32_t kGame = 0x101;
-constexpr uint64_t kCompatibility = 0x4D4750394C414E01ull;
+constexpr uint64_t kCompatibility = 0x4D4750394C414E02ull;
 constexpr uint16_t kFirstPort = 30810, kPortCount = 8;
 constexpr size_t kMaxPacket = 1400, kMaxProperties = 768, kMaxQos = 256;
-enum class Kind : uint16_t { Discover=1, Advert, Join, Joined, Leave, Left, Heartbeat, Reject, Data };
+enum class Kind : uint16_t { Discover=1, Advert, Join, Joined, Leave, Left, Heartbeat, Reject, Data, Roster };
 struct Endpoint {
   uint32_t ip=0; uint16_t port=0;
   friend bool operator==(const Endpoint&,const Endpoint&)=default;
@@ -23,6 +23,7 @@ struct Room {
   std::array<uint8_t,16> key{};
   std::string name;
   uint32_t flags=0, capacity=2, members=1, state=0;
+  uint32_t private_slots=0, private_members=0;
   std::vector<uint8_t> properties, qos;
 };
 struct Packet {

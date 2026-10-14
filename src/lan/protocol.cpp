@@ -28,7 +28,7 @@ std::vector<uint8_t> Encode(const Packet& p){
 std::optional<Packet> Decode(std::span<const uint8_t> bytes){try{
   if(bytes.size()<48 || bytes.size()>kMaxPacket)return {};
   Reader r(bytes);if(r.U32()!=0x4D475039 || r.U16()!=1)return {};
-  const auto kind=r.U16();if(kind<1 || kind>static_cast<uint16_t>(Kind::Data))return {};
+  const auto kind=r.U16();if(kind<1 || kind>static_cast<uint16_t>(Kind::Roster))return {};
   if(r.U32()!=kTitle || r.U32()!=kGame || r.U64()!=kCompatibility)return {};
   Packet p;p.kind=static_cast<Kind>(kind);p.request=r.U32();p.peer=r.U64();p.session=r.U64();
   const auto payload=r.Raw(r.U32());if(!p.peer || !r.End())return {};
@@ -37,13 +37,17 @@ std::optional<Packet> Decode(std::span<const uint8_t> bytes){try{
 std::vector<uint8_t> EncodeRoom(const Room& room){
   if(!room.id || !room.host || room.name.empty() || room.name.size()>31 ||
      room.name.find('\0')!=std::string::npos || !room.capacity || room.capacity>20 ||
-     room.members>room.capacity || room.state>1 || room.properties.size()>kMaxProperties || room.qos.size()>kMaxQos)
+     room.members>room.capacity || room.private_slots>room.capacity || room.private_members>room.private_slots ||
+     room.private_members>room.members || room.members-room.private_members>room.capacity-room.private_slots ||
+     room.state>1 || room.properties.size()>kMaxProperties || room.qos.size()>kMaxQos)
     throw std::runtime_error("Invalid LAN room");
   Writer w;w.U64(room.id);w.U64(room.host);w.U32(room.flags);w.U32(room.capacity);w.U32(room.members);w.U32(room.state);
+  w.U32(room.private_slots);w.U32(room.private_members);
   w.Raw(room.key);w.Text(room.name);w.Blob(room.properties);w.Blob(room.qos);return w.bytes;
 }
 std::optional<Room> DecodeRoom(std::span<const uint8_t> bytes){try{
   Reader r(bytes);Room room;room.id=r.U64();room.host=r.U64();room.flags=r.U32();room.capacity=r.U32();room.members=r.U32();room.state=r.U32();
+  room.private_slots=r.U32();room.private_members=r.U32();
   const auto key=r.Raw(16);std::copy(key.begin(),key.end(),room.key.begin());room.name=r.Text(31);
   room.properties=r.Blob(kMaxProperties);room.qos=r.Blob(kMaxQos);
   if(!r.End())return {};EncodeRoom(room);return room;
