@@ -2,8 +2,9 @@
 
 First target: **two Windows 10/11 PCs on the same Radmin VPN network, hosting
 and joining a MotoGP 09/10 race without a separate directory/relay server**.
-Radmin supplies the virtual LAN; the game host owns the lobby. Direct host IPv4
-entry comes first, automatic discovery later. Internet matchmaking, NAT traversal,
+Radmin supplies the virtual LAN; the game host owns the lobby. The primary flow
+is automatic room discovery, with direct host IPv4 entry as a fallback.
+Internet matchmaking, NAT traversal,
 ranked services, friends, voice and leaderboards are outside this first stage.
 
 This is a research milestone. No networking implementation or new executable
@@ -148,8 +149,12 @@ LAN backend beneath its existing Xbox Live Player Match flow.
 2. **Build the receive/transport foundation.** Validate buffers/endian handling,
    pending requests, completion events, send errors and close/cancel lifetime.
    Test Windows PE processes communicating over loopback before game lobbies.
-3. **Create a direct-IP LAN lobby.** Host owns real session metadata; joiner
-   requests it from the configured Radmin IPv4. Implement required XNet mapping,
+3. **Create a LAN lobby with discovery and direct-IP fallback.** Detect the local
+   Radmin adapter/address automatically. Hosts answer discovery queries with real
+   session metadata; searches populate the game's existing room-results flow.
+   Selecting a room joins its advertised endpoint without typing an IP.
+   An optional host IPv4 uses the same metadata query and join protocol by unicast
+   when broadcast discovery is unavailable. Implement required XNet mapping,
    connect state, QoS, create/search/join/leave and selected local identities.
    Reject incompatible game/build versions and return no room when a host is
    absent, rather than advertising a fabricated session.
@@ -158,22 +163,40 @@ LAN backend beneath its existing Xbox Live Player Match flow.
    lobby, disconnect, timeout and reconnect. Preserve the original game's
    network payload and simulation timing; DBZ fighting-game timing patches do
    not transfer to a racing game.
-5. **Package host/join controls and test Radmin.** Expose the local adapter/IP and
-   host address in the EN/TR launcher after the backend works. Keep the selected
-   Radmin address instead of accidentally advertising the physical Wi-Fi IP.
+5. **Package controls and test Radmin.** Keep room discovery as the normal path,
+   with an optional “Connect by IP” action and adapter override in EN/TR controls.
+   Radmin's local IPv4 is obtained from the adapter, not required as routine user
+   input. Keep its address instead of advertising the physical Wi-Fi IP.
    Windows app firewall access must allow the selected interface/UDP traffic.
-6. **Add discovery and larger grids later.** Broadcast discovery depends on VPN
-   interface/routing behavior, so direct IP remains available. Higher player
-   counts, automatic discovery and internet services follow the two-player path.
+6. **Add larger grids later.** Higher player counts and internet services follow
+   the two-player path. Discovery and direct-IP fallback are both first-stage
+   requirements, rather than deferring discovery to this later stage.
 
 ```mermaid
 flowchart LR
   H["Windows PC 1: MotoGP host\nLobby state and original game packets"]
   V["Radmin VPN: virtual LAN"]
-  J["Windows PC 2: MotoGP joiner\nHost Radmin IPv4 entered directly"]
+  J["Windows PC 2: MotoGP joiner\nAutomatic room list; optional host IPv4"]
   H <-->|"UDP / required game traffic"| V
   V <-->|"UDP / required game traffic"| J
 ```
+
+### Discovery behavior and acceptance
+
+Search sends small UDP discovery requests on the selected Radmin interface;
+listening hosts respond with their actual join endpoint, session ID, build/title
+version, name, slots and applicable game properties. Deduplicate repeated replies
+by session ID and endpoint, expire entries that stop answering, and hide or mark
+closed/incompatible rooms. Refreshing the list must not block the game/UI thread.
+
+Direct-IP fallback sends the same request to an explicit endpoint and retains
+compatibility checks and timeouts. It does not bypass admission or manufacture a
+room entry when the host does not answer. No public directory service is involved.
+
+Radmin/Windows broadcast forwarding, routing and adapter changes need real-device
+validation. Automatic discovery is implementable, but its success on a particular
+VPN installation cannot be established from loopback tests alone. If discovery
+packets do not reach peers, direct unicast IP remains available.
 
 No additional Python/server program is planned for players in this first design.
 The hosting game contains the small session/transport service. Radmin credentials
@@ -183,12 +206,16 @@ and VPN membership remain managed by Radmin, outside the launcher.
 
 Separate Windows/Wine processes can validate guest ABI, two-way UDP, real session
 buffers, pending/complete/cancel states, timeouts, unique identities, version
-rejection and unchanged offline defaults. Packet loss/delay fixtures can exercise
-transport cleanup. These do not establish real Radmin adapter behavior, native
+rejection and unchanged offline defaults. Discovery fixtures additionally cover
+multiple hosts, duplicate replies, stale/closed rooms, incompatible builds and
+unicast fallback with broadcasts deliberately unavailable. Packet loss/delay
+fixtures can exercise transport cleanup. These do not establish real Radmin adapter behavior, native
 Windows GPU races, full-grid synchronization or long-session reliability.
 
-Acceptance for the first implementation milestone is a real two-process direct-
-IP lobby with successful host advertisement/join and safe cleanup. A successful
+Acceptance for the first implementation milestone includes a real two-process
+lobby discovered without entering the host's IP, successful join and safe cleanup,
+plus a working direct-IP fallback when discovery is unavailable. Actual Radmin
+adapter discovery remains a separate Windows-device acceptance check. A successful
 UDP echo, enabled menu or success-returning stub alone does not meet it.
 
 Research evidence and downloaded references are under ignored `out/lan-research/`;

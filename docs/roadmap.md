@@ -84,8 +84,8 @@ koruma doğrulanır; eski düzende açılış da desteklenir.
 
 ## LAN multiplayer
 
-14 Ekim 2026: ilk hedef **Windows + Radmin VPN, aynı sanal ağda doğrudan IP ile
-host/join**. Ayrı merkezi sunucu zorunluluğu yok. [Kaynak incelemesi ve uygulama
+14 Ekim 2026: ilk hedef **Windows + Radmin VPN, aynı sanal ağda otomatik oda
+keşfi ve host/join; yedek seçenek olarak IP ile bağlanma**. Ayrı merkezi sunucu zorunluluğu yok. [Kaynak incelemesi ve uygulama
 rotası](lan-research.md) tamamlandı; DBZ Burst Limit'in Radmin/LAN yolu ve diğer
 ReXGlue ağ katmanları incelendi. MotoGP ağ desteği henüz uygulanmadı.
 
@@ -106,7 +106,8 @@ Araştırma sırası:
 1. Oyundaki multiplayer ekranlarının Live oturumu ve varsa System Link akışını
    incele; yerleşik System Link desteğini henüz doğrulanmış kabul etme.
 2. Gerekli profil, oyuncu kimliği, oturum, adres ve paket çağrılarını belirle.
-3. Doğrudan IP veya yerel oda keşfiyle iki oyun örneğinin lobby bağlantısını dene.
+3. Otomatik oda listesiyle iki oyun örneğinin lobby bağlantısını dene; keşif
+   çalışmadığında aynı bağlantı akışını doğrudan host IP'siyle doğrula.
 4. Yarış başlatma, oyuncu durumu senkronizasyonu, bağlantı kopması ve yeniden
    bağlanmayı iki ayrı Windows cihazında sınayarak uygulanabilirliği doğrula.
 
