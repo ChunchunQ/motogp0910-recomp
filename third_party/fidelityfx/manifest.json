@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/rexglue/FidelityFX-SDK",
+  "source_commit": "eee08db1688ac3d1275a70b728f4a8ba22914213",
+  "binary_origin": "PrebuiltSignedDLL (AMD supplied binary)",
+  "sha256": {
+    "amd_fidelityfx_dx12.lib": "0535d92fc02ba174949813e7e13f4df566092c4881d567b71c1e01e4d573ca74",
+    "amd_fidelityfx_dx12.dll": "12a5081257ec95b0b53ad51b4a87fb3c03f97fe0bbb59f9496968f8d50ef93a6"
+  }
+}

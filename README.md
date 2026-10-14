@@ -1,6 +1,6 @@
 # MotoGP 09/10 — ReXGlue v0.10.0
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-launcher.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-fsr-ultrawide-stable.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 [Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); [Yenilenen İngilizce/Türkçe launcher; 720p/1440p/4K, FSR 1.0, ses ve sade tuş eşlemeleri](docs/launcher.md). Stabilite/kalite kontrol ve LAN multiplayer araştırması sonraki aşamalardır. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
 
@@ -33,7 +33,7 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-launcher.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-fsr-ultrawide-stable.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue v0.10.0** kullanır; Visual Studio/derleme araçları gerekmez.
 
 1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
 2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
@@ -137,3 +137,5 @@ python3 scripts/package-windows.py
 Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi aynı ReXGlue 0.10.0 Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
 
 Çıktı `out/build/windows-cross-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-collision-data-fix.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+
+Experimental FSR 2/3 and horizontal-plus 21:9/32:9 camera options: [sources, implementation and limitations](docs/experimental-rendering.md). FSR quality modes do not lower scene rendering cost; correct temporal motion/depth integration remains unfinished.

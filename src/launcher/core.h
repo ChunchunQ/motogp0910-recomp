@@ -133,12 +133,13 @@ class Config {
   }
 };
 struct Settings {
+  std::string aspect="auto";
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
   int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
-  std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto", display_mode = "auto";
+  std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto", display_mode = "auto", fsr_quality = "auto";
   std::array<std::string,kBindings.size()> bindings{};
   std::array<std::string,kEngineEffects.size()> engine_effects{"game","game","game"};
   int shadow_distance=0;
@@ -165,6 +166,8 @@ struct Settings {
     s.prompt_style = Get(t, "button_prompt_style", std::string("auto"));
     s.game_language = Get<int64_t>(t, "user_language", 1);
     s.effect = Get(t, "present_effect", std::string("bilinear"));
+    s.aspect=Get(t,"aspect_ratio",std::string("auto"));
+    s.fsr_quality=Get(t,"present_fsr_quality_mode",std::string("auto"));
     s.scale_x = Get<int64_t>(t, "draw_resolution_scale_x", 1);
     s.scale_y = Get<int64_t>(t, "draw_resolution_scale_y", 1);
     // The SDK's single-value alias takes precedence only if actually changed.
@@ -182,6 +185,7 @@ struct Settings {
     return s;
   }
   void Validate() const {
+    if(aspect!="auto" && aspect!="16:9" && aspect!="21:9" && aspect!="32:9")throw Error(L"Unsupported aspect ratio.",L"Desteklenmeyen en-boy oranı.");
     for(const auto& effect:engine_effects)if(effect!="game" && effect!="off")throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");
     if(shadow_distance<0 || shadow_distance>180)throw Error(L"Shadow distance must be 0 to 180.",L"Gölge mesafesi 0 ile 180 arasında olmalı.");
     if(width<0 || height<0 || width>8192 || height>8192 ||
@@ -195,7 +199,8 @@ struct Settings {
        (display_mode!="auto" && display_mode!="fullscreen" && display_mode!="borderless" && display_mode!="windowed") ||
        (game_language!=1 && game_language!=3 && game_language!=4 && game_language!=5 && game_language!=6) ||
        (prompt_style!="auto" && prompt_style!="playstation" && prompt_style!="xbox" && prompt_style!="keyboard") ||
-       (effect!="bilinear" && effect!="cas" && effect!="fsr") ||
+       (effect!="bilinear" && effect!="cas" && effect!="fsr" && effect!="fsr2" && effect!="fsr3") ||
+       (fsr_quality!="auto" && fsr_quality!="nativeaa" && fsr_quality!="quality" && fsr_quality!="balanced" && fsr_quality!="performance" && fsr_quality!="ultra_performance") ||
        (post_effect!="none" && post_effect!="fxaa" && post_effect!="fxaa_extreme"))
       throw Error(L"Unsupported settings value. Choose a supported option or restore defaults.",
                   L"Desteklenmeyen ayar değeri. Desteklenen bir seçenek seç veya varsayılanlara dön.");
@@ -208,6 +213,7 @@ struct Settings {
   void Store(toml::table& t) const {
     Validate();
     for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
+    Put(t,"aspect_ratio",aspect);
     Put(t,"engine_shadow_distance",shadow_distance);
     Put(t, "window_width", width); Put(t, "window_height", height);
     if(guest_width)Put(t,"video_mode_width",guest_width);
@@ -215,7 +221,7 @@ struct Settings {
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
     Put(t,"display_mode",display_mode);Put(t,"host_refresh_rate",refresh_rate);Put(t,"fps_limit",fps_limit);
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
-    Put(t, "input_backend", backend); Put(t, "present_effect", effect);
+    Put(t, "input_backend", backend); Put(t, "present_effect", effect);Put(t,"present_fsr_quality_mode",fsr_quality);
     Put(t, "button_prompt_style", prompt_style);
     Put(t, "user_language", game_language);
     Put(t, "draw_resolution_scale_x", scale_x); Put(t, "draw_resolution_scale_y", scale_y);
@@ -265,7 +271,7 @@ inline std::string Sha256(const fs::path& path) {
   return result;
 }
 inline void Validate(const fs::path& exe, const fs::path& game) {
-  for (const auto* name : {L"motogp0910.exe", L"rexruntime.dll", L"rexgpu-xenos.dll",
+  for (const auto* name : {L"motogp0910.exe", L"rexruntime.dll", L"rexgpu-xenos.dll", L"amd_fidelityfx_dx12.dll",
        L"msvcp140.dll", L"msvcp140_atomic_wait.dll", L"vcruntime140.dll", L"vcruntime140_1.dll"}) {
     if (!fs::is_regular_file(exe / name)) throw Error(
         L"Program file missing: " + std::wstring(name) + L". Extract the complete Windows package.",
@@ -331,7 +337,7 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
   // FSR 1 is spatial: upscale the native 720p image to the selected host
   // output rather than silently raising the guest display mode to match it.
   // Keep an explicit custom guest mode from the user's TOML if present.
-  if(s.effect=="fsr") {
+  if(s.effect=="fsr" || s.effect=="fsr2" || s.effect=="fsr3" || s.aspect!="16:9") {
     if(!s.guest_width)args.push_back(L"--video_mode_width="+std::to_wstring(Get<int64_t>(config,"video_mode_width",1280)));
     if(!s.guest_height)args.push_back(L"--video_mode_height="+std::to_wstring(Get<int64_t>(config,"video_mode_height",720)));
   }

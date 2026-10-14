@@ -2,7 +2,9 @@
 #include <rex/cvar.h>
 
 inline void ApplyMotogpVideoSettings() {
-  if(rex::cvar::Query<std::string>("present_effect") != "fsr") return;
+  const auto effect=rex::cvar::Query<std::string>("present_effect");
+  const bool wide=rex::cvar::GetFlagInfo("aspect_ratio") && rex::cvar::Query<std::string>("aspect_ratio")!="16:9";
+  if(effect!="fsr" && effect!="fsr2" && effect!="fsr3" && !wide)return;
   // ReXGlue otherwise derives the guest video mode from a custom host window
   // size. Keep a native 720p source for spatial upscaling on direct EXE launch,
   // too, while preserving explicitly configured guest modes.

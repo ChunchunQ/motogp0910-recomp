@@ -35,3 +35,7 @@ member's SHA-256 and EXE-to-build equality are checked before publication.
 FSR 2/3 is suspended pending clarification; frame generation is dropped.
 Auto/16:9 remains the current aspect behavior. True ultrawide and further
 engine controls remain pending, not advertised as completed features.
+
+The experimental FSR/ultrawide milestone is documented in
+[experimental-rendering.md](experimental-rendering.md). Linux reached Main Menu
+at 21:9; Windows GPU initialization is unavailable in the cloud Wine environment.

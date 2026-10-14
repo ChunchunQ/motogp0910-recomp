@@ -1,0 +1,220 @@
+diff --git a/include/rex/ui/d3d12/d3d12_presenter.h b/include/rex/ui/d3d12/d3d12_presenter.h
+index 83d09f7..e94343d 100644
+--- a/include/rex/ui/d3d12/d3d12_presenter.h
++++ b/include/rex/ui/d3d12/d3d12_presenter.h
+@@ -264,12 +264,13 @@ class D3D12Presenter final : public Presenter {
+ 
+ #if defined(REX_HAS_FIDELITYFX_RUNTIME) && REX_HAS_FIDELITYFX_RUNTIME
+   bool EnsureTemporalUpscalerContext(uint32_t render_width, uint32_t render_height,
+-                                     uint32_t output_width, uint32_t output_height);
++                                     uint32_t output_width, uint32_t output_height, uint32_t major);
+   bool DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command_list,
+                                 ID3D12Resource* input_resource, uint32_t input_width,
+                                 uint32_t input_height, ID3D12Resource* output_resource,
+                                 uint32_t output_width, uint32_t output_height,
+                                 const GuestOutputPaintConfig& config);
++  bool PrepareTemporalInputs(ID3D12GraphicsCommandList* command_list, uint32_t width, uint32_t height);
+   void DestroyTemporalUpscalerContext();
+ #endif
+ 
+@@ -319,6 +320,11 @@ class D3D12Presenter final : public Presenter {
+   uint32_t temporal_upscaler_max_output_width_ = 0;
+   uint32_t temporal_upscaler_max_output_height_ = 0;
+   bool temporal_upscaler_provider_logged_ = false;
++  uint32_t temporal_upscaler_major_ = 0;
++  bool temporal_inputs_ready_ = false;
++  bool temporal_fallback_logged_ = false;
++  std::array<Microsoft::WRL::ComPtr<ID3D12Resource>,2> temporal_inputs_;
++  std::array<Microsoft::WRL::ComPtr<ID3D12Resource>,2> temporal_input_uploads_;
+ #endif
+ };
+ 
+diff --git a/src/ui/d3d12/d3d12_presenter.cpp b/src/ui/d3d12/d3d12_presenter.cpp
+index 306118e..dd89b6b 100644
+--- a/src/ui/d3d12/d3d12_presenter.cpp
++++ b/src/ui/d3d12/d3d12_presenter.cpp
+@@ -28,6 +28,7 @@
+ #include <ffx_api/dx12/ffx_api_dx12.h>
+ #include <ffx_api/ffx_api.h>
+ #include <ffx_api/ffx_upscale.h>
++extern "C" uint64_t Motogp_SelectFsrProvider(uint32_t major,void* device);
+ #endif
+ 
+ REXCVAR_DEFINE_BOOL(d3d12_allow_variable_refresh_rate_and_tearing, true, "UI/D3D12",
+@@ -65,11 +66,16 @@ D3D12Presenter::~D3D12Presenter() {
+ 
+ #if defined(REX_HAS_FIDELITYFX_RUNTIME) && REX_HAS_FIDELITYFX_RUNTIME
+ void D3D12Presenter::DestroyTemporalUpscalerContext() {
+-  if (!temporal_upscaler_context_) {
++  if (!temporal_upscaler_context_ && !temporal_inputs_[0]) {
+     return;
+   }
++  paint_context_.paint_submission_tracker.AwaitAllSubmissionsCompletion();
+   ffxContext* context = reinterpret_cast<ffxContext*>(&temporal_upscaler_context_);
+-  ffxDestroyContext(context, nullptr);
++  if(temporal_upscaler_context_)ffxDestroyContext(context, nullptr);
++  for(auto& input:temporal_inputs_)input.Reset();
++  for(auto& upload:temporal_input_uploads_)upload.Reset();
++  temporal_inputs_ready_=false;
++  temporal_upscaler_major_=0;
+   temporal_upscaler_context_ = nullptr;
+   temporal_upscaler_max_render_width_ = 0;
+   temporal_upscaler_max_render_height_ = 0;
+@@ -78,8 +84,8 @@ void D3D12Presenter::DestroyTemporalUpscalerContext() {
+ }
+ 
+ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32_t render_height,
+-                                                   uint32_t output_width, uint32_t output_height) {
+-  if (!temporal_upscaler_context_ || temporal_upscaler_max_render_width_ != render_width ||
++                                                   uint32_t output_width, uint32_t output_height, uint32_t major) {
++  if (!temporal_upscaler_context_ || temporal_upscaler_major_ != major || temporal_upscaler_max_render_width_ != render_width ||
+       temporal_upscaler_max_render_height_ != render_height ||
+       temporal_upscaler_max_output_width_ != output_width ||
+       temporal_upscaler_max_output_height_ != output_height) {
+@@ -88,7 +94,7 @@ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32
+     ffxCreateContextDescUpscale create_desc = {};
+     create_desc.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_UPSCALE;
+     create_desc.header.pNext = nullptr;
+-    create_desc.flags = FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE | FFX_UPSCALE_ENABLE_AUTO_EXPOSURE;
++    create_desc.flags = FFX_UPSCALE_ENABLE_AUTO_EXPOSURE;
+     create_desc.maxRenderSize.width = render_width;
+     create_desc.maxRenderSize.height = render_height;
+     create_desc.maxUpscaleSize.width = output_width;
+@@ -100,7 +106,12 @@ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32
+     backend_desc.header.pNext = nullptr;
+     backend_desc.device = provider_.GetDevice();
+ 
+-    create_desc.header.pNext = &backend_desc.header;
++    ffxOverrideVersion version{};
++    version.header.type=FFX_API_DESC_TYPE_OVERRIDE_VERSION;
++    version.versionId=Motogp_SelectFsrProvider(major,provider_.GetDevice());
++    if(!version.versionId){REXLOG_WARN("FSR_EXPERIMENTAL: requested FSR{} provider unavailable; spatial fallback",major);return false;}
++    version.header.pNext=&backend_desc.header;
++    create_desc.header.pNext=&version.header;
+ 
+     ffxContext* context = reinterpret_cast<ffxContext*>(&temporal_upscaler_context_);
+     if (ffxCreateContext(context, &create_desc.header, nullptr) != FFX_API_RETURN_OK) {
+@@ -109,6 +120,7 @@ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32
+       return false;
+     }
+ 
++    temporal_upscaler_major_=major;
+     temporal_upscaler_max_render_width_ = render_width;
+     temporal_upscaler_max_render_height_ = render_height;
+     temporal_upscaler_max_output_width_ = output_width;
+@@ -123,7 +135,7 @@ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32
+     ffxContext* context = reinterpret_cast<ffxContext*>(&temporal_upscaler_context_);
+     if (ffxQuery(context, &provider_version.header) == FFX_API_RETURN_OK &&
+         provider_version.versionName) {
+-      REXLOG_INFO("D3D12Presenter: FidelityFX upscaler provider {}", provider_version.versionName);
++      REXLOG_INFO("FSR_EXPERIMENTAL: FSR{} provider {}; neutral depth/motion, reset each frame", temporal_upscaler_major_, provider_version.versionName);
+     }
+     temporal_upscaler_provider_logged_ = true;
+   }
+@@ -131,6 +143,48 @@ bool D3D12Presenter::EnsureTemporalUpscalerContext(uint32_t render_width, uint32
+   return temporal_upscaler_context_ != nullptr;
+ }
+ 
++bool D3D12Presenter::PrepareTemporalInputs(ID3D12GraphicsCommandList* commands,uint32_t width,uint32_t height) {
++  if(temporal_inputs_ready_)return true;
++  auto* device=provider_.GetDevice();
++  std::array<Microsoft::WRL::ComPtr<ID3D12Resource>,2> textures,uploads;
++  std::array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT,2> footprints{};
++  for(size_t i=0;i<2;++i){
++    D3D12_RESOURCE_DESC desc{};desc.Dimension=D3D12_RESOURCE_DIMENSION_TEXTURE2D;
++    desc.Width=width;desc.Height=height;desc.DepthOrArraySize=1;desc.MipLevels=1;
++    desc.Format=i?DXGI_FORMAT_R16G16_FLOAT:DXGI_FORMAT_R32_FLOAT;
++    desc.SampleDesc.Count=1;desc.Layout=D3D12_TEXTURE_LAYOUT_UNKNOWN;
++    if(FAILED(device->CreateCommittedResource(&util::kHeapPropertiesDefault,D3D12_HEAP_FLAG_NONE,
++        &desc,D3D12_RESOURCE_STATE_COPY_DEST,nullptr,IID_PPV_ARGS(&textures[i]))))return false;
++    UINT64 bytes=0;device->GetCopyableFootprints(&desc,0,1,0,&footprints[i],nullptr,nullptr,&bytes);
++    D3D12_RESOURCE_DESC upload{};upload.Dimension=D3D12_RESOURCE_DIMENSION_BUFFER;upload.Width=bytes;
++    upload.Height=1;upload.DepthOrArraySize=1;upload.MipLevels=1;upload.SampleDesc.Count=1;
++    upload.Layout=D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
++    if(FAILED(device->CreateCommittedResource(&util::kHeapPropertiesUpload,D3D12_HEAP_FLAG_NONE,
++        &upload,D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&uploads[i]))))return false;
++    uint8_t* mapped=nullptr;D3D12_RANGE read{0,0};
++    if(FAILED(uploads[i]->Map(0,&read,reinterpret_cast<void**>(&mapped))))return false;
++    std::memset(mapped,0,static_cast<size_t>(bytes));
++    if(!i)for(uint32_t y=0;y<height;++y){
++      auto* row=reinterpret_cast<float*>(mapped+footprints[i].Offset+UINT64(y)*footprints[i].Footprint.RowPitch);
++      std::fill(row,row+width,1.0f);
++    }
++    uploads[i]->Unmap(0,nullptr);
++  }
++  for(size_t i=0;i<2;++i){
++    D3D12_TEXTURE_COPY_LOCATION from{},to{};from.pResource=uploads[i].Get();
++    from.Type=D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;from.PlacedFootprint=footprints[i];
++    to.pResource=textures[i].Get();to.Type=D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
++    commands->CopyTextureRegion(&to,0,0,0,&from,nullptr);
++    D3D12_RESOURCE_BARRIER barrier{};barrier.Type=D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
++    barrier.Transition.pResource=textures[i].Get();barrier.Transition.Subresource=D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
++    barrier.Transition.StateBefore=D3D12_RESOURCE_STATE_COPY_DEST;
++    barrier.Transition.StateAfter=D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
++    commands->ResourceBarrier(1,&barrier);
++  }
++  temporal_inputs_=std::move(textures);temporal_input_uploads_=std::move(uploads);
++  temporal_inputs_ready_=true;return true;
++}
++
+ bool D3D12Presenter::DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command_list,
+                                               ID3D12Resource* input_resource, uint32_t input_width,
+                                               uint32_t input_height,
+@@ -141,7 +195,9 @@ bool D3D12Presenter::DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command
+       !output_width || !output_height) {
+     return false;
+   }
+-  if (!EnsureTemporalUpscalerContext(input_width, input_height, output_width, output_height)) {
++  const uint32_t major=config.GetEffect()==GuestOutputPaintConfig::Effect::kFsr2?2:3;
++  if (!EnsureTemporalUpscalerContext(input_width, input_height, output_width, output_height,major) ||
++      !PrepareTemporalInputs(command_list,input_width,input_height)) {
+     return false;
+   }
+ 
+@@ -152,10 +208,10 @@ bool D3D12Presenter::DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command
+   dispatch_desc.color =
+       ffxApiGetResourceDX12(input_resource, FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+   dispatch_desc.depth =
+-      ffxApiGetResourceDX12(input_resource, FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ,
++      ffxApiGetResourceDX12(temporal_inputs_[0].Get(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ,
+                             FFX_API_RESOURCE_USAGE_DEPTHTARGET);
+   dispatch_desc.motionVectors =
+-      ffxApiGetResourceDX12(input_resource, FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
++      ffxApiGetResourceDX12(temporal_inputs_[1].Get(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+   dispatch_desc.exposure =
+       ffxApiGetResourceDX12(nullptr, FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+   dispatch_desc.reactive =
+@@ -172,7 +228,7 @@ bool D3D12Presenter::DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command
+   dispatch_desc.renderSize.height = input_height;
+   dispatch_desc.upscaleSize.width = output_width;
+   dispatch_desc.upscaleSize.height = output_height;
+-  dispatch_desc.enableSharpening = true;
++  dispatch_desc.enableSharpening = false; // Shared RCAS pass handles the launcher sharpness once.
+   dispatch_desc.sharpness = std::clamp(1.0f - config.GetFsrSharpnessReduction() * 0.5f, 0.0f, 1.0f);
+   // The presenter path doesn't currently provide accurate temporal inputs,
+   // so run in reset mode each frame to avoid history artifacts.
+@@ -186,7 +242,15 @@ bool D3D12Presenter::DispatchTemporalUpscaler(ID3D12GraphicsCommandList* command
+   dispatch_desc.flags = 0;
+ 
+   ffxContext* context = reinterpret_cast<ffxContext*>(&temporal_upscaler_context_);
+-  if (ffxDispatch(context, &dispatch_desc.header) != FFX_API_RETURN_OK) {
++  D3D12_RESOURCE_BARRIER color{};color.Type=D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
++  color.Transition.pResource=input_resource;color.Transition.Subresource=D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
++  color.Transition.StateBefore=D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
++  color.Transition.StateAfter=D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
++  command_list->ResourceBarrier(1,&color);
++  const auto result=ffxDispatch(context,&dispatch_desc.header);
++  std::swap(color.Transition.StateBefore,color.Transition.StateAfter);command_list->ResourceBarrier(1,&color);
++  if(result!=FFX_API_RETURN_OK){
++    if(!temporal_fallback_logged_){REXLOG_WARN("FSR_EXPERIMENTAL: dispatch failed code={}; spatial fallback",uint32_t(result));temporal_fallback_logged_=true;}
+     return false;
+   }
+ 
+@@ -867,6 +931,7 @@ Presenter::PaintResult D3D12Presenter::PaintAndPresentImpl(bool execute_ui_drawe
+               command_list, effect_source_resource, effect_input_width, effect_input_height,
+               effect_dest_resource, guest_output_flow.effect_output_sizes[i].first,
+               guest_output_flow.effect_output_sizes[i].second, guest_output_paint_config);
++          command_list->SetDescriptorHeaps(1,&view_heap); // FidelityFX binds its own descriptor heap.
+           if (!temporal_dispatch_done) {
+             D3D12_RESOURCE_BARRIER barrier_uav_to_rtv;
+             barrier_uav_to_rtv.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

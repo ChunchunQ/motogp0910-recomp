@@ -35,7 +35,7 @@ struct App {
   HWND window{},path{},size{},backend{},language{},status{},title{},subtitle{},folder_label{},
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
-       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{};
+       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
   std::array<HWND,5> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
   HWND shadow_distance{};
@@ -136,6 +136,10 @@ struct App {
     Localize();InvalidateRect(window,nullptr,FALSE);
   }
   void UpdateSharpness(){
+    const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
+    const bool temporal=selected==3 || selected==4;
+    if(fsr_quality)EnableWindow(fsr_quality,temporal && !process);
+    if(fsr_notice)SetWindowTextW(fsr_notice,temporal?T(L"Experimental: neutral motion/depth inputs.\nMay fall back to FSR 1; no frame generation.",L"Deneysel: nötr hareket/derinlik verileri.\nFSR 1’e dönebilir; kare üretimi yok."):T(L"Higher resolutions use more GPU memory.",L"Yüksek çözünürlük daha fazla GPU belleği kullanır."));
     EnableWindow(sharpness,!process && SendMessageW(effect,CB_GETCURSEL,0,0)!=0);
     SetWindowTextW(sharp_value,(std::to_wstring(SendMessageW(sharpness,TBM_GETPOS,0,0))+L"%").c_str());
   }
@@ -175,7 +179,7 @@ struct App {
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
     for(int i=0;i<5;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):T(L"Advanced",L"Gelişmiş"));
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
-    SetWindowTextW(letterbox,T(L"Keep aspect ratio",L"En-boy oranını koru"));
+    SetWindowTextW(letterbox,T(L"Letterbox",L"Siyah kenarlar"));
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
     SetWindowTextW(shader_cache,T(L"Shader cache",L"Shader önbelleği"));
     SetWindowTextW(dither,T(L"Reduce color banding",L"Renk bantlaşmasını azalt"));
@@ -188,7 +192,8 @@ struct App {
     FillCombo(post_effect,{T(L"Off",L"Kapalı"),L"FXAA",L"FXAA Extreme"});
     FillCombo(backend,{L"SDL — Xbox / PlayStation / USB",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
     FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
-    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS"});
+    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS",T(L"AMD FSR 2 (Experimental)",L"AMD FSR 2 (Deneysel)"),T(L"AMD FSR 3 (Experimental)",L"AMD FSR 3 (Deneysel)")});
+    FillCombo(fsr_quality,{L"Auto",L"Native AA",L"Quality",L"Balanced",L"Performance",L"Ultra Performance"});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
     for(auto c:engine_choices)FillCombo(c,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı")});
     auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);SendMessageW(shadow_distance,CB_RESETCONTENT,0,0);
@@ -220,6 +225,7 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
+    SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
     if(found==dimensions.end())found=dimensions.begin();
@@ -244,7 +250,10 @@ struct App {
     SendMessageW(game_language,CB_SETCURSEL,s.game_language==4?1:s.game_language==3?2:s.game_language==5?3:s.game_language==6?4:0,0);
     SendMessageW(prompt_style,CB_SETCURSEL,s.prompt_style=="playstation"?1:s.prompt_style=="xbox"?2:s.prompt_style=="keyboard"?3:0,0);
     auto preset=MatchingRenderPreset(s);FillRenderPresets(preset<0?static_cast<int>(kRenderPresets.size()):preset);
-    SendMessageW(effect,CB_SETCURSEL,s.effect=="fsr"?1:s.effect=="cas"?2:0,0);
+    SendMessageW(effect,CB_SETCURSEL,s.effect=="fsr"?1:s.effect=="cas"?2:s.effect=="fsr2"?3:s.effect=="fsr3"?4:0,0);
+    constexpr std::array<const char*,6> qualities{"auto","nativeaa","quality","balanced","performance","ultra_performance"};
+    auto quality=std::find(qualities.begin(),qualities.end(),s.fsr_quality);
+    SendMessageW(fsr_quality,CB_SETCURSEL,quality==qualities.end()?0:std::distance(qualities.begin(),quality),0);
     SendMessageW(post_effect,CB_SETCURSEL,s.post_effect=="fxaa"?1:s.post_effect=="fxaa_extreme"?2:0,0);
     SendMessageW(anisotropic,CB_SETCURSEL,std::clamp(s.anisotropic,-1,5)+1,0);
     SendMessageW(volume,TBM_SETPOS,TRUE,std::clamp(s.volume,0,100));
@@ -257,7 +266,7 @@ struct App {
     filling_binding=false;UpdateSharpness();
   }
   Settings GetControls()const{
-    Settings s=settings;auto index=SendMessageW(size,CB_GETCURSEL,0,0);
+    Settings s=settings;const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);
     if(gpu<0 || gpu>static_cast<LRESULT>(adapters.size()))throw std::runtime_error("Invalid GPU selection");
@@ -265,9 +274,11 @@ struct App {
     auto preset=SendMessageW(render_resolution,CB_GETCURSEL,0,0);
     if(preset<0)throw std::runtime_error("Invalid render resolution");
     if(preset<static_cast<LRESULT>(kRenderPresets.size()))ApplyRenderPreset(s,static_cast<int>(preset));
-    auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);s.effect=mode==1?"fsr":mode==2?"cas":"bilinear";
+    auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);s.effect=mode==1?"fsr":mode==2?"cas":mode==3?"fsr2":mode==4?"fsr3":"bilinear";
+    constexpr std::array<const char*,6> qualities{"auto","nativeaa","quality","balanced","performance","ultra_performance"};
+    auto quality=SendMessageW(fsr_quality,CB_GETCURSEL,0,0);if(quality<0 || quality>=6)throw std::runtime_error("Invalid FSR quality mode");s.fsr_quality=qualities[quality];
     s.anisotropic=SendMessageW(anisotropic,CB_GETCURSEL,0,0)-1;s.volume=SendMessageW(volume,TBM_GETPOS,0,0);
-    if(mode==1)s.fsr_reduction=2.0-SendMessageW(sharpness,TBM_GETPOS,0,0)/50.0;
+    if(mode==1 || mode==3 || mode==4)s.fsr_reduction=2.0-SendMessageW(sharpness,TBM_GETPOS,0,0)/50.0;
     if(mode==2)s.cas_sharpness=SendMessageW(sharpness,TBM_GETPOS,0,0)/100.0;
     auto display=SendMessageW(fullscreen,CB_GETCURSEL,0,0);
     if(display<0 || display>2)throw std::runtime_error("Invalid display mode");
@@ -306,7 +317,8 @@ struct App {
     LabelControl(0,L"Refresh rate",L"Yenileme hızı",260,512,181);refresh_rate=combo(0,260,538,181,kRefreshRate);
     LabelControl(0,L"FPS limit",L"FPS sınırı",453,512,181);fps_limit=combo(0,453,538,181,kFpsLimit);
     vsync=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,583,374,28,kVsync);
-    letterbox=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,621,374,28,kLetterbox);
+    letterbox=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,621,145,28,kLetterbox);
+    aspect=combo(0,413,621,221,kAspect);FillCombo(aspect,{L"Auto / 16:9",L"16:9",L"21:9 (Experimental)",L"32:9 (Experimental)"});
     dither=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,659,374,28,kDither);
     shader_cache=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,697,374,28,kShaderCache);
     LabelControl(0,L"Borderless and windowed use the desktop Hz.\nFPS cap does not unlock the game’s own limit.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır.\nFPS sınırı, oyunun kendi sınırını kaldırmaz.",260,748,374,66);
@@ -315,10 +327,11 @@ struct App {
     LabelControl(0,L"Texture filtering",L"Doku filtreleme",696,364,374);anisotropic=combo(0,696,390,374,kAnisotropic);
     LabelControl(0,L"Anti-aliasing",L"Kenar yumuşatma",696,438,374);post_effect=combo(0,696,464,374,kPostEffect);
     LabelControl(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",696,512,374);effect=combo(0,696,538,374,kEffect);
-    LabelControl(0,L"Sharpness",L"Keskinlik",696,578,290);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,1004,578,66,22);
-    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,690,602,386,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
-    msaa=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,653,374,28,kMsaa);
-    LabelControl(0,L"Higher resolutions use more GPU memory.",L"Yüksek çözünürlük daha fazla GPU belleği kullanır.",696,696,374,22);
+    LabelControl(0,L"FSR quality mode",L"FSR kalite modu",696,578,374);fsr_quality=combo(0,696,604,374,kFsrQuality);
+    LabelControl(0,L"Sharpness",L"Keskinlik",696,652,290);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,1004,652,66,22);
+    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,690,676,386,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
+    msaa=PageControl(0,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,727,374,28,kMsaa);
+    fsr_notice=PageControl(0,L"STATIC",L"",0,696,788,374,44);
     LabelControl(3,L"GAME PREFERENCES",L"OYUN TERCİHLERİ",260,247,798);
     LabelControl(3,L"Launcher language",L"Launcher dili",260,290,374);
     language=combo(3,260,316,374,kLanguage);

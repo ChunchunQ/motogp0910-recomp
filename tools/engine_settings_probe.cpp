@@ -1,5 +1,6 @@
 #include "motogp0910_init.h"
 #include "../src/engine_settings.h"
+#include "../src/ultrawide.h"
 #include <rex/runtime.h>
 #include <rex/kernel/init.h>
 #include <rex/cvar.h>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <filesystem>
 REX_EXTERN(sub_82386158);
+REX_EXTERN(sub_821E2108);
 namespace {int checks=0;void Check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);++checks;}}
 int main(int argc,char** argv){
   try{
@@ -57,6 +59,44 @@ int main(int argc,char** argv){
     Check(!rex::cvar::SetFlagByName("engine_speed_blur","on"),"Unsupported forced-enable mode rejected");
     // Verify the native shadow renderer reads the identified registry value.
     Check(read(0x8238D084)==0x817A000C && read(0x8238D08C)==0xC1AB0000,"Native shadow distance consumer matches the pinned title");
+    const auto source=stack+512;
+    constexpr uint32_t projection=0x82994870;
+    std::array<float,16> native_projection{1.1f,0,0,0,0,1.9555556f,0,0,0,0,1.0001f,1,0,0,-.1f,0};
+    for(auto ratio:{std::pair{16u,9u},std::pair{21u,9u},std::pair{32u,9u}}){
+      motogp::wide::SetRatio(ratio.first,ratio.second);
+      for(unsigned i=0;i<16;++i)write(source+i*4,std::bit_cast<uint32_t>(native_projection[i]));
+      PPCContext ctx{};ctx.r3.u32=source;ctx.r1.u32=stack+2048;ctx.lr=0x821CD0A0;
+      sub_821E2108(ctx,base);
+      const auto scale=motogp::wide::HorizontalScale();
+      for(unsigned i=0;i<16;++i)Check(std::abs(std::bit_cast<float>(read(projection+i*4))-native_projection[i]*(i%4==0?scale:1))<.00001f,"Native perspective setter preserves vertical/depth axes and expands horizontal coverage");
+      Check(ctx.r1.u32==stack+2048 && ctx.lr==0x821CD0A0,"Projection hook preserves native ABI");
+      Check(read(source)==std::bit_cast<uint32_t>(native_projection[0]),"Source camera matrix is preserved");
+      const auto x_clip=std::bit_cast<float>(read(projection));
+      Check(ratio.first==16?x_clip>1:x_clip<1,"A world point outside 16:9 becomes visible in wide modes");
+      ctx.r3.u32=projection;ctx.lr=0x8236BB78;sub_821E2108(ctx,base);
+      Check(std::bit_cast<float>(read(projection))==x_clip,"State restoration never applies the aspect twice");
+    }
+    constexpr uint32_t batch_count=uint32_t((-31941*65536)-17184);
+    const auto old_count=read(batch_count),old_buffer=read(batch_count+4),old_texture=read(batch_count+8);
+    for(auto ratio:{std::pair{16u,9u},std::pair{21u,9u},std::pair{32u,9u}})for(bool alias:{false,true}){
+      motogp::wide::SetRatio(ratio.first,ratio.second);
+      std::array<uint32_t,4> vertices{stack+1024,stack+1048,stack+1072,stack+1096};if(alias)vertices[3]=vertices[0];
+      for(unsigned i=0;i<4;++i)for(unsigned word=0;word<6;++word)write(vertices[i]+word*4,std::bit_cast<uint32_t>(float((i+word)%2)));
+      std::array<std::array<uint32_t,6>,4> saved{};for(unsigned i=0;i<4;++i)for(unsigned word=0;word<6;++word)saved[i][word]=read(vertices[i]+word*4);
+      write(batch_count,0);write(batch_count+4,stack+256);write(batch_count+8,0);
+      PPCContext ctx{};ctx.r1.u32=stack+2048;ctx.lr=0x12345678;ctx.r3.u32=vertices[0];ctx.r4.u32=vertices[1];ctx.r5.u32=vertices[2];ctx.r6.u32=vertices[3];
+      motogp::wide::DrawUiQuad(ctx,base);
+      Check(read(batch_count)==4,"Four HUD vertices reach actual native batch");
+      for(unsigned i=0;i<4;++i)for(unsigned word=0;word<6;++word){
+        const auto batched=read(stack+256+i*24+word*4);
+        const auto expected=word==0?std::bit_cast<uint32_t>(.5f+(std::bit_cast<float>(saved[i][word])-.5f)*motogp::wide::HorizontalScale()):saved[i][word];
+        Check(batched==expected,"Central HUD corrects horizontal aspect and preserves Y/Z/color/UV");
+        Check(read(vertices[i]+word*4)==saved[i][word],"Native HUD source vertices fully restored, including aliases");
+      }
+      Check(ctx.r1.u32==stack+2048 && ctx.lr==0x12345678,"HUD quad wrapper preserves native ABI");
+    }
+    write(batch_count,old_count);write(batch_count+4,old_buffer);write(batch_count+8,old_texture);
+    motogp::wide::SetRatio(16,9);
     memory->SystemHeapFree(stack);
     std::cout<<checks<<" native engine flag, parameter preservation, scope and ABI checks passed\n";return 0;
   }catch(const std::exception& error){std::cerr<<"FAIL: "<<error.what()<<'\n';return 1;}

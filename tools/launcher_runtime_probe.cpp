@@ -80,6 +80,25 @@ int main() {
     dimensions.width=2560;planner.OnSurfaceResizeFromUIThread();
     auto ultrawide=planner.GetGuestOutputPaintFlow(props,2560,1080,16384,16384,config);
     Check(ultrawide.letterbox_clear_rectangle_count==2,"Ultrawide aspect ratio retained");
+    using SetAspect=void(*)(uint32_t,uint32_t);
+    auto set_aspect=reinterpret_cast<SetAspect>(GetProcAddress(GetModuleHandleW(L"rexruntime.dll"),"Motogp_SetPresentationAspect"));
+    Check(set_aspect!=nullptr,"Actual runtime exposes coherent aspect override");
+    for(auto width:{2560u,3840u}){
+      dimensions.width=width;planner.OnSurfaceResizeFromUIThread();set_aspect(width,1080);
+      auto wide=planner.GetGuestOutputPaintFlow(props,width,1080,16384,16384,config);
+      Check(wide.letterbox_clear_rectangle_count==0,"True wide presentation fills matching host aspect");
+      Check(wide.properties.frontbuffer_width==1280 && wide.properties.frontbuffer_height==720,"Wide mode retains native framebuffer");
+      Check(wide.properties.display_aspect_ratio_x==width && wide.properties.display_aspect_ratio_y==1080,"Paint planner consumes requested display aspect");
+    }
+    set_aspect(0,0);dimensions.width=1920;planner.OnSurfaceResizeFromUIThread();
+    for(auto effect:{decltype(config)::Effect::kFsr2,decltype(config)::Effect::kFsr3})
+      for(auto quality:{decltype(config)::FsrQualityMode::kAuto,decltype(config)::FsrQualityMode::kNativeAa,decltype(config)::FsrQualityMode::kQuality,decltype(config)::FsrQualityMode::kBalanced,decltype(config)::FsrQualityMode::kPerformance,decltype(config)::FsrQualityMode::kUltraPerformance}){
+        config.SetEffect(effect);config.SetFsrQualityMode(quality);
+        const auto temporal=planner.GetGuestOutputPaintFlow(props,1920,1080,16384,16384,config);
+        Check(temporal.effect_count>=2,"Experimental providers plan an upscale and sharpening pass");
+        Check(std::find(temporal.effects.begin(),temporal.effects.begin()+temporal.effect_count,PaintPlanner::GuestOutputPaintEffect::kFsrEasu)!=temporal.effects.begin()+temporal.effect_count,"Experimental provider dispatch slot exists");
+        Check(temporal.effect_output_sizes[temporal.effect_count-1]==std::pair<uint32_t,uint32_t>{1920,1080},"All temporal quality modes reach host output");
+      }
     rex::cvar::SetFlagByName("window_width","1920");rex::cvar::SetFlagByName("window_height","1080");
     ApplyMotogpVideoSettings();rex::system::X_VIDEO_MODE mode{};
     rex::kernel::xboxkrnl::VdQueryVideoMode(&mode);

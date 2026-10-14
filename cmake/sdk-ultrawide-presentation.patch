@@ -1,0 +1,19 @@
+diff --git a/src/ui/presenter.cpp b/src/ui/presenter.cpp
+index 7360ed9..0fc2abf 100644
+--- a/src/ui/presenter.cpp
++++ b/src/ui/presenter.cpp
+@@ -850,9 +850,13 @@ std::unique_lock<std::mutex> Presenter::ConsumeGuestOutput(
+   return std::move(consumer_lock);
+ }
+ 
++extern "C" void Motogp_GetPresentationAspect(uint32_t*,uint32_t*);
++
+ Presenter::GuestOutputPaintFlow Presenter::GetGuestOutputPaintFlow(
+-    const GuestOutputProperties& properties, uint32_t host_rt_width, uint32_t host_rt_height,
++    const GuestOutputProperties& input_properties, uint32_t host_rt_width, uint32_t host_rt_height,
+     uint32_t max_rt_width, uint32_t max_rt_height, const GuestOutputPaintConfig& config) const {
++  auto properties = input_properties;
++  Motogp_GetPresentationAspect(&properties.display_aspect_ratio_x, &properties.display_aspect_ratio_y);
+   GuestOutputPaintFlow flow = {};
+ 
+   // FIXME(Triang3l): Configuration variables racing with per-game config

@@ -2,6 +2,7 @@
 """Reproduce the FSR/shared-SDL DLL pair from the pinned v0.10.0 source + patch."""
 import argparse
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 
@@ -22,6 +23,10 @@ def main():
     args = parser.parse_args()
     if not 1<=args.jobs<=16:
         parser.error('--jobs must be 1..16')
+    vendor=ROOT/'third_party/fidelityfx'
+    for name,digest in json.loads((vendor/'manifest.json').read_text())['sha256'].items():
+        if hashlib.sha256((vendor/name).read_bytes()).hexdigest()!=digest:
+            raise SystemExit(f'FidelityFX provider checksum mismatch: {name}')
     source = args.sdk_source.resolve()
     manifest = json.loads((ROOT/'third_party/rexglue-runtime/manifest.json').read_text())
     if not source.exists():
@@ -31,7 +36,7 @@ def main():
     revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != manifest['source_commit']:
         raise SystemExit('SDK source must match the exact v0.10.0 source commit in manifest.json.')
-    for name in ['sdk-explicit-video-mode.patch','sdk-livery-readback.patch']:
+    for name in ['sdk-explicit-video-mode.patch','sdk-livery-readback.patch','sdk-experimental-temporal-fsr.patch','sdk-ultrawide-presentation.patch']:
         patch = ROOT/'cmake'/name
         reversed_check = subprocess.run(['git','apply','--reverse','--check',str(patch)], cwd=source,
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -43,7 +48,7 @@ def main():
                '-DCMAKE_BUILD_TYPE=Release', f'-DREXGLUE_USE_VULKAN={"ON" if args.vulkan else "OFF"}',
                f'-DREXGLUE_USE_D3D12={"OFF" if args.vulkan else "ON"}',
                '-DREXGLUE_ENABLE_FIDELITYFX=OFF', '-DREXGLUE_ENABLE_TRACY=ON',
-               '-DREXGLUE_BUILD_TESTS=OFF', f'-DCMAKE_PROJECT_INCLUDE={ROOT / "cmake/sdk-spatial-fsr.cmake"}']
+               '-DREXGLUE_BUILD_TESTS=OFF', f'-DCMAKE_PROJECT_INCLUDE={ROOT / "cmake/sdk-temporal-fsr.cmake"}']
     if args.toolchain:
         command.append(f'-DCMAKE_TOOLCHAIN_FILE={args.toolchain.resolve()}')
     else:

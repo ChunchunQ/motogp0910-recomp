@@ -34,7 +34,9 @@ pcm.!default { type null }
 ctl.!default { type hw card 0 }
 EOF
 # Allocate a free X display rather than changing an existing desktop/server.
-Xvfb -displayfd 3 -screen 0 1280x720x24 -nolisten tcp -ac \
+screen="${MOTOGP_CLOUD_SCREEN:-1280x720}"
+[[ "$screen" =~ ^[0-9]+x[0-9]+$ ]] || { echo "Invalid MOTOGP_CLOUD_SCREEN" >&2; exit 2; }
+Xvfb -displayfd 3 -screen 0 "${screen}x24" -nolisten tcp -ac \
   3>"$run_dir/display" >"$run_dir/xvfb.log" 2>&1 &
 xvfb_pid=$!
 trap 'kill "$xvfb_pid" 2>/dev/null || true; wait "$xvfb_pid" 2>/dev/null || true' EXIT
@@ -46,6 +48,7 @@ done
 [[ -s "$run_dir/display" ]] || { echo 'Xvfb did not become ready.' >&2; exit 1; }
 export DISPLAY=":$(cat "$run_dir/display")"
 printf 'Display: %s\nLogs: %s\n' "$DISPLAY" "$run_dir"
+export LD_LIBRARY_PATH="$(dirname "$binary"):$LD_LIBRARY_PATH"
 "$binary" --game_data_root="$game_root" \
   --user_data_root="$project_dir/out/linux-game-userdata" \
   --log_file="$run_dir/game.log" --mnk_mode=true "$@"

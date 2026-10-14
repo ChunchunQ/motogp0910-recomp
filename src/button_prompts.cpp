@@ -1,3 +1,4 @@
+#include "ultrawide.h"
 #include "button_prompts.h"
 #include "button_prompt_geometry.h"
 #include "button_prompt_input.h"
@@ -125,7 +126,7 @@ void Emit(PPCContext& ctx,uint8_t* base,const Geometry& geometry) {
       rex::memory::store_and_swap<uint32_t>(base+pointers[v]+12,quad.color);
     }
     PPCContext draw=entry;draw.r7.u64=0;
-    __imp__sub_82388C38(draw,base);
+    motogp::wide::DrawUiQuad(draw,base);
     ctx=draw;
   }
   for(unsigned v=0;v<4;++v)std::memcpy(base+pointers[v],saved[v],24);
@@ -174,7 +175,7 @@ bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_
         rex::memory::store_and_swap<float>(base+pointers[i]+20,i>=2?1.f:0.f);
       }
       ctx.r7.u64=texture;
-      __imp__sub_82388C38(ctx,base);
+      motogp::wide::DrawUiQuad(ctx,base);
       for(unsigned i=0;i<4;++i)std::memcpy(base+pointers[i]+16,saved[i].data(),8);
       return true;
     }
@@ -231,7 +232,7 @@ REX_HOOK_RAW(sub_82388C38) {
   using namespace motogp::prompts;
   if(sprite_glyph && DrawGlyph(ctx,base,sprite_style,sprite_glyph,false))return;
   if(ready.load(std::memory_order_relaxed) && DrawReplacement(ctx,base,frame_style.load(std::memory_order_relaxed),inline_depth!=0)) return;
-  __imp__sub_82388C38(ctx,base);
+  motogp::wide::DrawUiQuad(ctx,base);
 }
 REX_HOOK_RAW(sub_8227E440) {
   using namespace motogp::prompts;

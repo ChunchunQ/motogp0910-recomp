@@ -233,9 +233,6 @@ and Windows/Wine for actual camera flags, preservation of parameters and PPC
 ABI, scope nesting/exception restoration and the pinned shadow-distance consumer.
 These CPU checks do not prove every GPU rendering effect visually correct.
 
-FSR 2/3 remains suspended for clarification: the v0.10.0 compatibility path
-binds the color image as its depth/motion inputs, uses no camera jitter and
-resets history every frame. The current launcher still offers working spatial
-FSR 1 and CAS. Frame generation was dropped at the user's request; the SDK
-disables its frame-generation provider and contains no wired interpolation path.
-Auto/native 16:9 is preserved; actual ultrawide camera support remains a later task.
+FSR 2/3 experimental providers and horizontal-plus ultrawide are now available.
+See [the implementation, sources and practical limitations](experimental-rendering.md).
+Frame generation remains excluded.

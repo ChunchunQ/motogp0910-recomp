@@ -11,7 +11,7 @@ BUILD = ROOT / "out/build/windows-cross-release"
 STAGE = ROOT / "out/package-windows"
 DIST = ROOT / "out/dist"
 RUNTIME = (
-    "rexruntime.dll", "rexgpu-xenos.dll", "msvcp140.dll",
+    "rexruntime.dll", "rexgpu-xenos.dll", "amd_fidelityfx_dx12.dll", "msvcp140.dll",
     "msvcp140_atomic_wait.dll", "vcruntime140.dll", "vcruntime140_1.dll",
 )
 
@@ -44,12 +44,17 @@ def main():
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
     (STAGE / "readme.txt").write_text(
-        "MotoGP 09/10 - Windows x64 Advanced launcher update - ReXGlue v0.10.0\n\n"
+        "MotoGP 09/10 - Windows x64 Experimental FSR and ultrawide update - ReXGlue v0.10.0\n\n"
         "ADVANCED: Motion blur (speed), depth of field, dynamic shadows, shadow render distance.\n"
         "Game default keeps the original behavior; Off disables the selected effect.\n"
         "Shadow distance offers game default / 45 / 90 / 180.\n"
         "The shadow override is scoped and preserves the original track tweak on return.\n"
-        "There is no frame generation; FSR 2/3 is pending proper temporal integration.\n\n"
+        "FSR 2/3: Experimental Windows D3D12 providers; no frame generation.\n"
+        "Synthesized far-depth/zero-motion inputs, history reset each frame.\n"
+        "This does not provide proper temporal reconstruction or lower scene render cost.\n"
+        "Quality modes resample the resolved scene; FSR 1 remains the safe default.\n"
+        "ULTRAWIDE: Auto / 16:9 / 21:9 / 32:9, horizontal-plus camera and central HUD.\n"
+        "Wide modes are experimental; broad gameplay and Windows GPU testing is pending.\n\n"
         "GENERAL: Game folder, Launcher language, Game language and Button prompts.\n"
         "The folder and launcher-language controls appear only on General.\n"
         "Game languages: English, French, German, Spanish and Italian.\n"
@@ -143,7 +148,7 @@ def main():
         for p in files
     )
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
-    archive = DIST / "MotoGP0910-Windows-x64-advanced-launcher.zip"
+    archive = DIST / "MotoGP0910-Windows-x64-fsr-ultrawide-stable.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))

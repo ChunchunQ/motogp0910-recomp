@@ -1,3 +1,4 @@
+#include "ultrawide.h"
 // motogp0910 - ReXGlue Recompiled Project
 //
 // Customize your app by overriding virtual hooks from rex::ReXApp.
@@ -117,6 +118,7 @@ class Motogp0910App : public rex::ReXApp {
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
     motogp::ApplyHostDisplay(window());
+    motogp::wide::Start(window());
     motogp::livery::Initialize();
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
@@ -126,6 +128,7 @@ class Motogp0910App : public rex::ReXApp {
   // std::unique_ptr<rex::ui::AchievementNotificationDialog>
   // CreateAchievementNotificationDialog() override;
   void OnShutdown() override {
+    motogp::wide::Stop();
     motogp::prompts::StopInputObserver();
     motogp::prompts::StopPS3Artwork();
   }

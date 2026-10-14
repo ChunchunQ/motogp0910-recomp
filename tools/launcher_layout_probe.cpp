@@ -73,6 +73,17 @@ int wmain(int argc,wchar_t** argv){
       for(auto size:sizes)CheckUI(WindowSizeFits(size,maximum),"Output size never exceeds physical monitor");
       if(maximum==std::pair{1920,1080})CheckUI(std::find(sizes.begin(),sizes.end(),std::pair{2560,1440})==sizes.end() && std::find(sizes.begin(),sizes.end(),std::pair{3840,2160})==sizes.end(),"1080p monitor hides 1440p and 4K output");
     }
+    for(const auto* mode:{"fsr2","fsr3"})for(const auto* quality:{"auto","nativeaa","quality","balanced","performance","ultra_performance"})for(const auto* aspect:{"auto","16:9","21:9","32:9"}){
+      Settings requested;requested.effect=mode;requested.fsr_quality=quality;requested.aspect=aspect;
+      app.SetControls(requested);const auto actual=app.GetControls();
+      CheckUI(actual.effect==mode && actual.fsr_quality==quality && actual.aspect==aspect,"Experimental FSR quality and wide aspect controls round trip");
+      CheckUI(IsWindowEnabled(app.fsr_quality),"Quality selector enabled only for temporal providers");
+      toml::table config;actual.Store(config);const auto restored=Settings::Load(config);
+      CheckUI(restored.effect==mode && restored.fsr_quality==quality && restored.aspect==aspect,"Experimental settings persist with their native types");
+      const auto args=Arguments(game,actual,config);
+      CheckUI(std::find(args.begin(),args.end(),L"--present_effect="+Wide(mode))!=args.end() && std::find(args.begin(),args.end(),L"--present_fsr_quality_mode="+Wide(quality))!=args.end() && std::find(args.begin(),args.end(),L"--aspect_ratio="+Wide(aspect))!=args.end(),"Child receives exact experimental options");
+    }
+    app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
     Settings oversize;oversize.width=3840;oversize.height=2160;app.SetControls(oversize);
