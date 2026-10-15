@@ -59,6 +59,7 @@ def main():
     (STAGE / "resources/ui").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "third_party/open-sans/OpenSans-Semibold.ttf", STAGE / "resources/ui/OpenSans-Semibold.ttf")
     shutil.copy2(ROOT / "docs/achievements.md", STAGE / "achievements-readme.txt")
+    shutil.copy2(ROOT / "docs/quit-menu.md", STAGE / "quit-menu-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
@@ -86,6 +87,11 @@ def main():
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
+        "QUIT GAME: Native main-menu entry and B/back on the initial Press Start screen.\n"
+        "Confirmation defaults to Cancel; pad A/B, keyboard and mouse are supported.\n"
+        "Held dismissal buttons stay masked; native input checks passed under Wine.\n"
+        "Native Windows menu appearance and save/exit playthrough need local verification.\n"
+        "See quit-menu-readme.txt.\n\n"
         "ACHIEVEMENTS: F7 opens the dark MotoGP list with search, unlocked/locked filters,\n"
         "progress and original achievement icons. Esc or Close returns to the game.\n"
         "Unlock notifications fade in at the bottom right with a soft 450 ms cue.\n"

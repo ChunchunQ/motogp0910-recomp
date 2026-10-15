@@ -23,7 +23,7 @@ PROBES = {
     'motogp_headless_probe': 'game', 'launcher_runtime_probe': '',
     'display_settings_probe': '', 'button_prompt_input_probe': '',
     'launcher_probe': 'game', 'launcher_layout_probe': 'ui',
-    'achievement_ui_probe': 'achievements',
+    'achievement_ui_probe': 'achievements', 'quit_menu_probe': 'quit',
 }
 
 def main():
@@ -91,6 +91,8 @@ def main():
         extra = [target(game)] if kind in ('game', 'ui') else [target(build / 'rexgpu-xenos.dll')] if kind == 'gpu' else []
         if kind == 'achievements':
             extra = [target(build / 'resources/ui/OpenSans-Semibold.ttf'), target(root / 'achievement-preview')]
+        if kind == 'quit':
+            extra = [target(game), target(build / 'resources/ui/OpenSans-Semibold.ttf')]
         if kind == 'ui':
             extra.append(target(root / 'screenshots'))
         run(name, extra)

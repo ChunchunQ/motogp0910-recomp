@@ -56,6 +56,7 @@ set(MOTOGP0910_SOURCES
     src/display_settings.cpp
     src/engine_settings.cpp
     src/ultrawide.cpp
+    src/quit_menu.cpp
 )
 
 add_executable(nightly_input_probe EXCLUDE_FROM_ALL tools/nightly_input_probe.cpp)
@@ -145,6 +146,10 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    add_executable(quit_menu_probe EXCLUDE_FROM_ALL tools/quit_menu_probe.cpp src/quit_menu.cpp)
+    target_include_directories(quit_menu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(quit_menu_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(quit_menu_probe)
     add_executable(lan_import_probe EXCLUDE_FROM_ALL tools/lan_import_probe.cpp src/lan/runtime.cpp)
     target_include_directories(lan_import_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(lan_import_probe PRIVATE motogp0910_recomp motogp_lan_guest)
@@ -172,7 +177,7 @@ if(TARGET motogp0910_recomp)
     add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
@@ -276,5 +281,5 @@ if(WIN32 AND TARGET motogp0910_recomp)
         engine_settings_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
-        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe)
+        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe)
 endif()

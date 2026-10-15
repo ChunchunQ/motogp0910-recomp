@@ -1,4 +1,4 @@
-# Project status — 14 October 2026
+# Project status — 15 October 2026
 
 This is the current status entry point. Older milestone documents describe
 historical builds; a stable SDK version or old ZIP mentioned there does not
@@ -25,6 +25,7 @@ Don't publish original game data, personal logs or preview screenshots.
 | Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
+| Quit menu | Native seventh menu entry, startup Back confirmation, 72 Windows/Wine checks | Native appearance and save/exit playthrough pending |
 | Achievements | Custom F7 list, toast and soft sound; 280 actual-runtime Windows/Wine checks | Native GPU appearance and listening check pending |
 | FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
 | Ultrawide | Experimental horizontal-plus projection and centered HUD | Full Windows camera/cutscene/culling coverage unverified |
@@ -35,9 +36,9 @@ Don't publish original game data, personal logs or preview screenshots.
 
 1. Keyboard prompt redesign delivered separately; visual review pending.
 2. Achievement UI, notification and quiet sound completed; Windows ZIP ready.
-3. Urgent next request: actual main-menu Quit game and Press Start back-button
-   exit confirmation. Implementation hasn't started; inspect original menu
-   state/entry points and avoid disrupting profile saves or LAN teardown.
+3. Urgent quit menus completed: actual main-menu Quit game and Press Start
+   Back confirmation; [72 targeted checks](quit-menu.md) passed. Native visual
+   and save/exit checks remain pending.
 4. In-game live settings, with honest restart requirements per setting.
 5. Launcher Controls simplification: ask the user for details before designing.
 6. Final launcher redesign: ask the user for details before designing.

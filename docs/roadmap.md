@@ -1,6 +1,6 @@
 # MotoGP 09/10 geliştirme notları
 
-## Güncel arayüz işleri — 14 Ekim 2026
+## Güncel arayüz işleri — 15 Ekim 2026
 
 Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edilir;
 önceki iş gösterilmeden sonraki iş başlatılmaz.
@@ -10,7 +10,7 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
    MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [280 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
 3. **Acil çıkış menüleri:** ana menüde Quit game; Press Start ekranında geri
-   tuşuyla çıkış onayı. Kullanıcının son ek isteği; henüz başlamadı.
+   tuşuyla çıkış onayı uygulandı. [72 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
 4. **Oyun içinden canlı ayarlar:** launcher seçeneklerine oyun içinden erişim;
    canlı değişebilen ve yeniden başlatma gerektiren ayarlar doğru ayrılacak.
 5. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.

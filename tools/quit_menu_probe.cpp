@@ -1,0 +1,117 @@
+#include "motogp0910_init.h"
+#include "../src/quit_menu.h"
+#include <rex/runtime.h>
+#include <rex/kernel/init.h>
+#include <rex/input/input_system.h>
+#include <rex/ui/imgui_drawer.h>
+#include <rex/ui/window.h>
+#include <rex/ui/windowed_app_context.h>
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <array>
+#include <cstring>
+#include <filesystem>
+#include <iostream>
+#include <stdexcept>
+using namespace rex::input;
+using rex::X_RESULT;using rex::X_STATUS;
+REX_EXTERN(sub_8227F318);
+REX_EXTERN(sub_826EC558);
+REX_EXTERN(sub_821FCCA8);
+REX_EXTERN(sub_8229C2C0);
+namespace {
+int checks=0;
+void Check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);++checks;}
+struct Driver final:InputDriver {
+ X_INPUT_STATE state{};Driver():InputDriver(nullptr,0){}
+ X_STATUS Setup()override{return X_STATUS_SUCCESS;}
+ void EnumerateDevices(std::vector<DeviceInfo>& out)override{DeviceInfo info{};info.id=static_cast<DeviceId>(1);out.push_back(info);}
+ X_RESULT GetDeviceState(DeviceId,X_INPUT_STATE* out)override{*out=state;return X_ERROR_SUCCESS;}
+ X_RESULT GetDeviceCapabilities(DeviceId,uint32_t,X_INPUT_CAPABILITIES* out)override{*out={};return X_ERROR_SUCCESS;}
+ X_RESULT SetDeviceVibration(DeviceId,X_INPUT_VIBRATION*)override{return X_ERROR_SUCCESS;}
+ X_RESULT GetDeviceKeystroke(DeviceId,uint32_t,X_INPUT_KEYSTROKE*)override{return X_ERROR_EMPTY;}
+};
+class UIContext final:public rex::ui::WindowedAppContext {void NotifyUILoopOfPendingFunctions()override{}void PlatformQuitFromUIThread()override{}};
+}
+int main(int argc,char** argv){try{
+ Check(argc==3,"Usage: quit_menu_probe GAME_ROOT FONT_TTF");
+ Driver* pad=nullptr;
+ rex::Runtime runtime(std::filesystem::canonical(argv[1]));rex::RuntimeConfig config{.kernel_init=rex::kernel::InitializeKernel,.tool_mode=true};
+ config.input_factory=[&](bool){auto input=std::make_unique<InputSystem>(nullptr);auto driver=std::make_unique<Driver>();pad=driver.get();input->AddDriver(std::move(driver));input->SetDeviceAssignment(std::make_unique<SlotAssignment>());return input;};
+ Check(!XFAILED(runtime.Setup(PPCImageConfig,std::move(config)))&&!XFAILED(runtime.LoadXexImage("game:\\default.xex")),"Load actual patched game and input system");
+ auto* memory=runtime.memory();auto* base=runtime.virtual_membase();const auto allocation=memory->SystemHeapAlloc(0x4000);Check(allocation!=0,"Fixture allocation");
+ std::memset(base+allocation,0,0x4000);
+ const auto write=[&](uint32_t a,uint32_t v){rex::memory::store_and_swap<uint32_t>(base+a,v);};const auto read=[&](uint32_t a){return rex::memory::load_and_swap<uint32_t>(base+a);};
+ motogp::quit::Initialize(&runtime);motogp::quit::SetFocused(true);motogp::quit::PollFrontendInput();const auto label=motogp::quit::LabelAddress();
+ const auto iterator=allocation+0x700;write(iterator,label);
+ for(unsigned char expected:std::string("Quit game\0",10)){
+   PPCContext decode{};decode.r3.u32=iterator;sub_826EC558(decode,base);
+   Check(decode.r3.u32==expected,"Actual native text decoder reads every Quit game codepoint");
+ }
+ Check(read(iterator)==label+10,"Native decoder advances exactly through UTF8 label and terminator");
+ const auto menu=allocation,screen=allocation+0x500,stack=allocation+0x3000;
+ write(menu,motogp::quit::kMainMenuVtable);constexpr std::array<uint32_t,7> ids={2,0,1,3,4,5,0xffffffff};
+ for(unsigned i=0;i<ids.size();++i)write(menu+0x20+4*i,ids[i]);
+ for(unsigned i=0;i<7;++i){const auto row=menu+0x3c+i*40;write(row+4,1);write(row+16,i<6?1:0);write(row+28,i<6?allocation+0x800+32*i:0);}
+ std::array<uint8_t,0x3c+6*40> prefix;std::memcpy(prefix.data(),base+menu,prefix.size());
+ const auto quit_row=menu+0x3c+6*40;Check(motogp::quit::AppendItem(base,menu,label),"Append seventh option");
+ Check(std::memcmp(prefix.data(),base+menu,prefix.size())==0,"Original six rows and IDs unchanged");
+ Check(read(quit_row+28)==label&&read(quit_row+40+28)==0,"New native label and terminator");
+ Check(motogp::quit::AppendItem(base,menu,label),"Append is idempotent");
+ auto move=[&](int selection,int delta){write(screen+0x18,selection);PPCContext ctx{};ctx.r1.u64=stack;ctx.lr=0x12345678;ctx.r30.u64=0x1122334455667788;ctx.r31.u64=0x8877665544332211;ctx.r3.u32=menu+0x3c;ctx.r4.u32=screen+0x18;ctx.r5.s64=delta;ctx.r6.u64=0;sub_8227F318(ctx,base);Check(ctx.r1.u32==stack&&ctx.lr==0x12345678&&ctx.r30.u64==0x1122334455667788&&ctx.r31.u64==0x8877665544332211,"Original menu navigation preserves ABI");return read(screen+0x18);};
+ Check(move(5,1)==6,"Original navigation reaches Quit game");Check(move(6,1)==0,"Original navigation wraps after seventh item");Check(move(0,-1)==6,"Original navigation wraps back to Quit game");
+ write(screen+0x18,6);
+ for(uint32_t event:{0u,0x40u,0x400u,0x2000u,0x800u})Check(motogp::quit::IsQuitSelection(base,menu,screen,event)==bool(event&motogp::quit::kAcceptEvents),"Only native accept events activate Quit game");
+ base[menu+0x244]=1;Check(!motogp::quit::IsQuitSelection(base,menu,screen,0x400),"Profile/loading transition blocks quitting");base[menu+0x244]=0;
+ base[menu+0x245]=1;Check(!motogp::quit::IsQuitSelection(base,menu,screen,0x400),"Second native transition blocks quitting");base[menu+0x245]=0;
+ for(unsigned i=0;i<6;++i){write(screen+0x18,i);Check(!motogp::quit::IsQuitSelection(base,menu,screen,0x400),"Original choices stay original choices");}write(screen+0x18,6);
+ write(menu,0);Check(!motogp::quit::AppendItem(base,menu,label),"Unknown menu layout untouched");write(menu,motogp::quit::kMainMenuVtable);
+ motogp::quit::Confirmation model;model.Open(X_INPUT_GAMEPAD_B);Check(!model.exit_selected(),"Cancel is selected by default");
+ Check(!model.Update(X_INPUT_GAMEPAD_B).cancel,"Opening B press cannot dismiss its own prompt");model.Update(0);auto decision=model.Update(X_INPUT_GAMEPAD_A);Check(decision.cancel&&!decision.accept,"Default A cancels");
+ model.Open(0);model.Update(0);model.Update(X_INPUT_GAMEPAD_DPAD_RIGHT);Check(model.exit_selected(),"Controller navigation selects exit");model.Update(0);decision=model.Update(X_INPUT_GAMEPAD_A);Check(decision.accept&&!decision.cancel,"A confirms explicit exit choice");
+ model.Open(0);model.Update(0);Check(model.Update(X_INPUT_GAMEPAD_B).cancel,"Fresh B cancels");
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;PPCContext ctx{};ctx.r1.u64=stack;ctx.lr=0x12345678;ctx.r3.u32=menu;ctx.r4.u32=screen;ctx.r5.u32=0x400;ctx.r23.u64=0xAABBCCDD;ctx.r31.u64=0xDEADBEEF;
+ sub_821FCCA8(ctx,base);Check(motogp::quit::Pending()&&ctx.r3.s32==-1,"Actual MainMenu hook consumes new action");Check(ctx.r1.u32==stack&&ctx.lr==0x12345678&&ctx.r23.u64==0xAABBCCDD&&ctx.r31.u64==0xDEADBEEF,"Hook preserves nonvolatile state");
+ X_INPUT_STATE state{};auto* input=static_cast<InputSystem*>(runtime.input_system());input->GetState(0,&state);Check(state.gamepad.buttons==0,"Guest input is neutral while confirmation owns it");input->GetStateForUI(0,&state);Check(state.gamepad.buttons&X_INPUT_GAMEPAD_A,"UI can still read actual pad");
+ ctx.r3.u32=menu;sub_821FCCA8(ctx,base);Check(ctx.r3.s32==-1,"Pending modal blocks original menu actions");
+ {
+ UIContext context;auto window=rex::ui::Window::Create(context,"Quit menu probe");ImFont* font=nullptr;
+ rex::ui::ImGuiDrawer drawer(window.get(),10,[&](ImFontAtlas* atlas){static const ImWchar range[]={0x20,0x1ff,0};font=atlas->AddFontFromFileTTF(argv[2],17,nullptr,range);});
+ auto& io=drawer.GetIO();io.DisplaySize=ImVec2(1280,720);io.DeltaTime=1.f/60;unsigned char* pixels;int w,h;io.Fonts->GetTexDataAsRGBA32(&pixels,&w,&h);io.Fonts->SetTexID(1);
+ int exits=0;auto dialog=motogp::quit::CreateConfirmationDialog(&drawer,font,false,[&]{++exits;});
+ auto frame=[&]{drawer.GetIO();ImGui::NewFrame();dialog->Draw();ImGui::Render();};
+ frame();frame();Check(exits==0,"Opening controller press cannot auto-exit");
+ io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!motogp::quit::Pending()&&exits==0,"Esc cancels actual dialog");io.AddKeyEvent(ImGuiKey_Escape,false);frame();
+ // Check the title-only source with actual native game mode property layout.
+ motogp::quit::PollFrontendInput();input->GetState(0,&state);Check(state.gamepad.buttons==0,"Dismissal A remains consumed until release");
+ pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();input->GetState(0,&state);pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;input->GetState(0,&state);Check(state.gamepad.buttons&X_INPUT_GAMEPAD_A,"Fresh press reaches game after release");
+ const uint32_t mode_ptr=0x8292710C,mode_value=0x82927110;const auto saved_ptr=read(mode_ptr),saved_value=read(mode_value);
+ write(mode_ptr,0);Check(!motogp::quit::IsTitleMode(base),"Uninitialized startup property cannot open exit");
+ write(mode_ptr,mode_value);write(mode_value,15);Check(motogp::quit::IsTitleMode(base),"Original mode 15 identifies title renderer path");
+ Check(!motogp::quit::ObserveTitleDraw(base,0,1.0),"In-game Press Start overlay never arms title exit");
+ Check(!motogp::quit::ObserveTitleDraw(base,1,.5),"Startup fade cannot arm title exit");
+ write(mode_value,3);Check(!motogp::quit::ObserveTitleDraw(base,1,1.0),"Other game modes never arm title exit");write(mode_value,15);
+ Check(motogp::quit::ObserveTitleDraw(base,1,1.0),"Visible title prompt arms native Back path");
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;ctx.r3.u64=0xBEEF;sub_8229C2C0(ctx,base);Check(motogp::quit::Pending(),"Actual title-update hook opens confirmation on fresh B");
+ frame();frame();Check(motogp::quit::Pending()&&exits==0,"Held title B cannot immediately dismiss confirmation");
+ io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!motogp::quit::Pending()&&exits==0,"Title cancellation returns without exit");io.AddKeyEvent(ImGuiKey_Escape,false);frame();
+ motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"UI-first dismissal cannot reopen title prompt before B release");input->GetState(0,&state);Check(!(state.gamepad.buttons&X_INPUT_GAMEPAD_B),"Title dismissal B stays masked for guest");
+ write(mode_ptr,saved_ptr);write(mode_value,saved_value);
+ motogp::quit::SetFocused(false);motogp::quit::Request();Check(!motogp::quit::Pending(),"Unfocused window cannot request exit");
+ motogp::quit::SetFocused(true);pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"Held input on focus regain cannot open confirmation");
+ pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();motogp::quit::Request();motogp::quit::PollFrontendInput();frame();frame();Check(motogp::quit::Pending()&&exits==0,"Fresh neutral input rearms safe confirmation");
+ io.AddKeyEvent(ImGuiKey_Escape,true);frame();io.AddKeyEvent(ImGuiKey_Escape,false);frame();
+ // Drain a guest blocker on the guest thread before returning to title.
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;ctx.r3.u32=menu;ctx.r4.u32=screen;ctx.r5.u32=0;motogp::quit::Request();sub_821FCCA8(ctx,base);
+ frame();frame();Check(exits==0,"Held A does not confirm a new dialog");
+ pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();frame();
+ io.AddKeyEvent(ImGuiKey_RightArrow,true);frame();
+ // A Shift+Arrow virtual D-pad sample can reach the next UI frame, rather than the key event's frame.
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_DPAD_RIGHT;motogp::quit::PollFrontendInput();frame();
+ io.AddKeyEvent(ImGuiKey_RightArrow,false);pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();frame();
+ io.AddKeyEvent(ImGuiKey_Enter,true);frame();Check(exits==1,"Delayed virtual D-pad does not double-apply keyboard navigation");frame();Check(exits==1,"Exit callback never repeats");
+ Check(ImGui::GetCurrentContext()->ColorStack.Size==0&&ImGui::GetCurrentContext()->StyleVarStack.Size==0,"Dialog style remains scoped");dialog.reset();Check(!drawer.HasDialogs(),"App-owned dialog detaches without self-deletion");
+ }
+ motogp::quit::Stop();memory->SystemHeapFree(allocation);
+ std::cout<<checks<<" native quit menu, original navigation, ABI, confirmation and input checks passed\n";return 0;
+}catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}}

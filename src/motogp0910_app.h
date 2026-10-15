@@ -27,6 +27,7 @@
 #include "lan/runtime.h"
 #include "crash_report.h"
 #include "achievement_ui.h"
+#include "quit_menu.h"
 #include <imgui.h>
 #include <rex/ui/keybinds.h>
 
@@ -138,9 +139,21 @@ class Motogp0910App : public rex::ReXApp {
     motogp::wide::Start(window());
     motogp::livery::Initialize();
     achievement_preferences_->Load(user_data_root(), rex::filesystem::GetExecutableFolder());
+    motogp::quit::Initialize(runtime());
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::StartInputObserver(window());
+  }
+  void OnWindowFocusChanged(bool focused) override {motogp::quit::SetFocused(focused);}
+  void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
+    motogp::quit::SetFocused(window()->HasFocus());
+    quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
+      app_context().CallInUIThreadDeferred([this] {
+        achievements().SaveUnlockState();
+        motogp::lan::Stop();
+        window()->RequestClose();
+      });
+    });
   }
   void OnConfigureFonts(ImFontAtlas* atlas) override {
     static const ImWchar ranges[] = {0x20, 0x1ff, 0};
@@ -166,6 +179,8 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    quit_dialog_.reset();
+    motogp::quit::Stop();
     motogp::lan::Stop();
     motogp::wide::Stop();
     motogp::prompts::StopInputObserver();
@@ -187,6 +202,7 @@ class Motogp0910App : public rex::ReXApp {
     }
   }
  private:
+  std::unique_ptr<rex::ui::ImGuiDialog> quit_dialog_;
   ImFont* achievement_font_ = nullptr;
   ImFont* achievement_heading_font_ = nullptr;
   std::shared_ptr<motogp::achievements::Preferences> achievement_preferences_ = std::make_shared<motogp::achievements::Preferences>();
