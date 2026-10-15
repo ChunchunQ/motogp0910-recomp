@@ -18,7 +18,7 @@
 
 using namespace launcher;
 namespace {
-constexpr int kWidth=1120,kHeight=860;
+constexpr int kWidth=1120,kHeight=860,kCaptionHeight=32;
 constexpr COLORREF kBackground=RGB(13,15,20),kSidebar=RGB(19,21,27),kCard=RGB(23,26,33),
     kField=RGB(32,36,45),kText=RGB(242,244,247),kMuted=RGB(157,165,178),
     kAccent=RGB(255,170,48),kRed=RGB(239,66,47),kBorder=RGB(48,53,64);
@@ -64,6 +64,7 @@ struct App {
   HANDLE process{};
   double scale=1;
   std::wstring status_en,status_tr;
+  #include "caption.inc"
   #include "achievements_page.inc"
   ~App(){if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();DeleteObject(background);DeleteObject(card);DeleteObject(field);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return turkish?tr:en;}
@@ -80,7 +81,7 @@ struct App {
     bool checkbox=button && (style&BS_TYPEMASK)==BS_AUTOCHECKBOX;
     if(button)style=(style&~BS_TYPEMASK)|BS_OWNERDRAW;
     if(std::wstring_view(cls)==L"COMBOBOX")style|=CBS_OWNERDRAWFIXED|CBS_HASSTRINGS;
-    auto c=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y),S(w),S(h),window,
+    auto c=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y+kCaptionHeight),S(w),S(h),window,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     if(!c)throw std::runtime_error("Cannot create launcher control");
     placements.push_back({c,x,y,w,h});
@@ -405,7 +406,7 @@ struct App {
   }
   COLORREF BackgroundFor(HWND control)const{
     RECT r;GetWindowRect(control,&r);MapWindowPoints(nullptr,window,reinterpret_cast<POINT*>(&r),2);
-    return r.top>=S(118) && r.top<S(732)?kCard:kBackground;
+    return r.top>=S(118+kCaptionHeight) && r.top<S(732+kCaptionHeight)?kCard:kBackground;
   }
   void Rounded(HDC dc,RECT r,COLORREF fill,COLORREF border,int radius=8){
     auto brush=CreateSolidBrush(fill);auto pen=CreatePen(PS_SOLID,S(1),border);
@@ -455,7 +456,7 @@ struct App {
   }
   void Paint(HDC target){
     RECT client;GetClientRect(window,&client);auto dc=CreateCompatibleDC(target);auto bitmap=CreateCompatibleBitmap(target,client.right,client.bottom);auto old=SelectObject(dc,bitmap);
-    FillRect(dc,&client,background);RECT side{0,0,S(210),client.bottom};auto b=CreateSolidBrush(kSidebar);FillRect(dc,&side,b);DeleteObject(b);
+    FillRect(dc,&client,background);const int full_height=client.bottom;client.bottom-=S(kCaptionHeight);SetViewportOrgEx(dc,0,S(kCaptionHeight),nullptr);RECT side{0,0,S(210),client.bottom};auto b=CreateSolidBrush(kSidebar);FillRect(dc,&side,b);DeleteObject(b);
     auto box=[&](int x,int y,int w,int h){RECT r{S(x),S(y),S(x+w),S(y+h)};Rounded(dc,r,kCard,kBorder,16);};
     if(current_page==3){box(242,118,846,84);box(242,228,846,504);}
     else if(current_page==0){box(242,118,410,614);box(678,118,410,614);}
@@ -475,11 +476,11 @@ struct App {
     SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(25),S(138),S(197),S(157)};DrawTextW(dc,T(L"PC RECOMPILATION",L"PC YENİDEN DERLEME"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(26),S(184),S(197),S(204)};DrawTextW(dc,T(L"SETTINGS",L"AYARLAR"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(25),S(532),S(185),S(576)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
-    BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
+    SetViewportOrgEx(dc,0,0,nullptr);DrawCaption(dc);BitBlt(target,0,0,client.right,full_height,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){
     DeleteFonts();scale=value;CreateFonts();
-    for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
+    for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y+kCaptionHeight),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
       wchar_t cls[32];GetClassNameW(p.control,cls,32);if(std::wstring_view(cls)==L"COMBOBOX"){SendMessageW(p.control,CB_SETITEMHEIGHT,0,S(22));SendMessageW(p.control,CB_SETITEMHEIGHT,WPARAM(-1),S(22));}}
     SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     for(auto c:{folder_label,status})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
@@ -619,13 +620,25 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
   if(message==WM_NCCREATE){app=static_cast<App*>(reinterpret_cast<CREATESTRUCTW*>(lparam)->lpCreateParams);app->window=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(app));}
   if(!app)return DefWindowProcW(window,message,wparam,lparam);
   switch(message){
-    case WM_CREATE:try{app->BuildControls();}catch(const std::exception& e){app->ErrorBox(e);return -1;}return 0;
+    case WM_CREATE:try{app->BuildControls();app->SetupCaption();}catch(const std::exception& e){app->ErrorBox(e);return -1;}return 0;
+    case WM_SETTEXT:case WM_SETICON:{const auto result=DefWindowProcW(window,message,wparam,lparam);app->PaintCaption();return result;}
+    case WM_NCHITTEST:{POINT p{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))};if(const auto hit=app->CaptionHit(p))return hit;break;}
+    case WM_NCMOUSEMOVE:{app->CaptionMove({static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});TRACKMOUSEEVENT track{sizeof(track),TME_LEAVE|TME_NONCLIENT,window,0};TrackMouseEvent(&track);return 0;}
+    case WM_NCMOUSELEAVE:app->caption_hover=0;app->PaintCaption();return 0;
+    case WM_NCLBUTTONDOWN:if(wparam==HTMINBUTTON||wparam==HTCLOSE){app->caption_pressed=static_cast<int>(wparam);SetCapture(window);app->PaintCaption();return 0;}break;
+    case WM_NCLBUTTONDBLCLK:if(wparam==HTCAPTION||wparam==HTMAXBUTTON)return 0;break;
+    case WM_MOUSEMOVE:if(app->caption_pressed){POINT p;GetCursorPos(&p);app->CaptionMove(p);return 0;}break;
+    case WM_LBUTTONUP:if(app->caption_pressed){POINT p;GetCursorPos(&p);app->CaptionRelease(p);return 0;}break;
+    case WM_CAPTURECHANGED:app->caption_pressed=0;app->PaintCaption();return 0;
+    case WM_SYSCOMMAND:if((wparam&0xFFF0)==SC_MAXIMIZE)return 0;break;
     case WM_COMMAND:app->Command(LOWORD(wparam),HIWORD(wparam));return 0;
     case WM_CONTEXTMENU:app->BindingMenu(reinterpret_cast<HWND>(wparam),{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});return 0;
     case WM_TIMER:if(wparam==2)app->PollAchievements();else app->Poll();return 0;
     case WM_DRAWITEM:{auto& draw=*reinterpret_cast<DRAWITEMSTRUCT*>(lparam);if(draw.CtlType==ODT_BUTTON)app->DrawButton(draw);else if(draw.CtlType==ODT_COMBOBOX)app->DrawCombo(draw);return TRUE;}
     case WM_MEASUREITEM:reinterpret_cast<MEASUREITEMSTRUCT*>(lparam)->itemHeight=app->S(22);return TRUE;
     case WM_NOTIFY:{auto* n=reinterpret_cast<NMHDR*>(lparam);if(n->code==NM_CUSTOMDRAW && (n->hwndFrom==app->sharpness || n->hwndFrom==app->volume))return app->DrawSlider(*reinterpret_cast<NMCUSTOMDRAW*>(lparam));return 0;}
+    case WM_VSCROLL:if(app->achievement_list && (!lparam||reinterpret_cast<HWND>(lparam)==app->achievement_list))return SendMessageW(app->achievement_list,WM_VSCROLL,wparam,lparam);break;
+    case WM_MOUSEWHEEL:if(app->current_page==5)return SendMessageW(app->achievement_list,message,wparam,lparam);break;
     case WM_HSCROLL:{if(reinterpret_cast<HWND>(lparam)==app->volume)SetWindowTextW(app->volume_value,(std::to_wstring(SendMessageW(app->volume,TBM_GETPOS,0,0))+L"%").c_str());
       if(reinterpret_cast<HWND>(lparam)==app->sharpness){auto value=SendMessageW(app->sharpness,TBM_GETPOS,0,0),mode=SendMessageW(app->effect,CB_GETCURSEL,0,0);
         if(mode==1)app->settings.fsr_reduction=2.0-value/50.0;if(mode==2)app->settings.cas_sharpness=value/100.0;app->UpdateSharpness();}return 0;}
@@ -637,8 +650,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_DPICHANGED:{auto* proposed=reinterpret_cast<RECT*>(lparam);
       MONITORINFO monitor{sizeof(monitor)};GetMonitorInfoW(MonitorFromRect(proposed,MONITOR_DEFAULTTONEAREST),&monitor);
       const auto& work=monitor.rcWork;
-      app->Rescale(std::max(.55,std::min({HIWORD(wparam)/96.0,(work.right-work.left-40)/double(kWidth),(work.bottom-work.top-50)/double(kHeight)})));
-      RECT r{0,0,app->S(kWidth),app->S(kHeight)};AdjustWindowRectExForDpi(&r,static_cast<DWORD>(GetWindowLongPtrW(window,GWL_STYLE)),FALSE,0,HIWORD(wparam));
+      app->Rescale(std::max(.55,std::min({HIWORD(wparam)/96.0,(work.right-work.left-40)/double(kWidth),(work.bottom-work.top-50)/double(kHeight+kCaptionHeight)})));
+      RECT r{0,0,app->S(kWidth),app->S(kHeight+kCaptionHeight)};AdjustWindowRectExForDpi(&r,static_cast<DWORD>(GetWindowLongPtrW(window,GWL_STYLE)),FALSE,0,HIWORD(wparam));
       const int width=r.right-r.left,height=r.bottom-r.top;
       SetWindowPos(window,nullptr,std::clamp<int>(proposed->left,work.left,std::max<int>(work.left,work.right-width)),
           std::clamp<int>(proposed->top,work.top,std::max<int>(work.top,work.bottom-height)),width,height,SWP_NOZORDER|SWP_NOACTIVATE);return 0;}
@@ -656,9 +669,9 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int show){
     HANDLE mutex=CreateMutexW(nullptr,FALSE,mutex_name.c_str());if(!mutex)throw std::runtime_error("Cannot initialize launcher lock");
     if(GetLastError()==ERROR_ALREADY_EXISTS){CloseHandle(mutex);MessageBoxW(nullptr,app.T(L"The launcher is already open.",L"Launcher zaten açık."),L"MotoGP 09/10",MB_OK);Gdiplus::GdiplusShutdown(gdip_token);CoUninitialize();return 0;}
     RECT work{};SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
-    app.scale=std::max(0.55,std::min({GetDpiForSystem()/96.0,(work.right-work.left-40)/double(kWidth),(work.bottom-work.top-50)/double(kHeight)}));
+    app.scale=std::max(0.55,std::min({GetDpiForSystem()/96.0,(work.right-work.left-40)/double(kWidth),(work.bottom-work.top-50)/double(kHeight+kCaptionHeight)}));
     WNDCLASSW cls{};cls.lpfnWndProc=WindowProc;cls.hInstance=instance;cls.lpszClassName=L"MotoGP0910Launcher";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(motogp::kIconResource));RegisterClassW(&cls);
-    RECT size{0,0,app.S(kWidth),app.S(kHeight)};constexpr DWORD style=WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX;
+    RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX;
     AdjustWindowRectEx(&size,style,FALSE,0);
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,(work.right-size.right+size.left)/2,(work.bottom-size.bottom+size.top)/2,
         size.right-size.left,size.bottom-size.top,nullptr,nullptr,instance,&app);

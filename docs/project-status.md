@@ -25,25 +25,46 @@ Don't publish original game data, personal logs or preview screenshots.
 | Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
-| Live settings | F4 MotoGP UI, 40 live controls, safe launcher persistence; 336 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
-| Quit menu | Uppercase native QUIT GAME entry; Press Start hook moved from boot movies to actual frontend update; 75 Windows/Wine checks, including real Backspace mapping and callback registration | Repaired native Press Start path and final menu appearance await user verification. See quit-menu.md. |
-| Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 58,070 actual launcher UI checks | EN/TR launcher previews inspected; native game GPU appearance and listening check pending |
+| Live settings | F1 MotoGP UI, 40 live controls, safe launcher persistence; 337 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
+| Quit menu | Uppercase entry; real boot flag-0/mode-11 and secondary flag-1/mode-15 caller guards; 78 checks, including actual Backspace and boot call-site instructions | Previous native failure identified; revised boot-path native retest pending. Accent color awaits user choice. See quit-menu.md. |
+| Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 59,199 actual launcher UI checks | EN/TR previews inspected. Native scrollbar now passes actual mouse-drag input; title bar has only minimize/close. Native game GPU/listening check pending |
 | FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
 | Ultrawide | Experimental horizontal-plus projection and centered HUD | Full Windows camera/cutscene/culling coverage unverified |
 | Performance | Reduced avoidable queries/logging/locking; synthetic path checks | No measured native game FPS improvement |
 | Runtime safety / crash reports | TLS, thread IDs, owned paths, dates; external native exception monitor | Dumps help diagnose complete exits; lobby returns are a different failure category |
+
+## Current controls / UI update — 15 October 2026
+
+- Native Control Settings follows Xbox / original PS3 DualShock 3 / Keyboard.
+  The supplied PS3 bank already contained the diagram; no new upload needed.
+- User chose a dark/orange keyboard **key list**, not a full keyboard image.
+  Real keybind alternatives and native action names follow live bindings and
+  Default / Alternative A / B. No gameplay mappings are rewritten.
+- Settings shortcut is **F1**; old F4 migrates while a different custom bind
+  is retained. Alt+F4 still closes the window normally.
+- Previous scrollbar issue now has a real OS mouse-drag regression; the launcher
+  caption visibly contains only working minimize/close buttons.
+- Prior Press Start repair missed the actual boot flag-0 / mode-11 call. Both
+  exact native title callers/updates are now covered; native user retest pending.
+- **Only the QUIT GAME accent color is pending user choice.** A color/HEX question
+  was sent. Do not guess or block independent completed work on this preference.
+
+Screenshots and raw game banks stay out of Git. Read-only achievement progress,
+LAN/Radmin, original button artwork and the cancelled physics investigation's
+revert are preserved.
 
 ## Work sequence
 
 1. Keyboard prompt redesign delivered separately; visual review pending.
 2. Achievement UI, notification and quiet sound completed; Windows ZIP ready.
 3. Quit menus follow-up implemented in the launcher achievement update: uppercase
-   `QUIT GAME`, corrected live frontend hook for Press Start Back/B; [75 targeted checks](quit-menu.md).
-4. In-game live settings completed: only immediate controls appear; no restart-only section. [Scope and 336 targeted checks](in-game-settings.md).
+   `QUIT GAME`, corrected live frontend hook for Press Start Back/B; [78 targeted checks](quit-menu.md).
+4. In-game live settings completed: only immediate controls appear; no restart-only section. [Scope and 337 targeted checks](in-game-settings.md).
 5. Launcher achievement page completed, retaining the existing MotoGP design.
    [Read-only save paths, original catalog and shared notification options](achievements.md).
-6. Launcher Controls simplification: ask the user for details before designing.
-7. Final launcher redesign: ask the user for details before designing.
+6. Native controls diagram and F1 / previous UI follow-up completed; native visual review pending.
+7. Launcher Controls simplification: ask the user for details before designing.
+8. Final launcher redesign: ask the user for details before designing.
 
 The FPS/physics investigation was explicitly cancelled and reverted. Don't
 resume speculative simulation or handling changes. Frame generation is excluded

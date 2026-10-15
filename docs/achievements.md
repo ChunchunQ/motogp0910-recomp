@@ -17,6 +17,20 @@ reset until after drawing, using a weak lifetime token. They do not invoke the
 SDK base dialog's self-deleting Close method. A pending close cannot reopen a
 menu already dismissed by F7. Notifications don't capture gameplay input.
 
+## Native Windows follow-up — implemented, 15 October 2026
+
+The user reported the achievement list's vertical scrollbar did not work.
+The old probe only exercised keyboard/Home/End, so it did not validate dragging.
+The list now uses its own DefWindowProc-based window class, with explicit parent
+scroll-message routing. The updated probe drives **real OS mouse input** to drag
+the native scrollbar thumb; it passes alongside keyboard/wheel handling.
+
+The launcher has a client-drawn title bar containing only minimize and close.
+This removes Windows' disabled maximize slot while retaining window movement,
+Alt+F4, system-menu access and the two requested actions. Actual caption paint,
+hit testing, blocked maximize and minimize/close commands are checked. Its
+32-pixel header participates in the existing DPI/work-area scaling.
+
 ## Launcher Achievements page
 
 The launcher retains its existing MotoGP sidebar, dark cards and orange accent.
@@ -91,10 +105,10 @@ keybinding dispatch were exercised under Wine: **286 checks passed**. Coverage:
   peak and endpoints, Windows sound-worker teardown.
 - Actual F7/Esc deferred ownership, stale callbacks and remapped SDK binds.
 
-The actual launcher window additionally passed **58,070 checks** across
+The actual launcher window additionally passed **59,199 checks** across
 all six pages, EN/TR and 75/100/125/150% scales. This includes loading all original
 XEX catalog entries/icons, legacy/current save byte preservation, search/filters,
-scrolling, transient save failures, profile isolation, shared preference writes,
+actual mouse dragging, caption controls, scrolling, transient save failures, profile isolation, shared preference writes,
 and keeping achievements usable during a running child. Existing launcher
 settings persistence and child-exit reload checks remain included.
 

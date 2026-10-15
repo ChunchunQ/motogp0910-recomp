@@ -59,6 +59,7 @@ def main():
     (STAGE / "resources/ui").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "third_party/open-sans/OpenSans-Semibold.ttf", STAGE / "resources/ui/OpenSans-Semibold.ttf")
     shutil.copy2(ROOT / "docs/achievements.md", STAGE / "achievements-readme.txt")
+    shutil.copy2(ROOT / "docs/controller-prompts.md", STAGE / "controller-prompts-readme.txt")
     shutil.copy2(ROOT / "docs/quit-menu.md", STAGE / "quit-menu-readme.txt")
     shutil.copy2(ROOT / "docs/in-game-settings.md", STAGE / "in-game-settings-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
@@ -88,12 +89,19 @@ def main():
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
-        "LIVE SETTINGS: F4 opens the MotoGP settings menu (English/Turkish).\n"
+        "LIVE SETTINGS: F1 opens the MotoGP settings menu (English/Turkish).\n"
         "Only immediately applied controls appear: audio, FPS/VSync, prompts,\n"
         "upscaling/sharpness, native engine effects and all 25 keyboard mappings.\n"
         "Save settings also updates launcher values; Return keeps live changes for this session.\n"
         "The race/network keeps running; pause offline gameplay before adjusting.\n"
         "See in-game-settings-readme.txt for scope and native Windows verification limits.\n\n"
+        "CONTROL SETTINGS: Xbox, original PS3 DualShock 3 diagram or dark/orange\n"
+        "keyboard key list, following automatic/manual button-prompt selection.\n"
+        "Default / Alternative A / B keep native action labels dynamic; keyboard\n"
+        "bindings update live. Keep resources/controller/ps3-controls.bin.\n"
+        "See controller-prompts-readme.txt for scope and native visual checks.\n\n"
+        "LAUNCHER: Achievement scrollbar supports native mouse dragging; the title\n"
+        "bar contains only minimize and close. Existing saves stay read-only.\n\n"
         "QUIT GAME: Native main-menu entry and B/back on the initial Press Start screen.\n"
         "Confirmation defaults to Cancel; pad A/B, keyboard and mouse are supported.\n"
         "Held dismissal buttons stay masked; native input checks passed under Wine.\n"

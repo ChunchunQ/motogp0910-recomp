@@ -153,10 +153,12 @@ class Motogp0910App : public rex::ReXApp {
     motogp::quit::SetOtherMenuCheck(motogp::settings::GuestInputBlocked);
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
+    motogp::prompts::LoadPS3ControlArtwork(runtime()->memory(),rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-controls.bin");
     motogp::prompts::StartInputObserver(window());
   }
   void OnWindowFocusChanged(bool focused) override {motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
+    achievement_preferences_->Load(user_data_root(),rex::filesystem::GetExecutableFolder());
     motogp::quit::SetFocused(window()->HasFocus());
     quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
       app_context().CallInUIThreadDeferred([this] {

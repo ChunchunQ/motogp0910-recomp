@@ -47,6 +47,24 @@ def extract(bank):
     assert len(records) == len(NAMES) == 42
     return b'MGPS3BTN' + struct.pack('>I', len(records)) + b''.join(records), catalog
 
+def extract_diagram(bank):
+    count = struct.unpack_from('>I', bank)[0]
+    if count != 253:
+        raise ValueError('Expected the original PS3 sharedfrontend bank')
+    sizes = struct.unpack_from('>253I', bank, 4)
+    start = 4 + 4 * count + sum(sizes[:251])
+    record = bank[start:start + sizes[251]]
+    resource_hash, payload_size = struct.unpack_from('>II', record)
+    width, height = struct.unpack_from('>HH', record, 12)
+    if (resource_hash, payload_size, width, height, record[10], len(record)) != (0x14D50C26, 524296, 1024, 512, 2, 524304):
+        raise ValueError('Unsupported original DualShock 3 control diagram')
+    pixels = record[16:]
+    pack = b'MGPS3CTL' + struct.pack('>I', 1) + struct.pack('>IIHHI', 251, resource_hash, width, height, len(pixels)) + pixels
+    metadata = dict(format='MotoGP PS3 control diagram BC3 v1', source_bank_sha256=hashlib.sha256(bank).hexdigest(),
+                    index=251, resource_hash=f'{resource_hash:08X}', width=width, height=height,
+                    bc3_sha256=hashlib.sha256(pixels).hexdigest(), pack_sha256=hashlib.sha256(pack).hexdigest())
+    return pack, metadata
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('bank', type=Path)
@@ -59,6 +77,11 @@ def main():
         format='MotoGP PS3 controller BC3 textures v1',
         source_bank_sha256=hashlib.sha256(args.bank.read_bytes()).hexdigest(),
         pack_sha256=hashlib.sha256(payload).hexdigest(), textures=catalog), indent=2) + '\n')
+    diagram, metadata = extract_diagram(args.bank.read_bytes())
+    diagram_file = args.output.with_name('ps3-controls.bin')
+    diagram_file.write_bytes(diagram)
+    diagram_file.with_suffix('.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    print(f'Extracted original DualShock 3 diagram: {diagram_file} ({len(diagram)} bytes)')
     print(f'Extracted {len(catalog)} original controller textures: {args.output} ({len(payload)} bytes)')
 
 if __name__ == '__main__':

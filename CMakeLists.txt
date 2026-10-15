@@ -52,7 +52,7 @@ rexglue_apply_target_settings(motogp_settings)
 set(MOTOGP0910_SOURCES
     src/main.cpp
     src/lan/runtime.cpp
-    src/button_prompts.cpp
+    src/button_prompts.cpp src/control_diagram.cpp
     src/ps3_prompt_textures.cpp
     src/physics_assets.cpp
     src/livery_readback.cpp
@@ -189,10 +189,10 @@ if(TARGET motogp0910_recomp)
     target_include_directories(physics_asset_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(physics_asset_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(physics_asset_probe)
-    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
+    add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_sources(button_prompt_gpu_probe PRIVATE src/in_game_settings_input.cpp)
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements motogp_settings)
@@ -200,10 +200,11 @@ if(TARGET motogp0910_recomp)
     rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)
     if(WIN32)
         target_link_libraries(button_prompt_window_probe PRIVATE xinput)
-        target_link_libraries(button_prompt_gpu_probe PRIVATE xinput)
+        set_target_properties(button_prompt_gpu_probe PROPERTIES WIN32_EXECUTABLE TRUE)
+        target_link_libraries(button_prompt_gpu_probe PRIVATE xinput motogp_crash_report)
     endif()
     add_executable(button_prompt_probe EXCLUDE_FROM_ALL
-        tools/button_prompt_probe.cpp src/ultrawide.cpp src/button_prompts.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
+        tools/button_prompt_probe.cpp src/ultrawide.cpp src/button_prompts.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_include_directories(button_prompt_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(button_prompt_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_probe)
@@ -226,12 +227,16 @@ endif()
 foreach(artwork_target motogp0910 button_prompt_probe button_prompt_window_probe button_prompt_gpu_probe)
     if(TARGET ${artwork_target})
         set_property(TARGET ${artwork_target} APPEND PROPERTY LINK_DEPENDS
-            "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-prompts.bin")
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-prompts.bin"
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-controls.bin")
         add_custom_command(TARGET ${artwork_target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${artwork_target}>/resources/controller"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-prompts.bin"
                 "$<TARGET_FILE_DIR:${artwork_target}>/resources/controller/ps3-prompts.bin"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/resources/controller/ps3-controls.bin"
+                "$<TARGET_FILE_DIR:${artwork_target}>/resources/controller/ps3-controls.bin"
             VERBATIM)
     endif()
 endforeach()
@@ -242,7 +247,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -252,7 +257,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File

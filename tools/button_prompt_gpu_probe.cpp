@@ -1,9 +1,9 @@
 // Real-game diagnostic sheet. Optional target; never packaged with the game.
 #include "motogp0910_init.h"
+#include "../src/motogp0910_app.h"
 #define sub_82388C38 production_ps3_quad_hook
 #include "../src/button_prompts.cpp"
 #undef sub_82388C38
-#include "../src/motogp0910_app.h"
 
 REX_HOOK_RAW(sub_82388C38) {
   const auto table=rex::memory::load_and_swap<uint32_t>(base+0x8292CCB8);

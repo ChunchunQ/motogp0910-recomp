@@ -27,7 +27,9 @@
     achievement_search_label=add(L"STATIC",0,260,309,60,22,0);
     achievement_search=add(L"EDIT",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,326,304,474,28,kAchievementSearch);SendMessageW(achievement_search,EM_SETLIMITTEXT,160,0);
     achievement_filter=add(L"COMBOBOX",WS_TABSTOP|CBS_DROPDOWNLIST,818,304,252,180,kAchievementFilter);
-    achievement_list=add(L"STATIC",WS_TABSTOP|WS_VSCROLL|SS_NOTIFY,260,346,810,338,kAchievementList);
+    WNDCLASSW list_class{};list_class.lpfnWndProc=DefWindowProcW;list_class.hInstance=GetModuleHandleW(nullptr);list_class.lpszClassName=L"MotoGPAchievementList";list_class.hCursor=LoadCursorW(nullptr,IDC_ARROW);
+    if(!GetClassInfoW(list_class.hInstance,list_class.lpszClassName,&list_class)&&!RegisterClassW(&list_class))throw std::runtime_error("Cannot register achievement list window");
+    achievement_list=add(L"MotoGPAchievementList",WS_TABSTOP|WS_VSCROLL,260,346,810,338,kAchievementList);
     SetWindowSubclass(achievement_list,AchievementListProc,1,reinterpret_cast<DWORD_PTR>(this));
     achievement_note=add(L"STATIC",0,260,697,810,24,0);
   }
@@ -61,7 +63,7 @@
       try {achievement_options=motogp::achievements::ReadOptions(root/"achievement-ui.toml");SetCheck(achievement_popup,achievement_options.popup);SetCheck(achievement_sound,achievement_options.sound);EnableWindow(achievement_popup,TRUE);EnableWindow(achievement_sound,TRUE);}
       catch(const std::exception&){EnableWindow(achievement_popup,FALSE);EnableWindow(achievement_sound,FALSE);}
       SetWindowTextW(achievement_note,unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7."));
-      RECT summary{S(242),S(118),S(1088),S(224)};InvalidateRect(window,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);
+      RECT summary{S(242),S(118+kCaptionHeight),S(1088),S(224+kCaptionHeight)};InvalidateRect(window,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);
     }catch(const std::exception& e){catalog_error=ErrorDetails(e);InvalidateRect(achievement_list,nullptr,FALSE);}
   }
   void SaveAchievementOption(int id){

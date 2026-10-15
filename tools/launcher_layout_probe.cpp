@@ -2,12 +2,14 @@
 // target includes production UI code; it does not replace any runtime behavior.
 #include "../src/launcher/main.cpp"
 #include <iostream>
+#include <thread>
+#include <atomic>
 
 namespace {
 int ui_checks=0;
 void CheckUI(bool ok,const char* message){if(!ok)throw std::runtime_error(message);++ui_checks;}
-void Screenshot(HWND window,const fs::path& file){
-  RECT r;GetClientRect(window,&r);auto dc=GetDC(window),copy=CreateCompatibleDC(dc);
+void Screenshot(HWND window,const fs::path& file,bool whole=false){
+  RECT r;if(whole){GetWindowRect(window,&r);r.right-=r.left;r.bottom-=r.top;r.left=r.top=0;}else GetClientRect(window,&r);auto dc=whole?GetWindowDC(window):GetDC(window),copy=CreateCompatibleDC(dc);
   BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=r.right;
   info.bmiHeader.biHeight=-r.bottom;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
   void* data=nullptr;auto bitmap=CreateDIBSection(dc,&info,DIB_RGB_COLORS,&data,nullptr,0);auto old=SelectObject(copy,bitmap);
@@ -50,11 +52,18 @@ int wmain(int argc,wchar_t** argv){
     const auto pictures=fs::path(argv[2]);fs::create_directories(pictures);
     App app;app.scale=1;const auto game=fs::path(argv[1]);
     WNDCLASSW cls{};cls.hInstance=GetModuleHandleW(nullptr);cls.lpfnWndProc=WindowProc;cls.lpszClassName=L"MotoGPLauncherUIProbe";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);RegisterClassW(&cls);
-    RECT bounds{0,0,kWidth,kHeight};constexpr DWORD style=WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU;
+    RECT bounds{0,0,kWidth,kHeight+kCaptionHeight};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX;
     AdjustWindowRectEx(&bounds,style,FALSE,0);
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kSidebar,"Custom caption is visibly painted in the client surface");ReleaseDC(window,dc);}
+    {RECT frame;GetWindowRect(window,&frame);const auto caption=app.CaptionBounds();const auto y=frame.top+(caption.height+caption.border)/2;
+      for(int x=caption.border;x<caption.width-caption.border;++x)CheckUI(SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.left+x,y))!=HTMAXBUTTON,"No visible caption position exposes a maximize button");
+      CheckUI(SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.right-caption.border-app.S(69),y))==HTMINBUTTON&&SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.right-caption.border-app.S(23),y))==HTCLOSE,"Caption retains minimize and close actions");
+      SendMessageW(window,WM_SYSCOMMAND,SC_MAXIMIZE,0);CheckUI(!IsZoomed(window),"Maximize command cannot enlarge the fixed launcher");
+    }
+
     // Read the actual original XEX in the background; never execute the title
     // or touch its unlock save. Use a separate fixture profile for UI actions.
     const auto profile=app.exe/L"achievement-profile";
@@ -101,16 +110,31 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(app.unlocks_known&&!app.unlocks_stale&&app.unlocks.empty()&&app.achievement_rows.empty(),"Changing profile never leaks another profile's progress or filtered list");Put(app.config.table,"user_data_root",Utf8(profile.wstring()));app.PollAchievements();
     SendMessageW(app.achievement_filter,CB_SETCURSEL,0,0);app.FilterAchievements();
     app.ShowPage(5);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+    { // Actual OS mouse input, not a fabricated WM_VSCROLL / direct scroll call.
+      SCROLLBARINFO bar{sizeof(bar)};CheckUI(GetScrollBarInfo(app.achievement_list,OBJID_VSCROLL,&bar),"Read native scrollbar geometry");
+      const int x=(bar.rcScrollBar.left+bar.rcScrollBar.right)/2;
+      const int start=bar.rcScrollBar.top+(bar.xyThumbTop+bar.xyThumbBottom)/2;
+      const int end=bar.rcScrollBar.bottom-bar.dxyLineButton-6;std::atomic<bool> done=false,mouse_ok=true;
+      std::thread mouse([&]{auto button=[&](DWORD flags){INPUT event{};event.type=INPUT_MOUSE;event.mi.dwFlags=flags;if(SendInput(1,&event,sizeof(event))!=1)mouse_ok=false;};
+        SetCursorPos(x,start);button(MOUSEEVENTF_LEFTDOWN);Sleep(120);
+        for(int i=1;i<=4;++i){SetCursorPos(x,start+(end-start)*i/4);Sleep(60);}button(MOUSEEVENTF_LEFTUP);done=true;
+      });
+      while(!done){MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}Sleep(5);}mouse.join();
+      MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}UpdateWindow(app.achievement_list);
+      CheckUI(mouse_ok&&app.achievement_scroll>0,"Dragging the actual native scrollbar thumb scrolls achievements");
+      SendMessageW(app.achievement_list,WM_KEYDOWN,VK_HOME,0);UpdateWindow(app.achievement_list);
+    }
+
     SendMessageW(app.achievement_list,WM_KEYDOWN,VK_END,0);UpdateWindow(app.achievement_list);CheckUI(app.achievement_scroll>0,"Keyboard scroll reaches the final achievements");SendMessageW(app.achievement_list,WM_KEYDOWN,VK_HOME,0);UpdateWindow(app.achievement_list);CheckUI(app.achievement_scroll==0,"Keyboard scroll returns to the first achievement");
     for(double scale:{.75,1.,1.25,1.5}){
-      app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight)};AdjustWindowRectEx(&size,style,FALSE,0);
+      app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};AdjustWindowRectEx(&size,style,FALSE,0);
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;
         for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           if(scale==1. || (scale==.75 && tr && page==2)){
             const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
-            auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);
+            auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);if(scale==1.&&page==5&&!tr)Screenshot(window,pictures/L"launcher-achievements-full-window.bmp",true);
           }
         }
       }
@@ -235,7 +259,12 @@ int wmain(int argc,wchar_t** argv){
       app.SaveSettings();Config after(app.config.path);auto current=Settings::Load(after.table);
       CheckUI(current.volume==58&&current.fps_limit==165&&current.bindings[0]=="Ctrl+J"&&Get(after.table,"custom_note",std::string{})=="keep me","Next launcher save preserves live edits and unrelated config");
     }
-    DestroyWindow(window);std::cout<<ui_checks<<" actual launcher UI checks passed\n";
+    { // Caption commands still work after replacing the native frame.
+      auto caption_click=[&](int hit,int offset){RECT r;GetWindowRect(window,&r);const auto c=app.CaptionBounds();POINT p{r.right-app.S(offset),r.top+c.height/2};SetCursorPos(p.x,p.y);SendMessageW(window,WM_NCLBUTTONDOWN,hit,MAKELPARAM(p.x,p.y));SendMessageW(window,WM_LBUTTONUP,0,0);};
+      caption_click(HTMINBUTTON,69);CheckUI(IsIconic(window),"Custom caption minimizes the actual launcher window");ShowWindow(window,SW_RESTORE);UpdateWindow(window);
+      caption_click(HTCLOSE,23);CheckUI(!IsWindow(window),"Custom caption closes the actual launcher window");
+    }
+    std::cout<<ui_checks<<" actual launcher UI checks passed\n";
   }catch(const std::exception& e){std::cerr<<"FAIL after "<<ui_checks<<" checks: "<<e.what()<<'\n';result=1;}
   Gdiplus::GdiplusShutdown(token);CoUninitialize();return result;
 }

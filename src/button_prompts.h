@@ -6,6 +6,9 @@
 
 namespace motogp::prompts {
 // Replacement geometry uses the game's original UI draw batch and layout.
+class Geometry;
+void EmitGeometry(PPCContext& context,uint8_t* base,const Geometry& geometry);
+Style CurrentStyle();
 void StartInputObserver(rex::ui::Window* window);
 void StopInputObserver();
 // Shared by the native draw hook and the integration probe that checks real

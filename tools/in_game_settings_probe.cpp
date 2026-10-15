@@ -174,11 +174,12 @@ int main(int argc,char** argv){try{
   io.DisplaySize=ImVec2(1280,720);auto menu=CreateMenu(&drawer,model,gate,font,heading,false,window.get());auto* listener=dynamic_cast<rex::ui::WindowInputListener*>(menu.get());Check(listener,"Production menu installs keyboard interception");
   auto frame=[&]{motogp::PaceGameFrame();drawer.GetIO();ImGui::NewFrame();menu->Draw();ImGui::Render();};
   auto key=[&](rex::ui::VirtualKey key){rex::ui::KeyEvent e(window.get(),key,1,false,false,false,false,false);listener->OnKeyDown(e);return e.is_handled();};
-  Check(key(rex::ui::VirtualKey::kF4)&&gate->IsOpen(),"F4 opens custom menu before SDK default handler");frame();frame();
+  Check(rex::cvar::Query<std::string>("bind_settings")=="F1"&&!key(rex::ui::VirtualKey::kF4),"F4 migrates to F1 and no longer opens either settings overlay");
+  Check(key(rex::ui::VirtualKey::kF1)&&gate->IsOpen(),"F1 opens custom menu before SDK default handler");frame();frame();
   Check(key(rex::ui::VirtualKey::kK),"Editing keys cannot also reach virtual controller");
   io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!gate->IsOpen(),"Escape returns to game without deleting app-owned dialog");io.AddKeyEvent(ImGuiKey_Escape,false);frame();motogp::PaceGameFrame();
-  Check(key(rex::ui::VirtualKey::kF4)&&gate->IsOpen(),"F4 reopens safely");frame();Check(key(rex::ui::VirtualKey::kF4)&&!gate->IsOpen(),"F4 toggles closed without duplicate binding registration");frame();motogp::PaceGameFrame();
-  rex::cvar::SetFlagByName("bind_settings","F8");Check(!key(rex::ui::VirtualKey::kF4)&&key(rex::ui::VirtualKey::kF8)&&gate->IsOpen(),"Existing user-remapped F4 binding is preserved");
+  Check(key(rex::ui::VirtualKey::kF1)&&gate->IsOpen(),"F1 reopens safely");frame();Check(key(rex::ui::VirtualKey::kF1)&&!gate->IsOpen(),"F1 toggles closed without duplicate binding registration");frame();motogp::PaceGameFrame();
+  rex::cvar::SetFlagByName("bind_settings","F8");Check(!key(rex::ui::VirtualKey::kF1)&&key(rex::ui::VirtualKey::kF8)&&gate->IsOpen(),"Existing user-remapped settings binding is preserved");
   frame();frame();frame();Check(io.NavActive,"Actual ImGui navigation activates for keyboard/controller");
   pad->state.gamepad.buttons=X_INPUT_GAMEPAD_DPAD_DOWN;frame();frame();Check(ImGui::IsKeyDown(ImGuiKey_GamepadDpadDown),"Guest pad sample reaches actual ImGui navigation input");pad->state.gamepad.buttons=0;frame();frame();
   pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;frame();Check(!gate->IsOpen(),"Controller B closes settings");pad->state.gamepad.buttons=0;frame();

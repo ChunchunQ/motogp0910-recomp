@@ -1,8 +1,10 @@
 # In-game live settings
 
-F4 opens the MotoGP menu while the game is running. It uses the same Open Sans,
+F1 opens the MotoGP menu while the game is running. It uses the same Open Sans,
 dark cards and orange accents as F7 achievements, with English/Turkish labels
-chosen from the existing launcher language preference. A remapped `bind_settings`
+chosen from the existing launcher language preference. The old SDK F4 binding
+(including an explicitly saved F4) migrates to F1; another custom shortcut is
+preserved. Alt+F4 retains its normal window-close behavior. A remapped `bind_settings`
 is respected. Return, Esc or the overlay key closes it; controller navigation
 uses the D-pad/left stick and A/Cross, with B/Circle to return.
 
@@ -75,7 +77,7 @@ not execute Windows GPU shaders or replace native gameplay/visual verification.
 The existing achievement and exit-menu probes cover shared-style and title
 regressions. All fixtures and previews belong under ignored `out/`.
 
-The current Windows/Wine run passed **336 targeted checks**, plus **237 native
+The current Windows/Wine run passed **337 targeted checks**, plus **237 native
 button replacement**, **280 achievement UI/storage/sound**, **72 native quit menu**
 and **54,325 actual launcher UI checks** (including a real child-process exit and
 reload/save of in-game values). Five input-precedence scenarios also passed.

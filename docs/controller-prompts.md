@@ -11,6 +11,7 @@ Open Sans Semibold lettering. [Design, coverage and validation](keyboard-prompts
 
 Extract the complete Windows ZIP. Replace the EXEs and both runtime DLLs,
 and keep `resources/controller/ps3-prompts.bin` in its supplied subdirectory.
+Also keep `resources/controller/ps3-controls.bin` for the Controls screen.
 Keep your existing `game/`, settings and saves. The launcher and Qatar
 collision repair are retained. The new package also includes the scoped career texture readback repair;
 see [career texture notes](career-textures.md).
@@ -25,6 +26,49 @@ Xbox controller; test PS artwork with an Xbox pad using:
 
 `--button_prompt_style=xbox`, `keyboard` and `auto` select the other modes.
 These switches change pictures, not controller mappings.
+
+## Native Control Settings screen
+
+The full controller diagram now follows the existing automatic/manual prompt
+style: Xbox retains the game's own Xbox 360 image; PlayStation uses the original
+DualShock 3 diagram from entry **251**, hash **14D50C26**, in the user's supplied
+PS3 `sharedfrontend.mgb`. The new `ps3-controls.bin` contains its unchanged
+1024x512 BC3 blocks. The adjacent JSON records source-bank, payload and pack
+SHA-256 hashes. It is the PS3 game's own diagram, including its leader lines.
+No replacement controller illustration was downloaded or generated.
+
+The DS3's left stick and D-pad occupy different positions. The temporary native
+left-label rows are reordered **0,1,2,5,6,7,8,3,4**, matching the PS3 lines. The
+profile's mappings are never rewritten. Default / Alternative A / Alternative B
+continue to supply the actual native action names dynamically; those names
+retain the selected game language. The image swaps in the original native UI
+batch with restored UVs and preserves the existing camera/projection/fades.
+
+For Keyboard style, the diagram becomes two columns of dark keycaps with orange
+MotoGP accents. The original localized action text stays in place. Keycaps show
+current keybind alternatives, unbound controls and both directions of each
+stick axis; changing an F1/launcher binding updates the list. Changing the native
+control preset changes the corresponding action labels immediately. Opaque
+backgrounds are kept away from those labels because the native renderer submits
+text before the diagram. Stable keycap geometry is cached; live changes rebuild
+it. No new keyboard gameplay mapping or controller behavior is introduced.
+
+Auto follows meaningful input as before; use SDL for native Sony identification.
+A Sony controller hidden behind an XInput virtual Xbox device still needs manual
+PlayStation prompt selection. Manual Xbox / PlayStation / Keyboard selections
+also apply to this diagram.
+
+`extract-ps3-prompts.py PS3_SHARED_FRONTEND_MGB` now reproducibly extracts both
+small button artwork and the full diagram. Keep original banks outside Git.
+The supplied `ps3-ui-assets-v2.zip` already contained the needed bank; no new
+PS3 dump or extraction was required from the user.
+
+Windows/Wine validation: **259 native button/diagram checks**, including original
+GPU-visible pixels/pitch/UVs, ABI and vertex restoration, all three preset label
+sets, live keybind alternatives/unbound state, native keyboard batching and
+protection of localized label regions. **171 production window/input checks**
+exercise real SDL virtual controllers and input switching. These are CPU/UI
+checks; the final 3D Controls screen still needs a native Windows visual check.
 
 ## Artwork coverage
 

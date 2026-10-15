@@ -4,6 +4,9 @@
 
 namespace motogp::prompts {
 void LoadPS3Artwork(rex::memory::Memory* memory,const std::filesystem::path& file);
+void LoadPS3ControlArtwork(rex::memory::Memory* memory,const std::filesystem::path& file);
+bool PS3ControlArtworkReady();
+uint32_t PS3ControlTexture(uint32_t original,uint8_t* base);
 void StopPS3Artwork();
 // Template is an original game UI texture wrapper. The returned wrapper uses
 // the game's material and a native Xenos BC3 fetch descriptor.

@@ -10,15 +10,20 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
    MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [286 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
 3. **Acil çıkış menüleri:** ana menüde QUIT GAME; Press Start ekranında geri
-   tuşuyla çıkış onayı uygulandı. [75 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
-4. **Oyun içinden canlı ayarlar:** F4 menüsü tamamlandı; yalnızca anında uygulanan
-   seçenekler var. Yeniden başlatma gerekenler eklenmedi. [336 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
+   tuşuyla çıkış onayı uygulandı. [78 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
+4. **Oyun içinden canlı ayarlar:** F1 menüsü tamamlandı; yalnızca anında uygulanan
+   seçenekler var. Yeniden başlatma gerekenler eklenmedi. [337 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
 5. **Launcher başarımlar sayfası:** mevcut MotoGP tasarımı, 50 orijinal simge,
    1000 G, canlı kayıt okuma, arama/filtre ve ortak bildirim/ses tercihleri eklendi.
-   [58.070 launcher UI kontrolü](achievements.md) geçti. Önceki Press Start çıkış
+   [59.199 launcher UI kontrolü](achievements.md) geçti. Önceki Press Start çıkış
    sorunu, gerçek menü güncelleme kancasına taşınarak düzeltildi; native test bekliyor.
-6. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
-7. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
+6. **Oyun kontrol şeması:** orijinal PS3 DualShock 3 görseli ve canlı klavye
+   tuş listesi eklendi; Default / Alternative A / B açıklamaları dinamik kalır.
+   [259 native çizim ve 171 gerçek pencere/giriş kontrolü](controller-prompts.md)
+   geçti. Önceki kaydırma, büyütme düğmesi ve gerçek boot Press Start yolu
+   bu güncellemede ele alındı; QUIT GAME vurgu rengi kullanıcı seçimini bekliyor.
+7. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
+8. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
 
 [Güncel durum ve kanıt sınırları](project-status.md) geçmiş aşama notlarının
 üzerindeki güncel kaynaktır.

@@ -12,6 +12,7 @@
 REX_EXTERN(__imp__sub_821FC650);
 REX_EXTERN(__imp__sub_821FCCA8);
 REX_EXTERN(__imp__sub_822AE9F8);
+REX_EXTERN(__imp__sub_8229C2C0);
 REX_EXTERN(__imp__sub_8229C178);
 
 namespace motogp::quit {
@@ -21,6 +22,7 @@ std::atomic<bool> pending{false},focused{false},input_armed{false};
 std::atomic<uint64_t> focus_epoch{0};
 std::atomic<uint16_t> buttons{0};
 std::atomic<uint64_t> title_serial{0};
+std::atomic<uint32_t> observed_title_mode{0},title_trace_mask{0},back_trace_count{0};
 uint64_t title_consumed=0;
 bool held_blocker=false,back_was_down=false;
 std::atomic<uint32_t> label_address{0};
@@ -40,7 +42,7 @@ void SynchronizeBlocker() {
   }
 }
 void Poll() {
-  // F4 may be editing MnK bindings on the UI thread. Its gate also keeps
+  // F1 may be editing MnK bindings on the UI thread. Its gate also keeps
   // held dismissal inputs from becoming a new quit request.
   if(auto check=other_menu.load(std::memory_order_acquire);check&&check()){buttons=0;input_armed=false;return;}
   uint16_t merged=0;
@@ -87,10 +89,18 @@ bool IsTitleMode(uint8_t* base) {
   const auto value=Read(base,0x8292710C);
   return value>=0x82000000 && value<0x84000000 && Read(base,value)==15;
 }
-bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha) {
-  const bool eligible=startup==1&&IsTitleMode(base)&&alpha>=1.0;
-  if(eligible)title_serial.fetch_add(1,std::memory_order_release);
-  return eligible;
+bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha,uint64_t caller) {
+  const auto value=Read(base,0x8292710C);
+  const auto mode=value>=0x82000000&&value<0x84000000?Read(base,value):0;
+  // There are exactly TWO native call sites. Boot's real PRESS START passes
+  // r4=0 (not an in-race overlay); the secondary frontend path passes r4=1.
+  // Match the caller as well as the mode so arbitrary/in-game calls can't arm.
+  const uint32_t trace_bit=caller==0x8229CA24?1:caller==0x822AE94C?2:0;
+  if(trace_bit&&!(title_trace_mask.fetch_or(trace_bit)&trace_bit))REXLOG_INFO("PC_QUIT_TITLE_DRAW mode={} caller=0x{:08X} flag={} alpha={} focused={}",mode,caller,startup,alpha,focused.load());
+  const bool boot=caller==0x8229CA24&&startup==0&&mode==11;
+  const bool frontend=caller==0x822AE94C&&startup==1&&mode==15&&alpha>=1.0;
+  if(boot||frontend){observed_title_mode.store(mode,std::memory_order_relaxed);title_serial.fetch_add(1,std::memory_order_release);}
+  return boot||frontend;
 }
 void PollFrontendInput(){Poll();SynchronizeBlocker();}
 void Confirmation::Open(uint16_t held){previous_=held;armed_=false;exit_selected_=false;}
@@ -110,7 +120,7 @@ void Initialize(rex::Runtime* runtime) {
   label_address=address;constexpr char label[]="QUIT GAME";
   // The title's 826EC558 decoder consumes UTF-8 bytes, not Xbox WCHAR data.
   std::memcpy(runtime->virtual_membase()+address,label,sizeof(label));
-  pending=false;buttons=0;title_serial=0;title_consumed=0;held_blocker=false;back_was_down=false;
+  pending=false;buttons=0;title_serial=0;observed_title_mode=0;title_trace_mask=0;back_trace_count=0;title_consumed=0;held_blocker=false;back_was_down=false;
 }
 uint32_t LabelAddress(){return label_address;}
 void SetFocused(bool value){
@@ -204,19 +214,29 @@ REX_HOOK_RAW(sub_821FCCA8) {
   __imp__sub_821FCCA8(ctx,base);
 }
 REX_HOOK_RAW(sub_8229C178) {
-  const auto startup=ctx.r4.u32;const double alpha=ctx.f1.f64;
+  const auto startup=ctx.r4.u32;const double alpha=ctx.f1.f64;const auto caller=ctx.lr;
   __imp__sub_8229C178(ctx,base);
-  motogp::quit::ObserveTitleDraw(base,startup,alpha);
+  motogp::quit::ObserveTitleDraw(base,startup,alpha,caller);
 }
-// The live frontend callback, installed when boot movies finish. 8229C2C0
-// only runs the preceding boot sequence and cannot see Press Start inputs.
-REX_HOOK_RAW(sub_822AE9F8) {
+namespace {
+bool PollTitleUpdate(uint8_t* base,uint32_t expected_mode) {
   using namespace motogp::quit;
   PollFrontendInput();
   const bool back=(buttons.load()&rex::input::X_INPUT_GAMEPAD_B)!=0;
   const auto serial=title_serial.load(std::memory_order_acquire);
-  if(!Pending() && serial!=title_consumed && IsTitleMode(base) && back&&!back_was_down){Request();SynchronizeBlocker();}
+  const auto value=Read(base,0x8292710C);
+  const bool mode_matches=value>=0x82000000&&value<0x84000000&&Read(base,value)==expected_mode;
+  if(back&&!back_was_down&&serial&&observed_title_mode.load()==expected_mode&&back_trace_count.fetch_add(1)<8)REXLOG_INFO("PC_QUIT_TITLE_BACK mode={} fresh_draw={} focused={} armed={} pending={}",expected_mode,serial!=title_consumed,focused.load(),input_armed.load(),Pending());
+  if(!Pending()&&serial!=title_consumed&&observed_title_mode.load()==expected_mode&&mode_matches&&back&&!back_was_down){Request();SynchronizeBlocker();}
   title_consumed=serial;back_was_down=back;
-  if(Pending())return;
+  return Pending();
+}
+}
+REX_HOOK_RAW(sub_8229C2C0) {
+  if(PollTitleUpdate(base,11))return;
+  __imp__sub_8229C2C0(ctx,base);
+}
+REX_HOOK_RAW(sub_822AE9F8) {
+  if(PollTitleUpdate(base,15))return;
   __imp__sub_822AE9F8(ctx,base);
 }

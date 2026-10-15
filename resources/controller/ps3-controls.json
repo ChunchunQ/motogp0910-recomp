@@ -1,0 +1,10 @@
+{
+  "format": "MotoGP PS3 control diagram BC3 v1",
+  "source_bank_sha256": "ca8c1bb14a5a7c947a17e081a2a5122a62a99e83a3787a148b6e915c077043f6",
+  "index": 251,
+  "resource_hash": "14D50C26",
+  "width": 1024,
+  "height": 512,
+  "bc3_sha256": "12e7fb167cc4799434f2dad0c304426eb0b921d9782dcd9d680c083bc56e87fe",
+  "pack_sha256": "a65391d800614c7b7ebfa9025125ab45e7d87a926d0a224296a13d37b61c40e1"
+}

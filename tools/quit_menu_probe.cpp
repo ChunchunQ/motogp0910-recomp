@@ -20,6 +20,7 @@ REX_EXTERN(sub_8227F318);
 REX_EXTERN(sub_826EC558);
 REX_EXTERN(sub_821FCCA8);
 REX_EXTERN(sub_822AE9F8);
+REX_EXTERN(sub_8229C2C0);
 namespace {
 int checks=0;
 void Check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);++checks;}
@@ -90,15 +91,19 @@ int main(int argc,char** argv){try{
  write(mode_ptr,0);Check(!motogp::quit::IsTitleMode(base),"Uninitialized startup property cannot open exit");
  write(mode_ptr,mode_value);write(mode_value,15);Check(motogp::quit::IsTitleMode(base),"Original mode 15 identifies title renderer path");
  Check(!motogp::quit::ObserveTitleDraw(base,0,1.0),"In-game Press Start overlay never arms title exit");
- Check(!motogp::quit::ObserveTitleDraw(base,1,.5),"Startup fade cannot arm title exit");
- write(mode_value,3);Check(!motogp::quit::ObserveTitleDraw(base,1,1.0),"Other game modes never arm title exit");write(mode_value,15);
- Check(motogp::quit::ObserveTitleDraw(base,1,1.0),"Visible title prompt arms native Back path");
+ Check(!motogp::quit::ObserveTitleDraw(base,1,.5,0x822AE94C),"Startup fade cannot arm title exit");
+ write(mode_value,3);Check(!motogp::quit::ObserveTitleDraw(base,1,1.0,0x822AE94C),"Other game modes never arm title exit");write(mode_value,15);
+ Check(motogp::quit::ObserveTitleDraw(base,1,1.0,0x822AE94C),"Visible secondary title prompt arms native Back path");
+ write(mode_value,11);
+ Check(read(0x8229CA18)==0x38800000&&read(0x8229CA20)==0x4BFFF759,"Original boot Press Start draw passes flag 0");
+ Check(!motogp::quit::ObserveTitleDraw(base,0,0,0x12345678),"Unrelated flag-0 draw cannot arm exit");
+ Check(motogp::quit::ObserveTitleDraw(base,0,0,0x8229CA24),"Actual boot caller in mode 11 arms exit without a false fade requirement");
  rex::cvar::SetFlagByName("mnk_mode","true");rex::cvar::SetFlagByName("keybind_b","Quote,Backspace");pad->state.gamepad.buttons=0;
  rex::ui::KeyEvent backspace(nullptr,rex::ui::VirtualKey::kBack,1,false,false,false,false,false);keyboard->OnKeyDown(backspace);
  input->GetStateForUI(0,&state);Check(state.gamepad.buttons&X_INPUT_GAMEPAD_B,"Actual Backspace binding reaches the same title B input channel");
 
  Check(read(0x8229C630)==0x3D00822B && read(0x8229C640)==0x3868E9F8,"Original boot transition installs the live frontend update callback");
- pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;ctx.r3.u64=0xBEEF;sub_822AE9F8(ctx,base);Check(motogp::quit::Pending(),"Actual title-update hook opens confirmation on fresh B");
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;ctx.r3.u64=0xBEEF;sub_8229C2C0(ctx,base);Check(motogp::quit::Pending(),"Actual boot title-update hook opens confirmation on fresh B");
  frame();frame();Check(motogp::quit::Pending()&&exits==0,"Held title B cannot immediately dismiss confirmation");
  io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!motogp::quit::Pending()&&exits==0,"Title cancellation returns without exit");io.AddKeyEvent(ImGuiKey_Escape,false);frame();
  motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"UI-first dismissal cannot reopen title prompt before B release");input->GetState(0,&state);Check(!(state.gamepad.buttons&X_INPUT_GAMEPAD_B),"Title dismissal B stays masked for guest");

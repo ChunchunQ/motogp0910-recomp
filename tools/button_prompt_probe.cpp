@@ -3,6 +3,7 @@
 #include "motogp0910_init.h"
 #include "../src/button_prompts.h"
 #include "../src/button_prompt_geometry.h"
+#include "../src/control_diagram.h"
 #include "../src/button_prompt_mapping.h"
 #include "../src/ps3_prompt_textures.h"
 #include <rex/filesystem.h>
@@ -10,6 +11,7 @@
 #include <rex/kernel/init.h>
 #include <rex/memory.h>
 #include <rex/runtime.h>
+#include <rex/graphics/xenos.h>
 #include <array>
 #include <cmath>
 #include <cstring>
@@ -148,6 +150,53 @@ int main(int argc,char** argv) {
         PPCContext context{};context.r7.u64=style==motogp::prompts::Style::Xbox?0x44440000:0x11112222;
         if(motogp::prompts::DrawReplacement(context,base,style))throw std::runtime_error("Passthrough texture was replaced");
         ++checks;
+      }
+      // The supplied original DualShock 3 control diagram uses a separate
+      // 1024x512 texture. Verify every GPU-visible source byte and row pitch.
+      motogp::prompts::LoadPS3ControlArtwork(memory,artwork_path.parent_path()/"ps3-controls.bin");
+      std::ifstream control_input(artwork_path.parent_path()/"ps3-controls.bin",std::ios::binary);
+      const std::vector<uint8_t> control_bytes((std::istreambuf_iterator<char>(control_input)),{});
+      const auto wrapper=allocation+0x2000;write(wrapper,allocation+0x2e00);
+      const auto diagram=motogp::prompts::PS3ControlTexture(wrapper,base),descriptor=rex::memory::load_and_swap<uint32_t>(base+diagram);
+      rex::graphics::xenos::xe_gpu_texture_fetch_t fetch{};
+      for(unsigned i=0;i<6;++i)reinterpret_cast<uint32_t*>(&fetch)[i]=rex::memory::load_and_swap<uint32_t>(base+descriptor+28+4*i);
+      if(fetch.pitch!=32||fetch.size_2d.width!=1023||fetch.size_2d.height!=511||fetch.format!=rex::graphics::xenos::TextureFormat::k_DXT4_5||
+         control_bytes.size()!=524316||std::memcmp(memory->TranslatePhysical(fetch.base_address<<12),control_bytes.data()+28,524288))throw std::runtime_error("Original DualShock 3 diagram upload differs from source");++checks;
+      const auto saved_diagram=rex::memory::load_and_swap<uint32_t>(base+0x8291770C);write(0x8291770C,wrapper);
+      for(unsigned v=0;v<4;++v){rex::memory::store_and_swap<float>(base+vertices[v],v==1||v==2?1.5f:1.f);write(vertices[v]+12,0x7fFFFFFF);}
+      std::array<std::array<uint8_t,24>,4> before_diagram;for(unsigned v=0;v<4;++v)std::memcpy(before_diagram[v].data(),base+vertices[v],24);
+      write(count_address,0);write(buffer_address,allocation+0x4000);write(texture_address,0);
+      PPCContext draw{};draw.r1.u32=allocation+0x3000;draw.lr=0x12345678;draw.r30.u64=0xAABBCCDDEEFF0011;draw.r31.u64=0x1122334455667788;
+      draw.r3.u32=vertices[0];draw.r4.u32=vertices[1];draw.r5.u32=vertices[2];draw.r6.u32=vertices[3];draw.r7.u32=wrapper;
+      if(!motogp::controls::DrawDiagram(draw,base,motogp::prompts::Style::PlayStation)||rex::memory::load_and_swap<uint32_t>(base+count_address)!=4||rex::memory::load_and_swap<uint32_t>(base+texture_address)!=diagram||draw.r1.u32!=allocation+0x3000||draw.lr!=0x12345678||draw.r30.u64!=0xAABBCCDDEEFF0011||draw.r31.u64!=0x1122334455667788)throw std::runtime_error("PS3 control diagram lost native batching/ABI");++checks;
+      for(unsigned v=0;v<4;++v){if(std::memcmp(before_diagram[v].data(),base+vertices[v],24))throw std::runtime_error("Control diagram changed native vertices");const auto p=allocation+0x4000+24*v;if(rex::memory::load_and_swap<float>(base+p+16)!=(v==1||v==2?1.f:0.f)||rex::memory::load_and_swap<float>(base+p+20)!=(v>=2?1.f:0.f))throw std::runtime_error("Control diagram retained an atlas crop");++checks;}
+      write(0x8291770C,saved_diagram);
+      for(unsigned preset=0;preset<3;++preset){
+        PPCContext labels{};labels.r1.u32=allocation+0x3000;labels.lr=0x82236D08;
+        for(unsigned i=0;i<18;++i)write(labels.r1.u32+0x110+4*i,100*preset+i);
+        if(!motogp::controls::PrepareLabels(labels,base,motogp::prompts::Style::PlayStation))throw std::runtime_error("PS3 labels were not reordered");
+        for(unsigned i=0;i<18;++i)if(rex::memory::load_and_swap<uint32_t>(base+labels.r1.u32+0x110+4*i)!=100*preset+(i<9?motogp::controls::kPS3LeftRows[i]:i))throw std::runtime_error("Selected preset action lost its matching DS3 physical input slot");
+        labels.lr=0x1234;if(motogp::controls::PrepareLabels(labels,base,motogp::prompts::Style::PlayStation))throw std::runtime_error("Unrelated native label call was modified");++checks;
+      }
+      auto keys=motogp::controls::KeyboardRows();if(keys[0]!="Q / I"||keys[3]!="W / S"||keys[4]!="A / D"||keys[15]!="X / Enter")throw std::runtime_error("Keyboard list does not show current alternatives and axes");++checks;
+      rex::cvar::SetFlagByName("keybind_left_trigger","Ctrl+J,K");if(motogp::controls::KeyboardRows()[0]!="Ctrl+J / K")throw std::runtime_error("Keyboard control list did not follow live remapping");++checks;
+      rex::cvar::SetFlagByName("keybind_left_trigger","");if(motogp::controls::KeyboardRows()[0]!="Unbound")throw std::runtime_error("Unbound keyboard control not shown");++checks;
+      rex::cvar::SetFlagByName("keybind_left_trigger","Q,I");keys=motogp::controls::KeyboardRows();
+      const auto layout=motogp::controls::KeyboardDiagram(keys,0x7FFFFFFF);
+      std::ofstream geometry("keyboard-control-geometry.bin",std::ios::binary);const auto quad_count=static_cast<uint32_t>(layout.quads.size());geometry.write(reinterpret_cast<const char*>(&quad_count),4);
+      for(const auto& q:layout.quads){geometry.write(reinterpret_cast<const char*>(q.points.data()),32);geometry.write(reinterpret_cast<const char*>(&q.color),4);for(const auto& p:q.points)if(!std::isfinite(p.x)||!std::isfinite(p.y)||p.x<0||p.x>1||p.y<0||p.y>1||(q.color>>24)!=0x7F)throw std::runtime_error("Keyboard control list escaped the native image or lost fade");}++checks;
+      // Action labels are submitted earlier by the original renderer. No
+      // opaque generated rectangle may cover either localized text column.
+      for(const auto& q:layout.quads)for(unsigned row=0;row<9;++row){
+        const float top=(18.f+row*38.5f)/512.f,bottom=(45.f+row*38.5f)/512.f;
+        const auto& lo=q.points[0];const auto& hi=q.points[2];
+        if(lo.y<bottom&&hi.y>top&&((lo.x<.27f&&hi.x>.02f)||(lo.x<.98f&&hi.x>.73f)))throw std::runtime_error("Keyboard diagram covers the native localized action labels");
+      }++checks;
+      // Exercise every row through the actual native appender in bounded CPU
+      // chunks. Production retains its normal native 8192-vertex GPU flush.
+      for(size_t at=0;at<layout.quads.size();at+=1000){motogp::prompts::Geometry part;part.quads.assign(layout.quads.begin()+at,layout.quads.begin()+std::min(layout.quads.size(),at+1000));
+        write(count_address,0);write(buffer_address,allocation+0x4000);write(texture_address,0);PPCContext out=draw;out.r7.u64=0;
+        motogp::prompts::EmitGeometry(out,base,part);if(rex::memory::load_and_swap<uint32_t>(base+count_address)!=part.quads.size()*4||out.r1.u32!=draw.r1.u32||out.lr!=draw.lr)throw std::runtime_error("Keyboard diagram native batching/ABI failed");++checks;
       }
       // Cropped replay sprites have a separate bank from inline font icons.
       // Check both replay variants, and ensure media/timeline callers cannot

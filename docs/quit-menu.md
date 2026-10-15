@@ -4,16 +4,43 @@ The original main menu now has a seventh **QUIT GAME** entry. The original six
 choices and their ID mapping remain unchanged. The new row uses the title's
 existing menu renderer and navigation; it isn't a floating host button.
 
-## User-reported follow-up — repaired, 15 October 2026
+## Current repair — boot Press Start path, 15 October 2026
+
+The user correctly reported that Back/B still failed after the preceding build.
+The previous probe covered the secondary frontend title, not the real boot
+Press Start path. Native boot draw **8229C848** calls **8229C178** at **8229CA20**
+with **r4=0** (return address **8229CA24**), in mode **11**. The old guard wrongly
+classified flag 0 as in-game and rejected it. The other native call site is the
+secondary frontend title at **822AE948** (return **822AE94C**), flag 1 / mode 15.
+
+Match these exact callers and modes. The boot path has no alpha>=1 requirement;
+its flag-0 branch does not consume that fade argument. Poll both original boot
+update **8229C2C0** and secondary frontend update **822AE9F8**. A fresh Back edge
+after an observed eligible draw requests the existing confirmation and blocks
+the original title update until dismissal. Unknown callers don't arm exit.
+Initial intro screens without an observed Press Start draw remain unaffected.
+
+The 78-check probe now includes the real boot call-site instructions, flag-0 /
+mode-11 observation, actual Backspace-to-B mapping, boot hook, held-input and
+cancel behavior. Native Windows retesting remains necessary; do not equate the
+probe with a completed native playthrough. Bounded PC_QUIT_TITLE_DRAW / BACK log
+entries record the actual call site, mode, focus and input arming for diagnosis.
+Confirmation language is loaded before constructing the dialog.
+
+The blue QUIT GAME accent color remains a **separate pending preference**.
+The user has been asked for a color name/HEX value; do not choose it for them.
+Uppercase QUIT GAME is retained.
+
+## Previous attempted repair — 15 October 2026
 
 The user reported that Backspace/controller B did not open the initial Press
 Start confirmation. The earlier 72-check probe called the boot update directly,
-so it did not establish which callback actually ran on that screen. The live
-frontend update is **822AE9F8**, installed by the final boot transition; the
-previous hook **8229C2C0** only runs the boot movies. Move the hook to the live
-callback, retain title-mode/fade/fresh-press gates, and add a check of the real
-patched callback-registration instructions. The new label is **QUIT GAME**.
-Native Windows confirmation of the repaired path remains pending.
+so it did not establish which callback actually ran on that screen. That attempt identified **822AE9F8**, installed by the final boot transition,
+as the live frontend update and moved the hook there, assuming **8229C2C0**
+only covered boot movies. That assumption was incomplete: the latter also
+updates the real boot Press Start screen. The current repair above hooks both
+callbacks and checks their actual draw call sites. The new label is **QUIT GAME**.
+The subsequent user report exposed the additional boot-path guard error fixed above.
 
 ## Implemented behavior and intended controls
 
@@ -59,15 +86,17 @@ All addresses are for the enforced TU 0.0.1.1 executable.
 - `821FCCA8` is the native main-menu event handler. Its selected index comes
   from screen state `+18`; accept bits are `400` / `2000`. Consume only the
   seventh entry, keeping the original handler for other choices and Back.
-- The title renderer `822AE390` checks the property pointer at `8292710C` for mode 15
-  before calling `8229C178` with startup flag 1. Observe only this startup path
-  at full fade. The in-game path calls the same function with flag 0.
+- The secondary title renderer `822AE390` checks the property pointer at
+  `8292710C` for mode 15 before calling `8229C178` with flag 1. Require full fade
+  for this exact caller. Flag 0 alone does not identify an in-game overlay;
+  the real boot title also uses flag 0, with a different caller and mode.
 - Startup initialization `8229CA58` installs boot update `8229C2C0` and draw
-  `8229C848`. The final boot transition constructs update pointer `822AE9F8`
-  at `8229C630` / `8229C640` and installs the real frontend callbacks. Hook
-  **822AE9F8**; while confirmation is open, skip its original input processing.
-- When the F4 input gate is active, do not poll MnK bindings from the quit hook;
-  F4 may be editing those strings on the UI thread. Require neutral input again
+  `8229C848`. Observe its actual flag-0 call in mode 11 and poll the boot update.
+  The final boot transition installs secondary update `822AE9F8` at
+  `8229C630` / `8229C640`. Both updates share the same fresh-edge/modal gate;
+  skip the original active update while confirmation owns input.
+- When the F1 input gate is active, do not poll MnK bindings from the quit hook;
+  F1 may be editing those strings on the UI thread. Require neutral input again
   after the other overlay releases ownership.
 
 No original disk files, message banks or generated source files are modified.
@@ -77,7 +106,7 @@ unchanged.
 
 ## Validation
 
-**75 targeted Windows/Wine checks passed**, using the real patched title and
+**78 targeted Windows/Wine checks passed**, using the real patched title and
 runtime. They cover descriptor/ID preservation and idempotence; original native
 navigation reaching the seventh row and wrapping in both directions; ABI
 preservation; every label character and its terminator through the original

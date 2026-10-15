@@ -4,6 +4,7 @@
 #include "button_prompt_input.h"
 #include "button_prompt_mapping.h"
 #include "ps3_prompt_textures.h"
+#include "control_diagram.h"
 #include "frame_pacing.h"
 
 #include <rex/cvar.h>
@@ -133,6 +134,8 @@ void Emit(PPCContext& ctx,uint8_t* base,const Geometry& geometry) {
 }
 
 }
+void EmitGeometry(PPCContext& ctx,uint8_t* base,const Geometry& geometry){Emit(ctx,base,geometry);}
+Style CurrentStyle(){return ready.load(std::memory_order_relaxed)?frame_style.load(std::memory_order_relaxed):Style::Xbox;}
 void StartInputObserver(rex::ui::Window* window) {
   input_window=window;
   focused.store(window->HasFocus());
@@ -230,6 +233,7 @@ void DrawReplaySprite(PPCContext& ctx,uint8_t* base,Style style) {
 }
 REX_HOOK_RAW(sub_82388C38) {
   using namespace motogp::prompts;
+  if(ready.load(std::memory_order_relaxed)&&motogp::controls::IsDrawing()&&motogp::controls::DrawDiagram(ctx,base,frame_style.load(std::memory_order_relaxed)))return;
   if(sprite_glyph && DrawGlyph(ctx,base,sprite_style,sprite_glyph,false))return;
   if(ready.load(std::memory_order_relaxed) && DrawReplacement(ctx,base,frame_style.load(std::memory_order_relaxed),inline_depth!=0)) return;
   motogp::wide::DrawUiQuad(ctx,base);

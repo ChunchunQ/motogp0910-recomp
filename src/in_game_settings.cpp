@@ -325,7 +325,7 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
     ImGui::SameLine();if(ImGui::Button(Tr(tr,"Revert unsaved","Kaydedilmeyenleri geri al"))){if(model.Revert()){view.edits.clear();view.saved=false;}}
     if(ImGui::GetContentRegionAvail().x>110)ImGui::SameLine();
     close=ImGui::Button(Tr(tr,"Return","Oyuna dön"));
-    auto bind=rex::cvar::Query<std::string>("bind_settings");if(bind.empty())bind="F4";
+    auto bind=rex::cvar::Query<std::string>("bind_settings");if(bind.empty())bind="F1";
     ImGui::TextDisabled(Tr(tr,"%s / Esc to return  ·  Live settings only","Oyuna dönmek için %s / Esc  ·  Yalnızca canlı ayarlar"),bind.c_str());
     const bool popup=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopupId);
     if(!was_capturing&&!popup&&ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)&&ImGui::IsKeyPressed(ImGuiKey_Escape,false))close=true;
@@ -338,7 +338,14 @@ std::atomic<InputGate*> guest_gate{nullptr};
 class Menu final:public rex::ui::ImGuiDialog,public rex::ui::WindowInputListener {
  public:
   Menu(rex::ui::ImGuiDrawer* drawer,std::shared_ptr<Model> model,std::shared_ptr<InputGate> gate,ImFont* font,ImFont* heading,bool tr,rex::ui::Window* window,bool (*can_open)())
-      :ImGuiDialog(drawer),model_(std::move(model)),gate_(std::move(gate)),font_(font),heading_(heading),tr_(tr),window_(window),can_open_(can_open){if(window_)window_->AddInputListener(this,63);}
+      :ImGuiDialog(drawer),model_(std::move(model)),gate_(std::move(gate)),font_(font),heading_(heading),tr_(tr),window_(window),can_open_(can_open){
+    // Migrate the SDK's old F4 default, including an explicitly saved F4;
+    // preserve a different user-defined shortcut. The SDK callback shares this
+    // cvar, so F4 no longer opens its other settings dialog either.
+    const auto binding=rex::cvar::Query<std::string>("bind_settings");
+    if(binding.empty()||binding=="F4")rex::cvar::SetFlagByName("bind_settings","F1");
+    if(window_)window_->AddInputListener(this,63);
+  }
   ~Menu()override{if(window_)window_->RemoveInputListener(this);gate_->Close();if(nav_owned_){auto& io=GetIO();ClearPad(io);io.ConfigFlags=old_flags_;io.BackendFlags=old_backend_;}}
   void OnKeyDown(rex::ui::KeyEvent& e)override{
     const auto bind=rex::ui::ParseVirtualKey(rex::cvar::Query<std::string>("bind_settings"));
