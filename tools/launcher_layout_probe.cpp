@@ -40,6 +40,7 @@ void LayoutCheck(App& app){
 }
 }
 int wmain(int argc,wchar_t** argv){
+  if(argc==2&&std::wstring_view(argv[1])==L"--fixture-child")return 0;
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
   Gdiplus::GdiplusStartupInput gdip;ULONG_PTR token{};Gdiplus::GdiplusStartup(&token,&gdip,nullptr);
   INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES|ICC_BAR_CLASSES};InitCommonControlsEx(&common);
@@ -174,6 +175,19 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(Get(saved.table,"custom_note",std::string{})=="keep me","Unrelated settings preserved");
     SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);
     Config preferences(app.preferences.path);CheckUI(Get(preferences.table,"language",std::string{})=="tr","UI language selection saved");
+    {
+      // Simulate a real child process saving live values while launcher fields
+      // are disabled. Its exit must refresh both controls and config baseline.
+      std::wstring command=Quote((ExecutableFolder()/L"launcher_layout_probe.exe").wstring())+L" --fixture-child";
+      STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION child{};
+      CheckUI(CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&startup,&child),"Start actual launcher child fixture");
+      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);
+      Config external(app.config.path);Put(external.table,"audio_master_volume",58);Put(external.table,"fps_limit",165);Put(external.table,"keybind_a",std::string("Ctrl+J"));external.Save();
+      CheckUI(WaitForSingleObject(app.process,10000)==WAIT_OBJECT_0,"Child fixture exited");app.Poll();
+      CheckUI(!app.process&&app.GetControls().volume==58&&app.GetControls().fps_limit==165&&app.GetControls().bindings[0]=="Ctrl+J","Child exit reloads live values into actual launcher controls");
+      app.SaveSettings();Config after(app.config.path);auto current=Settings::Load(after.table);
+      CheckUI(current.volume==58&&current.fps_limit==165&&current.bindings[0]=="Ctrl+J"&&Get(after.table,"custom_note",std::string{})=="keep me","Next launcher save preserves live edits and unrelated config");
+    }
     DestroyWindow(window);std::cout<<ui_checks<<" actual launcher UI checks passed\n";
   }catch(const std::exception& e){std::cerr<<"FAIL after "<<ui_checks<<" checks: "<<e.what()<<'\n';result=1;}
   Gdiplus::GdiplusShutdown(token);CoUninitialize();return result;

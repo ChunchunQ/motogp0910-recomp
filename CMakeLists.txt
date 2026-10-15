@@ -43,6 +43,11 @@ add_executable(achievement_ui_probe EXCLUDE_FROM_ALL tools/achievement_ui_probe.
 target_link_libraries(achievement_ui_probe PRIVATE motogp_achievements)
 rexglue_apply_target_settings(achievement_ui_probe)
 
+add_library(motogp_settings STATIC src/in_game_settings.cpp)
+target_compile_definitions(motogp_settings PUBLIC REX_HAS_FIDELITYFX_SDK=1)
+target_link_libraries(motogp_settings PUBLIC rex::runtime)
+rexglue_apply_target_settings(motogp_settings)
+
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
@@ -57,6 +62,7 @@ set(MOTOGP0910_SOURCES
     src/engine_settings.cpp
     src/ultrawide.cpp
     src/quit_menu.cpp
+    src/in_game_settings_input.cpp
 )
 
 add_executable(nightly_input_probe EXCLUDE_FROM_ALL tools/nightly_input_probe.cpp)
@@ -123,7 +129,7 @@ add_custom_command(TARGET motogp0910 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/open-sans/OpenSans-Semibold.ttf"
         "$<TARGET_FILE_DIR:motogp0910>/resources/ui/OpenSans-Semibold.ttf")
-target_link_libraries(motogp0910 PRIVATE motogp_lan_guest motogp_achievements)
+target_link_libraries(motogp0910 PRIVATE motogp_lan_guest motogp_achievements motogp_settings)
 
 add_executable(button_prompt_input_probe EXCLUDE_FROM_ALL tools/button_prompt_input_probe.cpp)
 target_link_libraries(button_prompt_input_probe PRIVATE rex::runtime)
@@ -146,6 +152,12 @@ endif()
 # Optional integration check: real generated game code + patched XEX data,
 # without initializing presentation or claiming that gameplay works.
 if(TARGET motogp0910_recomp)
+    if(WIN32)
+        add_executable(in_game_settings_probe EXCLUDE_FROM_ALL tools/in_game_settings_probe.cpp src/in_game_settings_input.cpp src/frame_pacing.cpp)
+        target_include_directories(in_game_settings_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+        target_link_libraries(in_game_settings_probe PRIVATE motogp0910_recomp motogp_settings bcrypt)
+        rexglue_apply_target_settings(in_game_settings_probe)
+    endif()
     add_executable(quit_menu_probe EXCLUDE_FROM_ALL tools/quit_menu_probe.cpp src/quit_menu.cpp)
     target_include_directories(quit_menu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(quit_menu_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -179,7 +191,8 @@ if(TARGET motogp0910_recomp)
     rexglue_apply_target_settings(button_prompt_window_probe)
     add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
-    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements)
+    target_sources(button_prompt_gpu_probe PRIVATE src/in_game_settings_input.cpp)
+    target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements motogp_settings)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
     rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)
     if(WIN32)
@@ -281,5 +294,5 @@ if(WIN32 AND TARGET motogp0910_recomp)
         engine_settings_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
-        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe)
+        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe in_game_settings_probe)
 endif()

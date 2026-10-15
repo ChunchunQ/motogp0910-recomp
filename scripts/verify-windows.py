@@ -24,6 +24,7 @@ PROBES = {
     'display_settings_probe': '', 'button_prompt_input_probe': '',
     'launcher_probe': 'game', 'launcher_layout_probe': 'ui',
     'achievement_ui_probe': 'achievements', 'quit_menu_probe': 'quit',
+    'in_game_settings_probe': 'settings',
 }
 
 def main():
@@ -93,6 +94,8 @@ def main():
             extra = [target(build / 'resources/ui/OpenSans-Semibold.ttf'), target(root / 'achievement-preview')]
         if kind == 'quit':
             extra = [target(game), target(build / 'resources/ui/OpenSans-Semibold.ttf')]
+        if kind == 'settings':
+            extra = [target(game), target(build / 'resources/ui/OpenSans-Semibold.ttf'), target(root / 'settings-preview')]
         if kind == 'ui':
             extra.append(target(root / 'screenshots'))
         run(name, extra)

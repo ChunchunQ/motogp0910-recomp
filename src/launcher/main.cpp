@@ -596,6 +596,10 @@ struct App {
   void Poll(){
     if(!process || WaitForSingleObject(process,0)!=WAIT_OBJECT_0)return;
     DWORD code=0;GetExitCodeProcess(process,&code);CloseHandle(process);process=nullptr;KillTimer(window,1);Running(false);
+    // Controls were disabled while the game ran. Re-read live settings saved
+    // through F4, so PLAY cannot silently restore the old launcher's snapshot.
+    try{Config updated(config.path);auto loaded=Settings::Load(updated.table);loaded.Validate();config=std::move(updated);settings=std::move(loaded);SetControls(settings);}
+    catch(const std::exception& e){ErrorBox(e);return;}
     if(code)Status(L"Game exited (code "+std::to_wstring(code)+L"). Open logs for the crash report.",L"Oyun kapandı (kod "+std::to_wstring(code)+L"). Çökme raporu için logları aç.");
     else Status(L"Game closed. You can launch again.",L"Oyun kapandı. Tekrar başlatabilirsin.");
   }

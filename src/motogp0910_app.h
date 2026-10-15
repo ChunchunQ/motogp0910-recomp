@@ -28,6 +28,9 @@
 #include "crash_report.h"
 #include "achievement_ui.h"
 #include "quit_menu.h"
+#include "in_game_settings.h"
+#include "frame_pacing.h"
+#include <rex/input/input_system.h>
 #include <imgui.h>
 #include <rex/ui/keybinds.h>
 
@@ -140,11 +143,19 @@ class Motogp0910App : public rex::ReXApp {
     motogp::livery::Initialize();
     achievement_preferences_->Load(user_data_root(), rex::filesystem::GetExecutableFolder());
     motogp::quit::Initialize(runtime());
+    settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
+    settings_gate_->SetFocused(window()->HasFocus());
+    settings_model_=std::make_shared<motogp::settings::Model>(settings_path_,runtime()->graphics_system()?runtime()->graphics_system()->presenter():nullptr);
+    settings_dialog_=motogp::settings::CreateMenu(imgui_drawer(),settings_model_,settings_gate_,
+        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish,window(),[]{return !motogp::quit::Pending();});
+    motogp::settings::SetGuestGate(settings_gate_.get());
+    motogp::SetFrameObserver(motogp::settings::PollGuestInput);
+    motogp::quit::SetOtherMenuCheck(motogp::settings::GuestInputBlocked);
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::StartInputObserver(window());
   }
-  void OnWindowFocusChanged(bool focused) override {motogp::quit::SetFocused(focused);}
+  void OnWindowFocusChanged(bool focused) override {motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
     motogp::quit::SetFocused(window()->HasFocus());
     quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
@@ -179,6 +190,11 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    motogp::SetFrameObserver(nullptr);
+    motogp::settings::SetGuestGate(nullptr);
+    motogp::quit::SetOtherMenuCheck(nullptr);
+    settings_dialog_.reset();
+    settings_model_.reset();
     quit_dialog_.reset();
     motogp::quit::Stop();
     motogp::lan::Stop();
@@ -187,6 +203,7 @@ class Motogp0910App : public rex::ReXApp {
     motogp::prompts::StopPS3Artwork();
   }
   void OnConfigurePaths(rex::PathConfig& paths) override {
+    settings_path_=paths.config_path;
     if (!paths.game_data_root.empty()) {
       return;
     }
@@ -202,6 +219,10 @@ class Motogp0910App : public rex::ReXApp {
     }
   }
  private:
+  std::filesystem::path settings_path_;
+  std::shared_ptr<motogp::settings::InputGate> settings_gate_=std::make_shared<motogp::settings::InputGate>();
+  std::shared_ptr<motogp::settings::Model> settings_model_;
+  std::unique_ptr<rex::ui::ImGuiDialog> settings_dialog_;
   std::unique_ptr<rex::ui::ImGuiDialog> quit_dialog_;
   ImFont* achievement_font_ = nullptr;
   ImFont* achievement_heading_font_ = nullptr;

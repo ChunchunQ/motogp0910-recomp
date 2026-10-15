@@ -25,6 +25,7 @@ Don't publish original game data, personal logs or preview screenshots.
 | Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
+| Live settings | F4 MotoGP UI, 40 live controls, safe launcher persistence; 336 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
 | Quit menu | Native seventh menu entry, startup Back confirmation, 72 Windows/Wine checks | Native appearance and save/exit playthrough pending |
 | Achievements | Custom F7 list, toast and soft sound; 280 actual-runtime Windows/Wine checks | Native GPU appearance and listening check pending |
 | FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
@@ -39,7 +40,7 @@ Don't publish original game data, personal logs or preview screenshots.
 3. Urgent quit menus completed: actual main-menu Quit game and Press Start
    Back confirmation; [72 targeted checks](quit-menu.md) passed. Native visual
    and save/exit checks remain pending.
-4. In-game live settings, with honest restart requirements per setting.
+4. In-game live settings completed: only immediate controls appear; no restart-only section. [Scope and 336 targeted checks](in-game-settings.md).
 5. Launcher Controls simplification: ask the user for details before designing.
 6. Final launcher redesign: ask the user for details before designing.
 
@@ -56,5 +57,5 @@ limitations; don't present compatibility dispatch as full temporal support.
 - [Runtime safety / validation limits](stability-quality-control.md).
 - [Experimental rendering](experimental-rendering.md).
 - [Career readback](career-textures.md), [collision repair](collision-data.md).
-- [Keyboard prompts](keyboard-prompts.md), [achievement UI](achievements.md).
+- [Keyboard prompts](keyboard-prompts.md), [achievement UI](achievements.md), [live settings](in-game-settings.md).
 - Build provenance: SDK pin, runtime manifest, Git commit, per-ZIP SHA-256.

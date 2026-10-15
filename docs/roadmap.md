@@ -11,8 +11,8 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
    MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [280 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
 3. **Acil çıkış menüleri:** ana menüde Quit game; Press Start ekranında geri
    tuşuyla çıkış onayı uygulandı. [72 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
-4. **Oyun içinden canlı ayarlar:** launcher seçeneklerine oyun içinden erişim;
-   canlı değişebilen ve yeniden başlatma gerektiren ayarlar doğru ayrılacak.
+4. **Oyun içinden canlı ayarlar:** F4 menüsü tamamlandı; yalnızca anında uygulanan
+   seçenekler var. Yeniden başlatma gerekenler eklenmedi. [336 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
 5. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
 6. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
 

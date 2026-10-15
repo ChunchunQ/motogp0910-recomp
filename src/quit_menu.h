@@ -28,6 +28,7 @@ class Confirmation {
 void Initialize(rex::Runtime* runtime);
 uint32_t LabelAddress();
 void SetFocused(bool focused);
+void SetOtherMenuCheck(bool (*check)());
 void Stop();
 bool Pending();
 void Request();

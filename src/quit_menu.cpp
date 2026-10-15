@@ -24,6 +24,7 @@ std::atomic<uint64_t> title_serial{0};
 uint64_t title_consumed=0;
 bool held_blocker=false,back_was_down=false;
 std::atomic<uint32_t> label_address{0};
+std::atomic<bool(*)()> other_menu{nullptr};
 uint32_t Read(uint8_t* base,uint32_t address){return rex::memory::load_and_swap<uint32_t>(base+address);}
 void Write(uint8_t* base,uint32_t address,uint32_t value){rex::memory::store_and_swap<uint32_t>(base+address,value);}
 void SynchronizeBlocker() {
@@ -117,7 +118,8 @@ void SetFocused(bool value){
 }
 void Stop(){pending=false;/* The runtime owns the stable guest label allocation. */input=nullptr;label_address=0;}
 bool Pending(){return pending.load(std::memory_order_acquire);}
-void Request(){if(focused.load(std::memory_order_acquire)&&input_armed.load(std::memory_order_acquire))pending.store(true,std::memory_order_release);}
+void SetOtherMenuCheck(bool (*check)()){other_menu.store(check,std::memory_order_release);}
+void Request(){if(auto check=other_menu.load(std::memory_order_acquire);check&&check())return;if(focused.load(std::memory_order_acquire)&&input_armed.load(std::memory_order_acquire))pending.store(true,std::memory_order_release);}
 namespace {
 class Dialog final:public rex::ui::ImGuiDialog {
  public:

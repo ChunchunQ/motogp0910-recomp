@@ -17,4 +17,6 @@ class FrameSchedule {
   Clock::time_point deadline_{};
 };
 void PaceGameFrame();
+// Optional guest-thread service; UI code must not poll InputSystem devices.
+void SetFrameObserver(void (*observer)());
 }

@@ -78,7 +78,7 @@ std::string Label(char code,Style style) {
   return glyph?LabelFor(*glyph,style,[](const char* name){return rex::cvar::Query<std::string>(name);}):std::string{};
 }
 Style SelectedStyle() {
-  const auto value=REXCVAR_GET(button_prompt_style);
+  const auto value=rex::cvar::Query<std::string>("button_prompt_style");
   if(value=="xbox") return Style::Xbox;
   if(value=="playstation") return Style::PlayStation;
   if(value=="keyboard") return Style::Keyboard;
