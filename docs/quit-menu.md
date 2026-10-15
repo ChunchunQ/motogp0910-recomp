@@ -1,8 +1,21 @@
 # PC quit menu — 15 October 2026
 
-The original main menu now has a seventh **Quit game** entry. The original six
+The original main menu now has a seventh **QUIT GAME** entry. The original six
 choices and their ID mapping remain unchanged. The new row uses the title's
 existing menu renderer and navigation; it isn't a floating host button.
+
+## User-reported follow-up — repaired, 15 October 2026
+
+The user reported that Backspace/controller B did not open the initial Press
+Start confirmation. The earlier 72-check probe called the boot update directly,
+so it did not establish which callback actually ran on that screen. The live
+frontend update is **822AE9F8**, installed by the final boot transition; the
+previous hook **8229C2C0** only runs the boot movies. Move the hook to the live
+callback, retain title-mode/fade/fresh-press gates, and add a check of the real
+patched callback-registration instructions. The new label is **QUIT GAME**.
+Native Windows confirmation of the repaired path remains pending.
+
+## Implemented behavior and intended controls
 
 On the initial Press Start screen, press the mapped B/back action once to ask
 whether to quit. This supports Xbox B, PlayStation Circle and the user's current
@@ -14,7 +27,7 @@ left stick to change the choice, A/Cross to select, B/Circle to cancel. Keyboard
 Left/Right/Tab changes selection; Enter selects; Esc/Backspace cancels. Mouse
 buttons also work. Existing keyboard mappings continue to supply virtual A/B.
 English/Turkish confirmation labels follow the launcher language at startup;
-the added native main-menu caption is "Quit game".
+the added native main-menu caption is "QUIT GAME".
 
 Opening presses must be released before controller confirmation is armed.
 SDK input blocking prevents the game receiving modal actions and masks held
@@ -46,13 +59,16 @@ All addresses are for the enforced TU 0.0.1.1 executable.
 - `821FCCA8` is the native main-menu event handler. Its selected index comes
   from screen state `+18`; accept bits are `400` / `2000`. Consume only the
   seventh entry, keeping the original handler for other choices and Back.
-- The title renderer `822AE390` checks the property at `82927100` for mode 15
+- The title renderer `822AE390` checks the property pointer at `8292710C` for mode 15
   before calling `8229C178` with startup flag 1. Observe only this startup path
   at full fade. The in-game path calls the same function with flag 0.
-- Startup initialization `8229CA58` installs `8229C2C0` and `8229C848` as update
-  and draw callbacks. The update hook handles a fresh B edge only after a title
-  draw observation and under the native mode-15 condition. While confirmation
-  is open, keep the original startup timeline from interpreting that input.
+- Startup initialization `8229CA58` installs boot update `8229C2C0` and draw
+  `8229C848`. The final boot transition constructs update pointer `822AE9F8`
+  at `8229C630` / `8229C640` and installs the real frontend callbacks. Hook
+  **822AE9F8**; while confirmation is open, skip its original input processing.
+- When the F4 input gate is active, do not poll MnK bindings from the quit hook;
+  F4 may be editing those strings on the UI thread. Require neutral input again
+  after the other overlay releases ownership.
 
 No original disk files, message banks or generated source files are modified.
 The label's guest allocation remains alive with the runtime so rendered batches
@@ -61,12 +77,12 @@ unchanged.
 
 ## Validation
 
-**72 targeted Windows/Wine checks passed**, using the real patched title and
+**75 targeted Windows/Wine checks passed**, using the real patched title and
 runtime. They cover descriptor/ID preservation and idempotence; original native
 navigation reaching the seventh row and wrapping in both directions; ABI
 preservation; every label character and its terminator through the original
 UTF-8 decoder 826EC558; native accept masks and profile transition guards; title-mode,
-fade and in-game exclusions; actual main/title input hooks; real SDK input
+fade and in-game exclusions; actual main/title input hooks, actual Backspace-to-B mapping and native frontend callback-registration instructions; real SDK input
 blockers and dismissal masking; held input/focus safety; real ImGui confirmation
 and cancellation; and one exit request per explicit confirmation.
 
@@ -75,7 +91,7 @@ cancellation reopening a held-B prompt, and virtual D-pad input arriving one
 frame after its physical keyboard arrow. Both pass after the release gate and
 cross-frame direction ownership fixes.
 
-The achievement probe's **280 checks also passed** against the same runtime.
+The achievement probe's **286 checks also passed** against the same runtime.
 The new probe is included in windows_validation_probes and verify-windows.py.
 Game saves, user preferences and original assets aren't test fixtures; checks
 run in isolated output folders. Raw diagnostics remain under ignored out/.

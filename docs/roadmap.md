@@ -8,13 +8,17 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 1. **Klavye tuş simgeleri:** koyu tuş kapakları, turuncu MotoGP detayları ve
    daha okunaklı yazı. Kullanıcı bu görünümü seçti; [uygulama ve Windows testleri](keyboard-prompts.md) tamamlandı. Kullanıcının görsel testi bekleniyor.
 2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
-   MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [280 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
-3. **Acil çıkış menüleri:** ana menüde Quit game; Press Start ekranında geri
-   tuşuyla çıkış onayı uygulandı. [72 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
+   MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [286 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
+3. **Acil çıkış menüleri:** ana menüde QUIT GAME; Press Start ekranında geri
+   tuşuyla çıkış onayı uygulandı. [75 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
 4. **Oyun içinden canlı ayarlar:** F4 menüsü tamamlandı; yalnızca anında uygulanan
    seçenekler var. Yeniden başlatma gerekenler eklenmedi. [336 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
-5. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
-6. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
+5. **Launcher başarımlar sayfası:** mevcut MotoGP tasarımı, 50 orijinal simge,
+   1000 G, canlı kayıt okuma, arama/filtre ve ortak bildirim/ses tercihleri eklendi.
+   [58.070 launcher UI kontrolü](achievements.md) geçti. Önceki Press Start çıkış
+   sorunu, gerçek menü güncelleme kancasına taşınarak düzeltildi; native test bekliyor.
+6. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
+7. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
 
 [Güncel durum ve kanıt sınırları](project-status.md) geçmiş aşama notlarının
 üzerindeki güncel kaynaktır.

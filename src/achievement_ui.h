@@ -3,6 +3,8 @@
 #include <rex/ui/imgui_dialog.h>
 #include <rex/ui/overlay/achievement_notification.h>
 #include <atomic>
+#include "achievement_preferences.h"
+#include <chrono>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -16,11 +18,15 @@ namespace rex { class Runtime; namespace ui { class ImmediateDrawer; class Achie
 namespace motogp::achievements {
 struct Preferences {
   std::atomic<bool> sound{true};
+  std::atomic<bool> popup{true};
+  mutable Options baseline;
+  std::chrono::steady_clock::time_point refreshed{};
   std::atomic<int> volume{25};
   bool turkish = false;
   std::filesystem::path path;
   void Load(const std::filesystem::path& user_root, const std::filesystem::path& executable_root);
   bool Save() const;
+  void Refresh();
 };
 struct MenuState { int filter = 0; char search[160]{}; };
 struct Summary { size_t earned=0, total=0; uint64_t score=0, available_score=0; };

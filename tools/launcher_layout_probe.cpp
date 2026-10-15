@@ -55,14 +55,61 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    // Read the actual original XEX in the background; never execute the title
+    // or touch its unlock save. Use a separate fixture profile for UI actions.
+    const auto profile=app.exe/L"achievement-profile";
+    Put(app.config.table,"user_data_root",Utf8(profile.wstring()));
+    app.ShowPage(5);
+    const auto deadline=GetTickCount64()+20000;
+    while(app.catalog.entries.empty()&&app.catalog_error.empty()&&GetTickCount64()<deadline){
+      app.PollAchievements();MSG msg;while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}Sleep(10);
+    }
+    if(!app.catalog_error.empty())std::cerr<<Utf8(app.catalog_error)<<'\n';
+    CheckUI(!app.catalog.entries.empty()&&!app.catalog_future.valid(),"Actual XEX achievement catalog loads without starting the game");
+    CheckUI(!fs::exists(profile),"Read-only catalog and progress loading never creates a profile or unlock save");
+    uint64_t available=0;size_t icons=0;for(size_t i=0;i<app.catalog.entries.size();++i){const auto& entry=app.catalog.entries[i];available+=entry.info.gamerscore;CheckUI(entry.info.id&&!entry.info.label.empty()&&!entry.info.description.empty(),"Every actual game achievement has its original identity and text");if(app.achievement_icons[i])++icons;}
+    CheckUI(icons==app.catalog.entries.size()&&available>0,"Original game artwork decodes for every achievement");
+    std::cout<<"Catalog: "<<app.catalog.entries.size()<<" achievements, "<<available<<" G, "<<icons<<" original icons\n";
+    const auto unlock_file=profile/L"achievements/434307F0.toml";fs::create_directories(unlock_file.parent_path());
+    const auto first=app.catalog.entries[0].info.id,second=app.catalog.entries[1].info.id;
+    const auto legacy_unlocks="unlocked = ["+std::to_string(first)+", "+std::to_string(second)+", 999999]\n";
+    {std::ofstream f(unlock_file,std::ios::binary);f<<legacy_unlocks;}
+    auto bytes=[&](const fs::path& file){std::ifstream f(file,std::ios::binary);return std::string(std::istreambuf_iterator<char>(f),{});};
+    app.PollAchievements();CheckUI(app.unlocks.size()==3&&app.AchievementEarned(first)&&bytes(unlock_file)==legacy_unlocks,"Legacy unlock save is read without migration or writes");
+    SendMessageW(app.achievement_filter,CB_SETCURSEL,1,0);app.Command(kAchievementFilter,CBN_SELCHANGE);
+    CheckUI(app.achievement_rows.size()==2,"Unlocked list counts only known catalog IDs");
+    SendMessageW(app.achievement_filter,CB_SETCURSEL,2,0);app.Command(kAchievementFilter,CBN_SELCHANGE);
+    CheckUI(app.achievement_rows.size()==app.catalog.entries.size()-2,"Locked filter uses real save state");
+    SendMessageW(app.achievement_filter,CB_SETCURSEL,0,0);SetWindowTextW(app.achievement_search,Wide(app.catalog.entries[0].info.label).c_str());app.FilterAchievements();
+    CheckUI(!app.achievement_rows.empty()&&app.achievement_rows[0]==0,"Search finds original achievement labels");
+    SetWindowTextW(app.achievement_search,L"no-such-achievement-fixture-98765");app.FilterAchievements();CheckUI(app.achievement_rows.empty(),"Search with no match has an empty state");SetWindowTextW(app.achievement_search,L"");app.FilterAchievements();
+    const auto modern="[unlocked."+std::to_string(first)+"]\nfiletime = 123456789\n";
+    {std::ofstream f(unlock_file,std::ios::binary);f<<modern;}app.PollAchievements();
+    CheckUI(app.unlocks.size()==1&&app.unlocks.at(first)==123456789&&bytes(unlock_file)==modern,"Timestamped unlocks refresh without changing save bytes");
+    {std::ofstream f(unlock_file,std::ios::binary);f<<"[broken";}app.PollAchievements();CheckUI(app.unlocks_stale&&app.unlocks.size()==1,"Corrupt or in-progress saves preserve last known progress");
+    fs::remove(unlock_file);bool missing_rejected=false;try{achievements::ReadUnlocks(unlock_file);}catch(const std::exception&){missing_rejected=true;}CheckUI(missing_rejected,"A save disappearing during a read is never reported as an empty valid save");app.PollAchievements();CheckUI(app.unlocks_stale&&app.unlocks.size()==1,"SDK remove/rename save window cannot reset progress");
+    {std::ofstream f(unlock_file,std::ios::binary);f<<legacy_unlocks;}app.PollAchievements();
+    CheckUI(!app.unlocks_stale&&app.unlocks.size()==3,"Save retry recovers from transient failures");
+    const auto prefs_file=profile/L"achievement-ui.toml";{std::ofstream f(prefs_file);f<<"sound_volume=17\nfuture_setting='keep me'\n";}
+    app.PollAchievements();app.Command(kAchievementPopup,BN_CLICKED);app.Command(kAchievementSound,BN_CLICKED);
+    auto options=motogp::achievements::ReadOptions(prefs_file);
+    CheckUI(!options.popup&&!options.sound&&options.volume==17,"Actual launcher checkboxes save shared notification preferences without changing volume");
+    CheckUI(toml::parse_file(prefs_file.string())["future_setting"].value_or(std::string{})=="keep me","Shared preference writes preserve unknown keys");
+    app.Running(true);CheckUI(IsWindowEnabled(app.achievement_list)&&IsWindowEnabled(app.achievement_popup)&&!IsWindowEnabled(app.path),"Achievements remain usable while game settings are locked");app.Running(false);
+    SendMessageW(app.achievement_filter,CB_SETCURSEL,1,0);app.FilterAchievements();
+    const auto profile2=app.exe/L"second-achievement-profile";Put(app.config.table,"user_data_root",Utf8(profile2.wstring()));app.PollAchievements();
+    CheckUI(app.unlocks_known&&!app.unlocks_stale&&app.unlocks.empty()&&app.achievement_rows.empty(),"Changing profile never leaks another profile's progress or filtered list");Put(app.config.table,"user_data_root",Utf8(profile.wstring()));app.PollAchievements();
+    SendMessageW(app.achievement_filter,CB_SETCURSEL,0,0);app.FilterAchievements();
+    app.ShowPage(5);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+    SendMessageW(app.achievement_list,WM_KEYDOWN,VK_END,0);UpdateWindow(app.achievement_list);CheckUI(app.achievement_scroll>0,"Keyboard scroll reaches the final achievements");SendMessageW(app.achievement_list,WM_KEYDOWN,VK_HOME,0);UpdateWindow(app.achievement_list);CheckUI(app.achievement_scroll==0,"Keyboard scroll returns to the first achievement");
     for(double scale:{.75,1.,1.25,1.5}){
       app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight)};AdjustWindowRectEx(&size,style,FALSE,0);
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;
-        for(int page=0;page<5;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+        for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           if(scale==1. || (scale==.75 && tr && page==2)){
-            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":L"advanced";
+            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);
           }
         }

@@ -3,6 +3,7 @@
 #include <rex/runtime.h>
 #include <rex/kernel/init.h>
 #include <rex/input/input_system.h>
+#include <rex/input/mnk/mnk_input_driver.h>
 #include <rex/ui/imgui_drawer.h>
 #include <rex/ui/window.h>
 #include <rex/ui/windowed_app_context.h>
@@ -18,7 +19,7 @@ using rex::X_RESULT;using rex::X_STATUS;
 REX_EXTERN(sub_8227F318);
 REX_EXTERN(sub_826EC558);
 REX_EXTERN(sub_821FCCA8);
-REX_EXTERN(sub_8229C2C0);
+REX_EXTERN(sub_822AE9F8);
 namespace {
 int checks=0;
 void Check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);++checks;}
@@ -35,18 +36,18 @@ class UIContext final:public rex::ui::WindowedAppContext {void NotifyUILoopOfPen
 }
 int main(int argc,char** argv){try{
  Check(argc==3,"Usage: quit_menu_probe GAME_ROOT FONT_TTF");
- Driver* pad=nullptr;
+ Driver* pad=nullptr;rex::input::mnk::MnkInputDriver* keyboard=nullptr;
  rex::Runtime runtime(std::filesystem::canonical(argv[1]));rex::RuntimeConfig config{.kernel_init=rex::kernel::InitializeKernel,.tool_mode=true};
- config.input_factory=[&](bool){auto input=std::make_unique<InputSystem>(nullptr);auto driver=std::make_unique<Driver>();pad=driver.get();input->AddDriver(std::move(driver));input->SetDeviceAssignment(std::make_unique<SlotAssignment>());return input;};
+ config.input_factory=[&](bool){auto input=std::make_unique<InputSystem>(nullptr);auto driver=std::make_unique<Driver>();pad=driver.get();input->AddDriver(std::move(driver));auto mnk=std::make_unique<rex::input::mnk::MnkInputDriver>(nullptr,0);keyboard=mnk.get();Check(keyboard->Setup()==X_STATUS_SUCCESS,"Actual MnK driver initializes");input->AddDriver(std::move(mnk));input->SetDeviceAssignment(std::make_unique<SlotAssignment>());return input;};
  Check(!XFAILED(runtime.Setup(PPCImageConfig,std::move(config)))&&!XFAILED(runtime.LoadXexImage("game:\\default.xex")),"Load actual patched game and input system");
  auto* memory=runtime.memory();auto* base=runtime.virtual_membase();const auto allocation=memory->SystemHeapAlloc(0x4000);Check(allocation!=0,"Fixture allocation");
  std::memset(base+allocation,0,0x4000);
  const auto write=[&](uint32_t a,uint32_t v){rex::memory::store_and_swap<uint32_t>(base+a,v);};const auto read=[&](uint32_t a){return rex::memory::load_and_swap<uint32_t>(base+a);};
  motogp::quit::Initialize(&runtime);motogp::quit::SetFocused(true);motogp::quit::PollFrontendInput();const auto label=motogp::quit::LabelAddress();
  const auto iterator=allocation+0x700;write(iterator,label);
- for(unsigned char expected:std::string("Quit game\0",10)){
+ for(unsigned char expected:std::string("QUIT GAME\0",10)){
    PPCContext decode{};decode.r3.u32=iterator;sub_826EC558(decode,base);
-   Check(decode.r3.u32==expected,"Actual native text decoder reads every Quit game codepoint");
+   Check(decode.r3.u32==expected,"Actual native text decoder reads every QUIT GAME codepoint");
  }
  Check(read(iterator)==label+10,"Native decoder advances exactly through UTF8 label and terminator");
  const auto menu=allocation,screen=allocation+0x500,stack=allocation+0x3000;
@@ -92,10 +93,16 @@ int main(int argc,char** argv){try{
  Check(!motogp::quit::ObserveTitleDraw(base,1,.5),"Startup fade cannot arm title exit");
  write(mode_value,3);Check(!motogp::quit::ObserveTitleDraw(base,1,1.0),"Other game modes never arm title exit");write(mode_value,15);
  Check(motogp::quit::ObserveTitleDraw(base,1,1.0),"Visible title prompt arms native Back path");
- pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;ctx.r3.u64=0xBEEF;sub_8229C2C0(ctx,base);Check(motogp::quit::Pending(),"Actual title-update hook opens confirmation on fresh B");
+ rex::cvar::SetFlagByName("mnk_mode","true");rex::cvar::SetFlagByName("keybind_b","Quote,Backspace");pad->state.gamepad.buttons=0;
+ rex::ui::KeyEvent backspace(nullptr,rex::ui::VirtualKey::kBack,1,false,false,false,false,false);keyboard->OnKeyDown(backspace);
+ input->GetStateForUI(0,&state);Check(state.gamepad.buttons&X_INPUT_GAMEPAD_B,"Actual Backspace binding reaches the same title B input channel");
+
+ Check(read(0x8229C630)==0x3D00822B && read(0x8229C640)==0x3868E9F8,"Original boot transition installs the live frontend update callback");
+ pad->state.gamepad.buttons=X_INPUT_GAMEPAD_B;ctx.r3.u64=0xBEEF;sub_822AE9F8(ctx,base);Check(motogp::quit::Pending(),"Actual title-update hook opens confirmation on fresh B");
  frame();frame();Check(motogp::quit::Pending()&&exits==0,"Held title B cannot immediately dismiss confirmation");
  io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!motogp::quit::Pending()&&exits==0,"Title cancellation returns without exit");io.AddKeyEvent(ImGuiKey_Escape,false);frame();
  motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"UI-first dismissal cannot reopen title prompt before B release");input->GetState(0,&state);Check(!(state.gamepad.buttons&X_INPUT_GAMEPAD_B),"Title dismissal B stays masked for guest");
+ keyboard->OnKeyUp(backspace);
  write(mode_ptr,saved_ptr);write(mode_value,saved_value);
  motogp::quit::SetFocused(false);motogp::quit::Request();Check(!motogp::quit::Pending(),"Unfocused window cannot request exit");
  motogp::quit::SetFocused(true);pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"Held input on focus regain cannot open confirmation");

@@ -38,25 +38,24 @@ std::string Fold(std::string value) { for(auto& c:value) if(c>='A'&&c<='Z') c+=3
 }
 void Preferences::Load(const std::filesystem::path& user_root,const std::filesystem::path& executable_root) {
   path=user_root/"achievement-ui.toml";
-  try { if(std::filesystem::is_regular_file(path)) {auto t=toml::parse_file(path.string()); sound=t["sound_enabled"].value_or(true); volume=std::clamp(t["sound_volume"].value_or(25),0,100);} }
+  try {baseline=ReadOptions(path);popup=baseline.popup;sound=baseline.sound;volume=baseline.volume;}
   catch(const std::exception& e) {REXLOG_WARN("Could not load achievement preferences: {}",e.what());}
   try {const auto file=executable_root/"motogp0910-launcher.toml"; if(std::filesystem::is_regular_file(file)) turkish=toml::parse_file(file.string())["language"].value_or(std::string("en"))=="tr";}
   catch(const std::exception&) {turkish=false;}
 }
 bool Preferences::Save() const {
-  if(path.empty()) return true;
-  try {
-    std::filesystem::create_directories(path.parent_path());
-    auto temp=path;temp+=".tmp";
-    std::ofstream file(temp,std::ios::trunc); file<<"sound_enabled = "<<(sound.load()?"true":"false")<<"\nsound_volume = "<<volume.load()<<'\n'; file.close();
-    if(!file) return false;
-#ifdef _WIN32
-    if(!MoveFileExW(temp.c_str(),path.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)) return false;
-#else
-    std::filesystem::rename(temp,path);
-#endif
-    return true;
-  } catch(const std::exception& e) {REXLOG_WARN("Could not save achievement preferences: {}",e.what()); return false;}
+  const Options now{popup.load(),sound.load(),volume.load()};
+  if(!WriteOptions(path,baseline,now))return false;
+  baseline=now;return true;
+}
+void Preferences::Refresh() {
+  const auto now=std::chrono::steady_clock::now();
+  if(path.empty()||now-refreshed<std::chrono::milliseconds(500))return;
+  refreshed=now;
+  // Don't replace a slider edit before its deactivation/save event.
+  if(Options{popup.load(),sound.load(),volume.load()}!=baseline)return;
+  try {baseline=ReadOptions(path);popup=baseline.popup;sound=baseline.sound;volume=baseline.volume;}
+  catch(const std::exception&) {} // A transient write failure preserves the last good preferences.
 }
 Summary Progress(const rex::system::AchievementManager& manager) {
   Summary out;auto list=manager.ListAchievements();out.total=list.size();
@@ -69,6 +68,7 @@ bool Matches(const rex::system::AchievementInfo& info,bool unlocked,const MenuSt
   return search.empty() || Fold(info.label).find(search)!=std::string::npos || Fold(unlocked?info.description:info.unachieved_description.empty()?info.description:info.unachieved_description).find(search)!=std::string::npos;
 }
 bool DrawMenu(rex::system::AchievementManager& manager,MenuState& state,Preferences& preferences,ImFont* font,rex::ui::AchievementIconCache* icons,ImFont* heading) {
+  preferences.Refresh();
   Theme theme(font); const bool tr=preferences.turkish; const auto& io=ImGui::GetIO();
   ImVec2 size(std::min(900.f,std::max(280.f,io.DisplaySize.x-40)),std::min(680.f,std::max(260.f,io.DisplaySize.y-40)));
   ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x*.5f,io.DisplaySize.y*.5f),ImGuiCond_Always,ImVec2(.5f,.5f));
@@ -113,6 +113,8 @@ bool DrawMenu(rex::system::AchievementManager& manager,MenuState& state,Preferen
     if(!shown) {ImGui::Spacing(); ImGui::TextDisabled("%s",Tr(tr,summary.total?"No achievements match this filter.":"Achievement catalog is not available yet.",summary.total?"Bu filtreye uygun başarım bulunamadı.":"Başarım listesi henüz hazır değil."));}
     ImGui::EndChild();
     ImGui::Separator();
+    bool popup=preferences.popup.load(); if(ImGui::Checkbox(Tr(tr,"Pop-up in game","Oyun içi bildirim"),&popup)) {preferences.popup=popup; preferences.Save();}
+    ImGui::SameLine();
     bool sound=preferences.sound.load(); if(ImGui::Checkbox(Tr(tr,"Unlock sound","Başarım sesi"),&sound)) {preferences.sound=sound; preferences.Save();}
     ImGui::SameLine(); int volume=preferences.volume.load(); ImGui::SetNextItemWidth(std::max(90.f,std::min(170.f,size.x*.22f)));
     if(ImGui::SliderInt("##achievement_volume",&volume,0,100,"%d%%")) preferences.volume=volume;
@@ -172,8 +174,9 @@ class Notifications final:public rex::ui::AchievementNotificationDialog {
   void Push(const rex::system::AchievementEvent& event) override {queue_.Push(event);}
  protected:
   void OnDraw(ImGuiIO& io) override {
+    prefs_->Refresh();
     const double now=std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
-    if(const auto toast=queue_.Next(now,!io.AppFocusLost)) {if(toast->play_sound) sound_.Play();DrawToast(toast->event,toast->alpha,prefs_->turkish,font_,&icons_);}
+    if(const auto toast=queue_.Next(now,!io.AppFocusLost)) {if(toast->play_sound) sound_.Play();if(prefs_->popup.load())DrawToast(toast->event,toast->alpha,prefs_->turkish,font_,&icons_);}
   }
  private:
   ToastQueue queue_;ImFont* font_;std::shared_ptr<Preferences> prefs_;rex::ui::AchievementIconCache icons_;Sound sound_;

@@ -26,8 +26,8 @@ Don't publish original game data, personal logs or preview screenshots.
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
 | Live settings | F4 MotoGP UI, 40 live controls, safe launcher persistence; 336 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
-| Quit menu | Native seventh menu entry, startup Back confirmation, 72 Windows/Wine checks | Native appearance and save/exit playthrough pending |
-| Achievements | Custom F7 list, toast and soft sound; 280 actual-runtime Windows/Wine checks | Native GPU appearance and listening check pending |
+| Quit menu | Uppercase native QUIT GAME entry; Press Start hook moved from boot movies to actual frontend update; 75 Windows/Wine checks, including real Backspace mapping and callback registration | Repaired native Press Start path and final menu appearance await user verification. See quit-menu.md. |
+| Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 58,070 actual launcher UI checks | EN/TR launcher previews inspected; native game GPU appearance and listening check pending |
 | FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
 | Ultrawide | Experimental horizontal-plus projection and centered HUD | Full Windows camera/cutscene/culling coverage unverified |
 | Performance | Reduced avoidable queries/logging/locking; synthetic path checks | No measured native game FPS improvement |
@@ -37,12 +37,13 @@ Don't publish original game data, personal logs or preview screenshots.
 
 1. Keyboard prompt redesign delivered separately; visual review pending.
 2. Achievement UI, notification and quiet sound completed; Windows ZIP ready.
-3. Urgent quit menus completed: actual main-menu Quit game and Press Start
-   Back confirmation; [72 targeted checks](quit-menu.md) passed. Native visual
-   and save/exit checks remain pending.
+3. Quit menus follow-up implemented in the launcher achievement update: uppercase
+   `QUIT GAME`, corrected live frontend hook for Press Start Back/B; [75 targeted checks](quit-menu.md).
 4. In-game live settings completed: only immediate controls appear; no restart-only section. [Scope and 336 targeted checks](in-game-settings.md).
-5. Launcher Controls simplification: ask the user for details before designing.
-6. Final launcher redesign: ask the user for details before designing.
+5. Launcher achievement page completed, retaining the existing MotoGP design.
+   [Read-only save paths, original catalog and shared notification options](achievements.md).
+6. Launcher Controls simplification: ask the user for details before designing.
+7. Final launcher redesign: ask the user for details before designing.
 
 The FPS/physics investigation was explicitly cancelled and reverted. Don't
 resume speculative simulation or handling changes. Frame generation is excluded

@@ -11,7 +11,7 @@
 
 REX_EXTERN(__imp__sub_821FC650);
 REX_EXTERN(__imp__sub_821FCCA8);
-REX_EXTERN(__imp__sub_8229C2C0);
+REX_EXTERN(__imp__sub_822AE9F8);
 REX_EXTERN(__imp__sub_8229C178);
 
 namespace motogp::quit {
@@ -40,6 +40,9 @@ void SynchronizeBlocker() {
   }
 }
 void Poll() {
+  // F4 may be editing MnK bindings on the UI thread. Its gate also keeps
+  // held dismissal inputs from becoming a new quit request.
+  if(auto check=other_menu.load(std::memory_order_acquire);check&&check()){buttons=0;input_armed=false;return;}
   uint16_t merged=0;
   auto* system=input.load(std::memory_order_acquire);
   if(system && focused.load(std::memory_order_acquire))for(uint32_t user=0;user<4;++user){
@@ -104,7 +107,7 @@ void Initialize(rex::Runtime* runtime) {
   input=static_cast<rex::input::InputSystem*>(runtime->input_system());
   const auto address=runtime->memory()->SystemHeapAlloc(32);
   if(!address)throw std::runtime_error("Could not allocate the PC quit menu label");
-  label_address=address;constexpr char label[]="Quit game";
+  label_address=address;constexpr char label[]="QUIT GAME";
   // The title's 826EC558 decoder consumes UTF-8 bytes, not Xbox WCHAR data.
   std::memcpy(runtime->virtual_membase()+address,label,sizeof(label));
   pending=false;buttons=0;title_serial=0;title_consumed=0;held_blocker=false;back_was_down=false;
@@ -205,7 +208,9 @@ REX_HOOK_RAW(sub_8229C178) {
   __imp__sub_8229C178(ctx,base);
   motogp::quit::ObserveTitleDraw(base,startup,alpha);
 }
-REX_HOOK_RAW(sub_8229C2C0) {
+// The live frontend callback, installed when boot movies finish. 8229C2C0
+// only runs the preceding boot sequence and cannot see Press Start inputs.
+REX_HOOK_RAW(sub_822AE9F8) {
   using namespace motogp::quit;
   PollFrontendInput();
   const bool back=(buttons.load()&rex::input::X_INPUT_GAMEPAD_B)!=0;
@@ -213,5 +218,5 @@ REX_HOOK_RAW(sub_8229C2C0) {
   if(!Pending() && serial!=title_consumed && IsTitleMode(base) && back&&!back_was_down){Request();SynchronizeBlocker();}
   title_consumed=serial;back_was_down=back;
   if(Pending())return;
-  __imp__sub_8229C2C0(ctx,base);
+  __imp__sub_822AE9F8(ctx,base);
 }

@@ -1,5 +1,9 @@
 #include "core.h"
 #include "hardware.h"
+#include "achievements.h"
+#include "../achievement_preferences.h"
+#include <shlwapi.h>
+#include <future>
 #include "ui_ids.h"
 #include "../window_icons.h"
 #include <commctrl.h>
@@ -37,7 +41,7 @@ struct App {
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
-  std::array<HWND,5> navigation{};
+  std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
   HWND crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
@@ -46,7 +50,7 @@ struct App {
   struct Placement {HWND control;int x,y,w,h;};
   std::vector<Label> labels;
   std::vector<Placement> placements;
-  std::array<std::vector<HWND>,5> pages;
+  std::array<std::vector<HWND>,6> pages;
   std::map<HWND,bool> checks;
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
@@ -60,7 +64,8 @@ struct App {
   HANDLE process{};
   double scale=1;
   std::wstring status_en,status_tr;
-  ~App(){if(process)CloseHandle(process);DeleteFonts();DeleteObject(background);DeleteObject(card);DeleteObject(field);}
+  #include "achievements_page.inc"
+  ~App(){if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();DeleteObject(background);DeleteObject(card);DeleteObject(field);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return turkish?tr:en;}
   int S(int value)const{return static_cast<int>(value*scale+0.5);}
   void DeleteFonts(){for(auto f:{font,heading,small_font,bold,logo})if(f)DeleteObject(f);}
@@ -133,8 +138,8 @@ struct App {
   }
   void ShowPage(int page){
     CancelCapture();current_page=page;
-    for(int i=0;i<5;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
-    Localize();InvalidateRect(window,nullptr,FALSE);
+    for(int i=0;i<6;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
+    Localize();if(page==5){if(!catalog_error.empty())catalog_key.clear();SetTimer(window,2,500,nullptr);PollAchievements();}else if(!catalog_future.valid())KillTimer(window,2);InvalidateRect(window,nullptr,FALSE);
   }
   void UpdateSharpness(){
     const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
@@ -173,12 +178,13 @@ struct App {
   void Localize(){
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
-    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):T(L"Advanced",L"Gelişmiş"));
+    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):current_page==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
     SetWindowTextW(subtitle,current_page==0?T(L"Display, detail and upscaling.",L"Görüntü, detay ve ölçekleme."):
-        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."));
+        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):current_page==4?T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."):T(L"Your milestones. Every race counts.",L"Her yarış, yeni bir hedef."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<5;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):T(L"Advanced",L"Gelişmiş"));
+    for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
+    LocalizeAchievements();
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Letterbox",L"Siyah kenarlar"));
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
@@ -315,7 +321,7 @@ struct App {
   void BuildControls(){
     CreateFonts();title=Control(L"STATIC",L"",0,242,28,610,46);SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     subtitle=Control(L"STATIC",L"",0,244,80,590,24);
-    for(int i=0;i<5;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,std::array{268,372,424,216,320}[i],170,42,kNavGraphics+i);
+    for(int i=0;i<6;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,20,std::array{268,372,424,216,320,476}[i],170,42,kNavGraphics+i);
     folder_label=PageControl(3,L"STATIC",L"",0,260,130,700,22);SendMessageW(folder_label,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     path=PageControl(3,L"EDIT",ResolveGameRoot(exe,config.table).c_str(),WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,260,160,658,28,kPath);SendMessageW(path,EM_SETLIMITTEXT,32760,0);
     browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,932,158,138,32,kBrowse);
@@ -388,6 +394,7 @@ struct App {
       binding_buttons[i]=PageControl(2,L"BUTTON",L"…",WS_TABSTOP|BS_PUSHBUTTON,x+350,y,24,25,kCaptureBase+i);
     }
     LabelControl(2,L"Type a key or use … to capture. Right-click a field to unbind or reset. Esc cancels capture.",L"Tuşu yaz veya … ile yakala. Sağ tık: tuşu kaldır / sıfırla. Esc: yakalamayı iptal et.",242,736,846,22);
+    BuildAchievements();
     status=Control(L"STATIC",L"",0,242,765,846,32);SendMessageW(status,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,242,806,158,38,kSave);
     defaults=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,410,806,156,38,kDefaults);
@@ -454,6 +461,7 @@ struct App {
     else if(current_page==0){box(242,118,410,614);box(678,118,410,614);}
     else if(current_page==4){box(242,118,410,414);box(678,118,410,414);box(242,558,846,124);}
     else if(current_page==1)box(242,118,846,368);
+    else if(current_page==5){box(242,118,846,154);box(242,286,846,446);PaintAchievementSummary(dc);}
     else{box(242,118,846,72);box(242,212,410,410);box(678,212,410,410);}
     {Gdiplus::Graphics g(dc);g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);g.ScaleTransform(static_cast<float>(scale),static_cast<float>(scale));
       Gdiplus::GraphicsPath red;red.AddBezier(0.f,854.f,194.f,828.f,72.f,683.f,210.f,573.f);red.AddLine(210.f,573.f,210.f,636.f);red.AddBezier(210.f,636.f,144.f,726.f,195.f,828.f,28.f,860.f);red.CloseFigure();
@@ -466,7 +474,7 @@ struct App {
     SetTextColor(dc,kAccent);r={S(24),S(78),S(197),S(120)};DrawTextW(dc,L"09/10",-1,&r,DT_LEFT|DT_SINGLELINE);
     SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(25),S(138),S(197),S(157)};DrawTextW(dc,T(L"PC RECOMPILATION",L"PC YENİDEN DERLEME"),-1,&r,DT_LEFT|DT_SINGLELINE);
     r={S(26),S(184),S(197),S(204)};DrawTextW(dc,T(L"SETTINGS",L"AYARLAR"),-1,&r,DT_LEFT|DT_SINGLELINE);
-    r={S(25),S(493),S(185),S(547)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
+    r={S(25),S(532),S(185),S(576)};DrawTextW(dc,T(L"Make it yours.\nThen take the grid.",L"Kendine göre ayarla.\nSonra piste çık."),-1,&r,DT_LEFT);
     BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){
@@ -562,13 +570,15 @@ struct App {
   void Running(bool value) {
     CancelCapture();
     for(auto control:{path,browse,save,defaults,play}) EnableWindow(control,!value);
-    for(auto& page:pages) for(auto control:page) EnableWindow(control,!value);
+    for(size_t i=0;i<pages.size();++i) for(auto control:pages[i]) EnableWindow(control,i==5||!value);
     Localize();
   }
   void Command(int id,int event){
     try{
       if(id>=kBindingBase && id<kBindingBase+static_cast<int>(kBindings.size()) && event==EN_CHANGE && !filling_binding){
         edited_bindings[id-kBindingBase]=Utf8(Text(binding_fields[id-kBindingBase]));
+      }else if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
+      }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
       }else if(id==kLanguage && event==CBN_SELCHANGE){
         turkish=SendMessageW(language,CB_GETCURSEL,0,0)==1;Localize();Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
@@ -576,8 +586,8 @@ struct App {
         SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==2?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
-        auto c=GetDlgItem(window,id);if(checks.contains(c)){SetCheck(c,!Checked(c));return;}
-        if(id>=kNavGraphics && id<=kNavAdvanced){ShowPage(id-kNavGraphics);return;}
+        auto c=GetDlgItem(window,id);if(checks.contains(c)){if(id==kAchievementPopup||id==kAchievementSound){SaveAchievementOption(id);return;}SetCheck(c,!Checked(c));return;}
+        if(id>=kNavGraphics && id<=kNavAchievements){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");
@@ -612,7 +622,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_CREATE:try{app->BuildControls();}catch(const std::exception& e){app->ErrorBox(e);return -1;}return 0;
     case WM_COMMAND:app->Command(LOWORD(wparam),HIWORD(wparam));return 0;
     case WM_CONTEXTMENU:app->BindingMenu(reinterpret_cast<HWND>(wparam),{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});return 0;
-    case WM_TIMER:app->Poll();return 0;
+    case WM_TIMER:if(wparam==2)app->PollAchievements();else app->Poll();return 0;
     case WM_DRAWITEM:{auto& draw=*reinterpret_cast<DRAWITEMSTRUCT*>(lparam);if(draw.CtlType==ODT_BUTTON)app->DrawButton(draw);else if(draw.CtlType==ODT_COMBOBOX)app->DrawCombo(draw);return TRUE;}
     case WM_MEASUREITEM:reinterpret_cast<MEASUREITEMSTRUCT*>(lparam)->itemHeight=app->S(22);return TRUE;
     case WM_NOTIFY:{auto* n=reinterpret_cast<NMHDR*>(lparam);if(n->code==NM_CUSTOMDRAW && (n->hwndFrom==app->sharpness || n->hwndFrom==app->volume))return app->DrawSlider(*reinterpret_cast<NMCUSTOMDRAW*>(lparam));return 0;}

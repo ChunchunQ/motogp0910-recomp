@@ -50,6 +50,18 @@ int main(int argc,char** argv) {try {
   loaded.Load(out,out);Check(loaded.volume==100,"Invalid volume clamps safely");
   {std::ofstream t(out/"motogp0910-launcher.toml");t<<"language = 'tr'\n";}
   loaded.Load(out,out);Check(loaded.turkish,"Launcher language reused");
+  { // Two independent UI processes edit different fields from a stale baseline.
+    const auto file=out/"shared-preferences.toml";
+    {std::ofstream f(file);f<<"future_setting='preserve'\nsound_volume=25\n";}
+    const auto old=ReadOptions(file);auto launcher=old,overlay=old;launcher.popup=false;overlay.volume=13;
+    Check(WriteOptions(file,old,launcher)&&WriteOptions(file,old,overlay),"Launcher and overlay merge independent preference changes");
+    auto merged=ReadOptions(file);Check(!merged.popup&&merged.sound&&merged.volume==13,"Stale writer cannot replace other UI's preference changes");
+    Check(toml::parse_file(file.string())["future_setting"].value_or(std::string{})=="preserve","Unknown preference fields survive");
+    Preferences live;live.Load(out,out);auto changed=ReadOptions(live.path),next=changed;next.popup=false;next.sound=false;next.volume=9;
+    Check(WriteOptions(live.path,changed,next),"External launcher change saved");live.Refresh();
+    Check(!live.popup&&!live.sound&&live.volume==9,"Running overlay reloads launcher notification and sound changes");
+    {std::ofstream f(file);f<<"[broken";}Check(!WriteOptions(file,old,launcher),"Corrupt preferences are never silently overwritten");
+  }
   rex::system::AchievementManager manager;manager.SetUnlockSavePath(out/"fixture-unlocks.toml");
   std::vector<AchievementInfo> catalog;
   for(int i=0;i<18;++i) {AchievementInfo info;info.id=i+1;info.gamerscore=10+i*5;info.label=i%2?"Clean racing":"First victory";info.description="Keep pushing. Complete the challenge and make your mark on the circuit.";info.unachieved_description="Complete the race challenge to unlock this achievement.";catalog.push_back(info);}
