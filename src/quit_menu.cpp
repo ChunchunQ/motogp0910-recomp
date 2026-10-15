@@ -15,6 +15,7 @@
 REX_EXTERN(__imp__sub_821FC650);
 REX_EXTERN(__imp__sub_821FC9B0);
 REX_EXTERN(__imp__sub_82288CD0);
+REX_EXTERN(__imp__sub_8227FEE8);
 REX_EXTERN(__imp__sub_82389D10);
 REX_EXTERN(__imp__sub_82379D38);
 REX_EXTERN(__imp__sub_8236E940);
@@ -263,10 +264,18 @@ REX_HOOK_RAW(sub_821FC9B0) {
   struct Restore {uint32_t previous;~Restore(){drawing_main_menu=previous;}} restore{previous};
   __imp__sub_821FC9B0(ctx,base);
 }
+REX_HOOK_RAW(sub_8227FEE8) {
+  using namespace motogp::quit;
+  const bool previous=drawing_quit_label;
+  drawing_quit_label=IsQuitLabelDraw(base,drawing_main_menu,ctx.r3.u32,ctx.r4.u32,ctx.lr);
+  struct Restore {bool previous;~Restore(){drawing_quit_label=previous;}} restore{previous};
+  __imp__sub_8227FEE8(ctx,base);
+}
 REX_HOOK_RAW(sub_82288CD0) {
   using namespace motogp::quit;
   const bool previous=drawing_white_accent;
-  drawing_white_accent=IsWhiteAccentDraw(base,drawing_main_menu,ctx.r31.u32,ctx.r18.u32,ctx.lr);
+  drawing_white_accent=IsWhiteAccentDraw(base,drawing_main_menu,ctx.r31.u32,ctx.r18.u32,ctx.lr)||
+      (drawing_quit_label&&IsWhiteCapPass(ctx.lr));
   struct Restore {bool previous;~Restore(){drawing_white_accent=previous;}} restore{previous};
   __imp__sub_82288CD0(ctx,base);
 }

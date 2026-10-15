@@ -3,7 +3,7 @@ namespace launcher {
 enum ControlId {kPath=101,kBrowse,kSize,kBackend,kFullscreen,kVsync,kKeyboard,kMute,
     kSave,kDefaults,kLogs,kReport,kPlay,kLanguage,kTabs,kRenderResolution,kEffect,
     kSharpness,kAnisotropic,kLetterbox,kDither,kVolume,kCapture,kClearBinding,
-    kResetBinding,kPostEffect,kShaderCache,kMsaa,kAdapter,kPromptStyle,kGameLanguage,kRefreshRate,kFpsLimit,kFsrQuality,kAspect,kShadowDistance,kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kCrashDiagnostics,kEngineBase=150,kNavGraphics=200,kNavAudio,kNavControls,kNavGeneral,kNavAdvanced,kNavAchievements,
+    kResetBinding,kPostEffect,kShaderCache,kMsaa,kAdapter,kPromptStyle,kGameLanguage,kRefreshRate,kFpsLimit,kFsrQuality,kAspect,kShadowDistance,kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kCrashDiagnostics,kAdaptiveTriggers=160,kEngineBase=150,kNavGraphics=200,kNavAudio,kNavControls,kNavGeneral,kNavAdvanced,kNavAchievements,
     kAchievementSearch=220,kAchievementFilter,kAchievementPopup,kAchievementSound,kAchievementList,
     kBindingBase=300,kCaptureBase=400};
 }

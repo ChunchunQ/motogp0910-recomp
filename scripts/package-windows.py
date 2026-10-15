@@ -62,6 +62,7 @@ def main():
     shutil.copy2(ROOT / "docs/controller-prompts.md", STAGE / "controller-prompts-readme.txt")
     shutil.copy2(ROOT / "docs/quit-menu.md", STAGE / "quit-menu-readme.txt")
     shutil.copy2(ROOT / "docs/in-game-settings.md", STAGE / "in-game-settings-readme.txt")
+    shutil.copy2(ROOT / "docs/adaptive-triggers.md", STAGE / "adaptive-triggers-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
@@ -89,10 +90,16 @@ def main():
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
-        "QUIT UPDATE: White QUIT GAME accent preserves original geometry/alpha.\n"
-        "Press Start Back now checks the separate native boot application phase;\n"
-        "the controls-update build still failed on the user device. 98 targeted checks pass;\n"
-        "native Windows recheck is pending. See quit-menu-readme.txt.\n\n"
+        "DUALSENSE (EXPERIMENTAL): Controls > DualSense adaptive triggers...\n"
+        "Separate L2/R2 resistance modes and positions/strength; default off.\n"
+        "F1 > Controls changes and saves the same settings live. Requires native\n"
+        "DualSense / Edge with SDL. 8BitDo / DS3 / DS4 cannot provide resistance.\n"
+        "Software/SDL transport verified; physical DualSense testing pending.\n"
+        "See adaptive-triggers-readme.txt.\n\n"
+        "QUIT UPDATE: The user confirmed Press Start Back opens the exit dialog.\n"
+        "QUIT GAME now recolors its upper blue cap too, preserving brightness\n"
+        "layers, alpha and geometry. Final GPU appearance needs user review.\n"
+        "See quit-menu-readme.txt.\n\n"
         "LIVE SETTINGS: F1 opens the MotoGP settings menu (English/Turkish).\n"
         "Only immediately applied controls appear: audio, FPS/VSync, prompts,\n"
         "upscaling/sharpness, native engine effects and all 25 keyboard mappings.\n"

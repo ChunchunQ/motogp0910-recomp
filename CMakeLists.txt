@@ -43,9 +43,18 @@ add_executable(achievement_ui_probe EXCLUDE_FROM_ALL tools/achievement_ui_probe.
 target_link_libraries(achievement_ui_probe PRIVATE motogp_achievements)
 rexglue_apply_target_settings(achievement_ui_probe)
 
+add_library(motogp_adaptive STATIC src/adaptive_triggers.cpp)
+target_link_libraries(motogp_adaptive PUBLIC rex::runtime)
+rexglue_apply_target_settings(motogp_adaptive)
+if(WIN32)
+    add_executable(adaptive_triggers_probe EXCLUDE_FROM_ALL tools/adaptive_triggers_probe.cpp)
+    target_link_libraries(adaptive_triggers_probe PRIVATE motogp_adaptive bcrypt)
+    rexglue_apply_target_settings(adaptive_triggers_probe)
+endif()
+
 add_library(motogp_settings STATIC src/in_game_settings.cpp)
 target_compile_definitions(motogp_settings PUBLIC REX_HAS_FIDELITYFX_SDK=1)
-target_link_libraries(motogp_settings PUBLIC rex::runtime)
+target_link_libraries(motogp_settings PUBLIC rex::runtime motogp_adaptive)
 rexglue_apply_target_settings(motogp_settings)
 
 # Sources
@@ -247,7 +256,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -257,7 +266,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -302,5 +311,5 @@ if(WIN32 AND TARGET motogp0910_recomp)
         engine_settings_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
-        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe in_game_settings_probe)
+        launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe in_game_settings_probe adaptive_triggers_probe)
 endif()

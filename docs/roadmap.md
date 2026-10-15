@@ -10,7 +10,7 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
    MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [286 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
 3. **Acil çıkış menüleri:** ana menüde QUIT GAME; Press Start ekranında geri
-   tuşuyla çıkış onayı uygulandı. [98 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
+   tuşuyla çıkış onayı uygulandı. [109 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; kullanıcı Press Start’tan çıkışın düzeldiğini doğruladı. Üst beyaz katmanın yeni GPU görünümü bekliyor.
 4. **Oyun içinden canlı ayarlar:** F1 menüsü tamamlandı; yalnızca anında uygulanan
    seçenekler var. Yeniden başlatma gerekenler eklenmedi. [337 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
 5. **Launcher başarımlar sayfası:** mevcut MotoGP tasarımı, 50 orijinal simge,
@@ -179,3 +179,12 @@ new version: 0.0.1.1` satırı bulunuyor. Uygulama bu sürümü kontrol edip di�
 sürümlerde başlatmayı reddediyor. Patch çalışma sırasında uygulanır; orijinal
 stok XEX dosyası değiştirilmez. Bu bilgi, verilen TU'nun uygulandığını gösterir;
 en son yayımlanmış TU olduğu ayrıca araştırılmadı.
+
+## DualSense follow-up — 15 October 2026
+
+Downpour’un SDL kaynakları incelendikten sonra dokuz sağ/sol tetik ayarı launcher
+Controls ve F1 menüsüne eklendi. Varsayılan kapalı ve deneysel; yalnızca yerel
+DualSense / Edge + SDL hedeflenir. 8BitDo’ya efekt gönderilmez. Yazılım ve gerçek
+SDL sanal cihaz taşıması doğrulandı; fiziksel direnç testi için DualSense gerekir.
+[Kaynaklar ve kapsam](adaptive-triggers.md). QUIT GAME’in kalan üst mavi katmanı,
+parlaklık ve alfa geçişleri korunarak beyaz/griye dönüştürüldü.

@@ -1,3 +1,4 @@
+#include "adaptive_triggers.h"
 #include "ultrawide.h"
 // motogp0910 - ReXGlue Recompiled Project
 //
@@ -155,8 +156,9 @@ class Motogp0910App : public rex::ReXApp {
         rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
     motogp::prompts::LoadPS3ControlArtwork(runtime()->memory(),rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-controls.bin");
     motogp::prompts::StartInputObserver(window());
+    motogp::adaptive::Start(window()->HasFocus());
   }
-  void OnWindowFocusChanged(bool focused) override {motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
+  void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
     achievement_preferences_->Load(user_data_root(),rex::filesystem::GetExecutableFolder());
     motogp::quit::SetFocused(window()->HasFocus());
@@ -192,6 +194,7 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    motogp::adaptive::Stop();
     motogp::SetFrameObserver(nullptr);
     motogp::settings::SetGuestGate(nullptr);
     motogp::quit::SetOtherMenuCheck(nullptr);

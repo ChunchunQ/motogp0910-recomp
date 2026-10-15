@@ -3,7 +3,7 @@
 namespace {
 rex::memory::Memory* accent_memory=nullptr;
 thread_local uint32_t drawing_main_menu=0;
-thread_local bool drawing_white_accent=false,binding_white_accent=false;
+thread_local bool drawing_white_accent=false,binding_white_accent=false,drawing_quit_label=false;
 std::mutex accent_mutex;
 std::map<uint32_t,uint32_t> accent_descriptors,accent_materials;
 std::set<uint32_t> white_materials;
@@ -27,6 +27,11 @@ bool IsWhiteAccentDraw(uint8_t* base,uint32_t menu,uint32_t list,uint32_t index,
       (caller==0x8228380C||caller==0x82283868)&&Read(base,list)==menu+kItemsOffset&&
       label_address&&Read(base,menu+kItemsOffset+kQuitIndex*kItemSize+28)==label_address;
 }
+bool IsQuitLabelDraw(uint8_t* base,uint32_t menu,uint32_t array,uint32_t index,uint64_t caller){
+  return menu&&Read(base,menu)==kMainMenuVtable&&array==menu+kItemsOffset&&index==kQuitIndex&&
+      caller==0x82283540&&label_address&&Read(base,array+index*kItemSize+28)==label_address;
+}
+bool IsWhiteCapPass(uint64_t caller){return caller==0x82280334||caller==0x822803A8;}
 uint32_t WhiteAccentDescriptor(uint8_t* base,uint32_t original){
   const std::lock_guard lock(accent_mutex);
   if(!accent_memory||!original)return 0;
@@ -34,9 +39,11 @@ uint32_t WhiteAccentDescriptor(uint8_t* base,uint32_t original){
   rex::graphics::xenos::xe_gpu_texture_fetch_t fetch{};
   for(unsigned i=0;i<6;++i)reinterpret_cast<uint32_t*>(&fetch)[i]=Read(base,original+28+4*i);
   if(fetch.type!=rex::graphics::xenos::FetchConstantType::kTexture)return 0;
-  // RGB=ONE, A=original alpha selector. White preserves the strip's original
-  // transparency without recoloring the shared blue texture or its other users.
-  fetch.swizzle=(fetch.swizzle&0xE00)|5|(5<<3)|(5<<6);
+  // Replicate the original visible blue channel: the blue cap becomes neutral
+  // white/gray while retaining its brightness layers and original alpha.
+  // Shared source pixels and the gray background passes are never modified.
+  const unsigned blue=(fetch.swizzle>>6)&7;
+  fetch.swizzle=(fetch.swizzle&0xE00)|blue|(blue<<3)|(blue<<6);
   const auto copy=accent_memory->SystemHeapAlloc(52);if(!copy)return 0;
   std::memcpy(base+copy,base+original,52);
   for(unsigned i=0;i<6;++i)Write(base,copy+28+4*i,reinterpret_cast<uint32_t*>(&fetch)[i]);

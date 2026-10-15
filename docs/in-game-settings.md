@@ -84,3 +84,14 @@ reload/save of in-game values). Five input-precedence scenarios also passed.
 Changed application/probe sources compiled without warnings. Native Windows
 GPU rendering, listening and gameplay interaction remain to be verified locally;
 CPU planning and ImGui draw/layout checks do not establish shader correctness.
+
+## DualSense resistance profiles — 15 October 2026
+
+Controls adds the same nine adaptive-trigger parameters as the launcher editor.
+They update the native SDL effect service live and save back to the same TOML
+keys. XInput hides these controls because it cannot apply them; switch to SDL
+in the launcher before starting. Default off and experimental. This adds no
+restart-only setting to F1. [Modes, sources and hardware limits](adaptive-triggers.md).
+
+The updated targeted Windows/Wine settings probe passed **345 checks**, including
+all nine trigger values saved/read through the launcher and whole-profile revert.

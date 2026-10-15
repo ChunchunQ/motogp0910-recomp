@@ -24,7 +24,7 @@ PROBES = {
     'display_settings_probe': '', 'button_prompt_input_probe': '',
     'launcher_probe': 'game', 'launcher_layout_probe': 'ui',
     'achievement_ui_probe': 'achievements', 'quit_menu_probe': 'quit',
-    'in_game_settings_probe': 'settings',
+    'in_game_settings_probe': 'settings', 'adaptive_triggers_probe': '',
 }
 
 def main():

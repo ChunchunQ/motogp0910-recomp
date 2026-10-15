@@ -155,6 +155,27 @@ int wmain(int argc,wchar_t** argv){
       const auto args=Arguments(game,actual,config);
       CheckUI(std::find(args.begin(),args.end(),L"--present_effect="+Wide(mode))!=args.end() && std::find(args.begin(),args.end(),L"--present_fsr_quality_mode="+Wide(quality))!=args.end() && std::find(args.begin(),args.end(),L"--aspect_ratio="+Wide(aspect))!=args.end(),"Child receives exact experimental options");
     }
+    {auto initial=app.settings.adaptive;
+      for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
+        auto dialog_font=CreateFontW(-static_cast<int>(15*scale),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
+        struct FontCleanup{HFONT font;~FontCleanup(){DeleteObject(font);}} font_cleanup{dialog_font};
+        AdaptiveDialog dialog(app.window,dialog_font,tr,scale,app.settings.adaptive);auto modal=dialog.Create();
+        CheckUI(modal&&GetDlgItem(modal,100)&&GetDlgItem(modal,110)&&GetDlgItem(modal,120),"DualSense modal creates master and independent right/left controls");
+        if(scale==1.){ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);Screenshot(modal,pictures/(tr?"dualsense-tr.bmp":"dualsense-en.bmp"),true);}
+        RECT client;GetClientRect(modal,&client);
+        for(auto id:{100,110,111,112,113,114,115,116,120,121,122,123,124,125,126,IDOK,IDCANCEL}){
+          RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);
+          CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"DualSense controls fit scaled modal");
+        }
+        SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendDlgItemMessageW(modal,113,TBM_SETPOS,TRUE,8);
+        CheckUI(dialog.Commit()&&app.settings.adaptive.enabled&&app.settings.adaptive.right.strength==8,"Modal commits all trigger controls");
+        SendDlgItemMessageW(modal,111,TBM_SETPOS,TRUE,9);
+        CheckUI(!dialog.Commit()&&app.settings.adaptive.right.start==3,"Invalid interval cannot partially replace pending launcher profile");
+        DestroyWindow(modal);app.settings.adaptive=initial;
+      }
+      AdaptiveDialog dialog(app.window,app.font,false,1,app.settings.adaptive);auto modal=dialog.Create();SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendMessageW(modal,WM_COMMAND,IDCANCEL,0);
+      CheckUI(!dialog.window&&app.settings.adaptive==initial,"Cancel preserves all pending trigger values");
+    }
     app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();

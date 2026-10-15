@@ -56,3 +56,18 @@ inline const MotogpSharedSDLApiV1& Api() {
 MOTOGP_SHARED_SDL_FUNCTIONS(MOTOGP_SDL_WRAPPER)
 #undef MOTOGP_SDL_WRAPPER
 }
+
+// Additive export: keep the exact shared-input V1 table ABI unchanged.
+namespace motogp::shared_sdl {
+#ifdef _WIN32
+using SendEffect=bool(*)(uint32_t,SDL_Gamepad*,const void*,int);
+inline SendEffect EffectSender(){
+  static const auto send=[] {auto module=GetModuleHandleW(L"rexruntime.dll");return module?reinterpret_cast<SendEffect>(GetProcAddress(module,"Motogp_SendGamepadEffect")):nullptr;}();return send;
+}
+inline bool HasGamepadEffects(){return EffectSender()!=nullptr;}
+inline bool SendGamepadEffect(SDL_Gamepad* pad,const void* data,int size){const auto send=EffectSender();return send&&send(1,pad,data,size);}
+#else
+inline bool HasGamepadEffects(){return true;}
+inline bool SendGamepadEffect(SDL_Gamepad* pad,const void* data,int size){return SDL_SendGamepadEffect(pad,data,size);}
+#endif
+}

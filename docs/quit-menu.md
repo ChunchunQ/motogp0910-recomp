@@ -25,22 +25,29 @@ observed title draw before a later Back edge in the same frame.
 The revised probe calls the game's original **821E4EE0** transition function;
 it no longer invents a shared boot/frontend state. **98 targeted Windows/Wine
 checks passed**, including the actual Backspace-to-B path and native boot hook.
-Native Windows confirmation remains pending; the previous build's user failure
-is not counted as a success. Bounded `PC_QUIT_TITLE_DRAW` / `PC_QUIT_TITLE_BACK`
+The user subsequently confirmed on native Windows that pressing Back at Press
+Start now opens the exit confirmation. Existing diagnostic transition/edge
 logs now include the separate boot phase for diagnosis.
 
 ## White QUIT GAME accent
 
-The user chose **white**. Scope the two native strip passes to the added seventh
-main-menu row, keeping the original geometry, animation, alpha and other tiles.
-The type-7 material's diffuse texture uses a separate native fetch descriptor:
-RGB samples constant ONE while alpha retains its original selector. No source
-bitmap, shared blue texture, physical texture data or runtime DLL is modified.
-Queued mesh draws receive a stable private material copy; descriptor/material
-caches are protected across native render threads and owned by guest memory
-until shutdown. `PC_QUIT_WHITE_ACCENT` records first view creation. CPU checks
-verify native material dispatch, row/caller guards and exact fetch preservation
-apart from RGB swizzle; they do not prove final Windows GPU pixels.
+The user chose **white**. The thin stripe was already accepted, but the upper
+blue cap uses a separate label-render path. Scope `8227FEE8` only to main-menu
+array `menu+3C`, row 6, original caller `82283540` and our own label. Within that
+scope, color passes `82280334` / `822803A8` become white; the gray background
+passes `822802FC` / `82280370` remain untouched. The original two thin-strip
+passes keep their existing row/caller guards.
+
+The type-7 material's diffuse texture uses a separate native fetch descriptor.
+All RGB outputs now sample the original visible blue selector, retaining the
+cap's different brightness layers as white/gray; alpha retains its original
+selector. Original pixels, pitch, tiling, geometry, fades and other tiles remain
+unchanged. Queued draws receive stable private material copies. Descriptor and
+material caches are protected across native render threads and owned by guest
+memory until shutdown. `PC_QUIT_WHITE_ACCENT` records first view creation.
+CPU checks cover native dispatch, every row/caller guard, both colored and gray
+cap passes and exact descriptor preservation apart from RGB swizzle. The new
+upper-cap appearance still needs native Windows GPU visual review.
 
 ## Implemented behavior and intended controls
 
@@ -107,7 +114,7 @@ unchanged.
 
 ## Validation
 
-**98 targeted Windows/Wine checks passed**, using the real patched title and
+**109 targeted Windows/Wine checks passed**, using the real patched title and
 runtime. They cover descriptor/ID preservation and idempotence; original native
 navigation reaching the seventh row and wrapping in both directions; ABI
 preservation; every label character and its terminator through the original
@@ -134,5 +141,6 @@ cmake --build --preset win-amd64-release --target quit_menu_probe --parallel 2
 
 These checks don't establish the final appearance of the seven-row game menu
 on a native Windows GPU or a complete user-profile save/exit playthrough.
-Native Windows visual/exit validation remains a local test. Extract the complete
+The user confirmed Press Start exit on native Windows; the new cap recoloring
+still needs local visual review. Extract the complete
 Windows ZIP; preserve the existing game directory, saves and configuration.

@@ -42,10 +42,13 @@ repairs. Generated filenames remain English. Do not commit preview screenshots.
 
 ## In-game access — 15 October 2026
 
-F4 live settings is delivered in the achievement menu's MotoGP theme. Only
+F1 live settings is delivered in the achievement menu's MotoGP theme. Only
 immediate controls appear; the user explicitly rejected a restart-only section.
 Saving updates the shared launcher TOML; the launcher reloads on child exit.
 See [live settings](in-game-settings.md) for the consumer matrix, safe persistence,
 input ownership, SDK keyboard-toggle exclusion and native Windows verification
 limits. Controls redesign and the final launcher redesign remain later stages
 whose UX requirements must be clarified with the user.
+
+DualSense adaptive triggers now have separate launcher/F1 controls; see
+[the researched SDL approach and hardware limits](adaptive-triggers.md).

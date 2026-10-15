@@ -1,6 +1,7 @@
 // Actual Windows DLL, CVar, presenter, input, persistence and ImGui regression.
 #include "motogp0910_init.h"
 #include "../src/in_game_settings.h"
+#include "../src/adaptive_triggers.h"
 #include "../src/audio_settings.h"
 #include "../src/button_prompt_options.h"
 #include "../src/engine_settings_options.h"
@@ -106,6 +107,17 @@ int main(int argc,char** argv){try{
   Check(model->Set("present_fsr_sharpness_reduction","0.8")&&std::abs(planner.GetGuestOutputPaintConfigFromUIThread().GetFsrSharpnessReduction()-.8f)<.001f,"FSR coefficient changes immediately");
   Check(model->Set("present_dither","true")&&planner.GetGuestOutputPaintConfigFromUIThread().GetDither(),"Dither directly applied to presenter");
   auto copy=planner.GetGuestOutputPaintConfigFromUIThread();auto previous=copy.GetEffect();Check(!PatchPaintConfig(copy,"present_effect","bogus")&&copy.GetEffect()==previous,"Invalid paint update does not corrupt config");
+  {Model trigger_model(out/"trigger-settings.toml",&planner);const auto original=motogp::adaptive::ReadProfile();
+    Check(trigger_model.Set("dualsense_adaptive_triggers","true")&&trigger_model.Set("dualsense_rt_strength","8"),"Adaptive trigger enable and strength apply live");
+    Check(!trigger_model.Set("dualsense_rt_start","9")&&!trigger_model.Set("dualsense_rt_mode","vibration")&&!trigger_model.Set("dualsense_lt_strength","9"),"Invalid Weapon intervals, unsupported modes and excessive strength rejected");
+    Check(trigger_model.Set("dualsense_rt_end","9")&&trigger_model.Set("dualsense_rt_start","8"),"Valid separated Weapon interval accepted");
+    Check(trigger_model.Revert()&&motogp::adaptive::ReadProfile()==original&&!trigger_model.Unsaved(),"Revert restores whole profile without invalid intermediate ranges");
+    Check(trigger_model.Set("dualsense_adaptive_triggers","true")&&trigger_model.Set("dualsense_rt_mode","feedback")&&trigger_model.Set("dualsense_rt_start","4")&&trigger_model.Set("dualsense_rt_end","7")&&trigger_model.Set("dualsense_rt_strength","6")&&trigger_model.Set("dualsense_lt_end","5")&&trigger_model.Set("dualsense_lt_start","1")&&trigger_model.Set("dualsense_lt_strength","7")&&trigger_model.Set("dualsense_lt_mode","weapon"),"All nine trigger controls accept independent live values");
+    rex::cvar::SetFlagByName("input_backend","xinput");
+    Check(!motogp::adaptive::LiveAvailable()&&!trigger_model.Set("dualsense_rt_strength","2"),"Live DualSense controls are unavailable under a backend that cannot apply them");rex::cvar::SetFlagByName("input_backend","sdl");
+    const auto changed=motogp::adaptive::ReadProfile();Check(trigger_model.Save()&&launcher::Settings::Load(toml::parse_file((out/"trigger-settings.toml").string())).adaptive==changed,"F1 save writes all nine values for the launcher with correct types");
+    Check(motogp::adaptive::WriteProfile(original),"Restore initial trigger profile without disturbing other live settings");
+  }
   Check(model->Set("keybind_a","Ctrl+K,Space")&&!model->Set("keybind_b","Ctrl+")&&model->Set("keybind_guide",""),"Live binding alternatives and explicit unbind validated");
   for(const auto& b:launcher::kBindings)Check(ValidBinding(b.defaults)==launcher::ValidBinding(b.defaults),"Canonical launcher bindings accepted identically");
   {

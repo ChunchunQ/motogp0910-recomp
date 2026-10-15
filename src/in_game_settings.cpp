@@ -1,4 +1,5 @@
 #include "in_game_settings.h"
+#include "adaptive_triggers.h"
 #include "overlay_theme.h"
 #include "keyboard_binding_specs.h"
 #include <rex/cvar.h>
@@ -73,6 +74,13 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
     {"audio_master_volume","Master volume","Ana ses düzeyi",P::Audio,K::Integer,0,100},
     {"audio_mute","Mute","Sessiz",P::Audio,K::Toggle},
   };
+  s.push_back({"dualsense_adaptive_triggers","DualSense adaptive triggers (Experimental)","DualSense adaptif tetikler (Deneysel)",P::Controls,K::Toggle});
+  for(int side=0;side<2;++side){const std::string key=side?"dualsense_lt_":"dualsense_rt_",en=side?"L2 · ":"R2 · ",tr=side?"L2 · ":"R2 · ";
+    s.push_back({key+"mode",en+"Effect mode",tr+"Efekt modu",P::Controls,K::Choice,0,0,{{"off","Off","Kapalı"},{"feedback","Feedback (constant resistance)","Feedback (sabit direnç)"},{"weapon","Weapon (resistance section)","Weapon (direnç bölgesi)"}}});
+    s.push_back({key+"start",en+"Start position",tr+"Başlangıç konumu",P::Controls,K::Integer,0,9});
+    s.push_back({key+"end",en+"End position (Weapon only)",tr+"Bitiş konumu (yalnızca Weapon)",P::Controls,K::Integer,0,9});
+    s.push_back({key+"strength",en+"Strength (0 = off)",tr+"Güç (0 = kapalı)",P::Controls,K::Integer,0,8});
+  }
   for(const auto& b:launcher::kBindings){
     // UTF-8 UI names come from the SDK-independent canonical binding list.
     std::string en;for(auto* p=b.english;*p;++p)en+=char(*p);
@@ -115,7 +123,7 @@ Model::Model(std::filesystem::path config,rex::ui::Presenter* presenter):path_(s
   for(const auto& s:Catalog())if(Available(s))saved_[s.key]=rex::cvar::GetFlagByName(s.key);
 }
 Model::~Model()=default;
-bool Model::Available(const Spec& s)const{return rex::cvar::GetFlagInfo(s.key)&&(!IsPaint(s.key)||presenter_);}
+bool Model::Available(const Spec& s)const{return rex::cvar::GetFlagInfo(s.key)&&(!IsPaint(s.key)||presenter_)&&(!s.key.starts_with("dualsense_")||adaptive::LiveAvailable());}
 std::string Model::Value(std::string_view key)const{return rex::cvar::GetFlagByName(key);}
 bool Model::Set(std::string_view key,std::string value){
   std::unique_lock<std::mutex> input_lock(InputValueMutex(),std::defer_lock);
@@ -127,6 +135,13 @@ bool Model::Set(std::string_view key,std::string value){
   else if(spec->kind==Kind::Binding)valid=ValidBinding(value);
   else valid=Numeric(value,number)&&number>=spec->minimum&&number<=spec->maximum&&(spec->kind!=Kind::Integer||std::trunc(number)==number);
   if(!valid){error_="Invalid value / Geçersiz değer: "+spec->en;return false;}
+  if(key.starts_with("dualsense_")){
+    auto p=adaptive::ReadProfile();auto& t=key.starts_with("dualsense_rt_")?p.right:p.left;
+    if(key=="dualsense_adaptive_triggers")p.enabled=value=="true";
+    else if(key.ends_with("mode"))t.mode=value;else if(key.ends_with("start"))t.start=static_cast<int>(number);else if(key.ends_with("end"))t.end=static_cast<int>(number);else if(key.ends_with("strength"))t.strength=static_cast<int>(number);
+    if(!p.Valid()){error_="Weapon: end must exceed start / Bitiş başlangıçtan büyük olmalı.";return false;}
+    if(!adaptive::WriteProfile(p)){error_="Could not update DualSense profile.";return false;}error_.clear();return true;
+  }
   if(Value(key)==value){error_.clear();return true;}
   Paint paint;if(IsPaint(key)){paint=presenter_->GetGuestOutputPaintConfigFromUIThread();if(!PatchPaintConfig(paint,key,value)){error_="Unsupported live image setting.";return false;}}
   if(!rex::cvar::SetFlagByName(key,value)){error_="The game rejected this setting: "+spec->en;return false;}
@@ -134,7 +149,19 @@ bool Model::Set(std::string_view key,std::string value){
   error_.clear();return true;
 }
 size_t Model::Unsaved()const{size_t n=0;for(const auto& [key,value]:saved_)n+=Value(key)!=value;return n;}
-bool Model::Revert(){for(const auto& [key,value]:saved_)if(Value(key)!=value&&!Set(key,value))return false;error_.clear();return true;}
+bool Model::Revert(){
+  // Restore the complete trigger profile together: valid old and new Weapon
+  // ranges can have invalid intermediate start/end values in map order.
+  auto p=adaptive::ReadProfile();
+  for(const auto& [key,value]:saved_){
+    if(!key.starts_with("dualsense_")){if(Value(key)!=value&&!Set(key,value))return false;continue;}
+    auto& t=key.starts_with("dualsense_lt_")?p.left:p.right;
+    if(key=="dualsense_adaptive_triggers")p.enabled=value=="true";
+    else if(key.ends_with("mode"))t.mode=value;else if(key.ends_with("start"))t.start=std::stoi(value);else if(key.ends_with("end"))t.end=std::stoi(value);else if(key.ends_with("strength"))t.strength=std::stoi(value);
+  }
+  if(!adaptive::WriteProfile(p)){error_="Could not restore DualSense profile.";return false;}
+  error_.clear();return true;
+}
 bool Model::Save(){
   error_.clear();if(!Unsaved())return true;
   if(path_.empty()||!disk_->load_error.empty()){error_="Cannot save settings: "+disk_->load_error;return false;}
@@ -305,6 +332,11 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
     }
     ImGui::BeginChild("##settings_list",ImVec2(0,-130),ImGuiChildFlags_Borders);
     if(view.page==Page::Controls)ImGui::TextWrapped("%s",Tr(tr,"Click Change key, or edit alternatives separated by commas and press Enter. Right-click Change key to unbind or reset.","Tuş değiştir'e bas veya virgülle ayrılmış alternatifleri düzenleyip Enter'a bas. Kaldırmak / sıfırlamak için Tuş değiştir'e sağ tıkla."));
+    if(view.page==Page::Controls){
+      ImGui::TextWrapped("%s",Tr(tr,"DualSense / Edge + native SDL required; USB or Bluetooth. Static resistance profiles. Physical hardware testing is pending.","DualSense / Edge + yerel SDL gerekir; USB veya Bluetooth. Sabit direnç profilleri. Fiziksel donanım testi henüz yapılmadı."));
+      if(!adaptive::LiveAvailable())ImGui::TextWrapped("%s",Tr(tr,"Select the SDL controller backend in the launcher to enable live DualSense controls.","Canlı DualSense ayarları için launcher’dan SDL kontrolcü arka ucunu seç."));
+      ImGui::TextWrapped("%s",adaptive::Status(tr).c_str());ImGui::Separator();
+    }
     if(view.page==Page::Graphics&&(model.Value("present_effect")=="fsr2"||model.Value("present_effect")=="fsr3")){
       ImGui::TextWrapped("%s",Tr(tr,"Experimental FSR 2/3: full temporal reconstruction is incomplete. No frame generation or scene render-cost reduction.","Deneysel FSR 2/3: tam zamansal yeniden oluşturma eksik. Kare üretimi veya sahne çizim yükü azalması sağlamaz."));ImGui::Separator();
     }

@@ -51,3 +51,12 @@ extern "C" __declspec(dllexport) int32_t Motogp_ConfigureHostDisplay(
   return 0;
 }
 #endif
+
+#ifdef _WIN32
+// Route effects through the same SDL instance that owns the physical gamepad.
+extern "C" __declspec(dllexport) bool Motogp_SendGamepadEffect(
+    uint32_t version,SDL_Gamepad* pad,const void* data,int size) {
+  if(version!=1||!pad||!data||size!=47)return false;
+  return SDL_SendGamepadEffect(pad,data,size);
+}
+#endif

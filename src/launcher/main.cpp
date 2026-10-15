@@ -1,4 +1,5 @@
 #include "core.h"
+#include "adaptive_triggers_dialog.h"
 #include "hardware.h"
 #include "achievements.h"
 #include "../achievement_preferences.h"
@@ -43,7 +44,7 @@ struct App {
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
   std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -191,6 +192,7 @@ struct App {
     SetWindowTextW(msaa,T(L"Native 2× MSAA",L"Yerel 2× MSAA"));
     SetWindowTextW(shader_cache,T(L"Shader cache",L"Shader önbelleği"));
     SetWindowTextW(dither,T(L"Reduce color banding",L"Renk bantlaşmasını azalt"));
+    SetWindowTextW(adaptive_triggers,T(L"DualSense adaptive triggers (Experimental)…",L"DualSense adaptif tetikler (Deneysel)…"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
     SetWindowTextW(crash_diagnostics,T(L"Extended crash diagnostics",L"Gelişmiş çökme tanılaması"));
     SetWindowTextW(lan_enabled,T(L"Enable LAN (Experimental)",L"LAN’ı etkinleştir (Deneysel)"));
@@ -386,6 +388,7 @@ struct App {
     LabelControl(1,L"Use the in-game options for separate music and effects levels.\nChanges apply the next time you start the game.",L"Müzik ve efektleri ayrı ayarlamak için oyun içi seçenekleri kullan.\nDeğişiklikler oyunu sonraki başlatışında uygulanır.",260,513,798,52);
     LabelControl(2,L"Controller",L"Kontrolcü",260,249,110);backend=combo(2,386,246,356,kBackend);
     keyboard=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,766,246,304,28,kKeyboard);
+    adaptive_triggers=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,260,289,482,32,kAdaptiveTriggers);
     LabelControl(2,L"BUTTONS & MOVEMENT",L"DÜĞMELER VE HAREKET",260,335,374);
     LabelControl(2,L"CAMERA & MENUS",L"KAMERA VE MENÜLER",696,335,374);
     for(size_t i=0;i<kBindings.size();++i){bool right=i>=13;int x=right?696:260,y=365+static_cast<int>(right?i-13:i)*28;
@@ -591,6 +594,7 @@ struct App {
         if(id>=kNavGraphics && id<=kNavAchievements){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
+          case kAdaptiveTriggers:AdaptiveDialog(window,font,turkish,scale,settings.adaptive).Show();break;
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");
             Status(L"Press a key or chord. Escape cancels.",L"Bir tuşa veya tuş birleşimine bas. Escape iptal eder.");break;
           case kClearBinding:SetWindowTextW(binding_fields[binding_index],L"");break;

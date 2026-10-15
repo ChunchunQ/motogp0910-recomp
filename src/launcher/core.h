@@ -13,6 +13,7 @@
 #include "keyboard_bindings.h"
 #include "render_presets.h"
 #include "engine_options.h"
+#include "../adaptive_trigger_config.h"
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -133,6 +134,7 @@ class Config {
   }
 };
 struct Settings {
+  motogp::adaptive::Profile adaptive;
   std::string aspect="auto";
   bool lan_enabled=false;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
@@ -148,6 +150,10 @@ struct Settings {
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
     Settings s;
+    s.adaptive.enabled=Get(t,"dualsense_adaptive_triggers",false);
+    for(int side=0;side<2;++side){auto& p=side?s.adaptive.left:s.adaptive.right;std::string key=side?"dualsense_lt_":"dualsense_rt_";
+      p.mode=Get(t,key+"mode",p.mode);p.start=Get<int64_t>(t,key+"start",p.start);p.end=Get<int64_t>(t,key+"end",p.end);p.strength=Get<int64_t>(t,key+"strength",p.strength);
+    }
     s.lan_enabled=Get(t,"lan_enabled",false);
     s.lan_player_name=Get(t,"lan_player_name",std::string("Player"));
     s.lan_room_name=Get(t,"lan_room_name",std::string("MotoGP room"));
@@ -191,6 +197,7 @@ struct Settings {
     return s;
   }
   void Validate() const {
+    if(!adaptive.Valid())throw Error(L"Invalid DualSense profile. Weapon end must exceed start; positions 0-9, strength 0-8.",L"Geçersiz DualSense profili. Weapon bitişi başlangıçtan büyük olmalı; konumlar 0-9, güç 0-8.");
     const auto ipv4=[](const std::string& value){
       if(value.empty())return true;unsigned parts=0,number=0,digits=0;uint32_t address=0;
       for(char c:value){if(c=='.'){if(!digits || number>255 || ++parts>3)return false;address=(address<<8)|number;number=digits=0;}
@@ -230,6 +237,10 @@ struct Settings {
   }
   void Store(toml::table& t) const {
     Validate();
+    Put(t,"dualsense_adaptive_triggers",adaptive.enabled);
+    for(int side=0;side<2;++side){const auto& p=side?adaptive.left:adaptive.right;std::string key=side?"dualsense_lt_":"dualsense_rt_";
+      Put(t,key+"mode",p.mode);Put(t,key+"start",p.start);Put(t,key+"end",p.end);Put(t,key+"strength",p.strength);
+    }
     Put(t,"lan_enabled",lan_enabled);Put(t,"lan_player_name",lan_player_name);Put(t,"lan_room_name",lan_room_name);
     Put(t,"lan_bind_ip",lan_bind_ip);Put(t,"lan_host_ip",lan_host_ip);
     for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
