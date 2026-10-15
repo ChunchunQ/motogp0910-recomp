@@ -4,43 +4,43 @@ The original main menu now has a seventh **QUIT GAME** entry. The original six
 choices and their ID mapping remain unchanged. The new row uses the title's
 existing menu renderer and navigation; it isn't a floating host button.
 
-## Current repair — boot Press Start path, 15 October 2026
+## Current repair — separate boot and frontend states
 
-The user correctly reported that Back/B still failed after the preceding build.
-The previous probe covered the secondary frontend title, not the real boot
-Press Start path. Native boot draw **8229C848** calls **8229C178** at **8229CA20**
-with **r4=0** (return address **8229CA24**), in mode **11**. The old guard wrongly
-classified flag 0 as in-game and rejected it. The other native call site is the
-secondary frontend title at **822AE948** (return **822AE94C**), flag 1 / mode 15.
+The user confirmed that the controls-update build still failed on Press Start.
+The underlying guard mixed two different native states. Boot initialization
+`8229CA58` passes **11** to **821E4EE0**, which writes the application phase at
+**828DA060**. It does **not** set the frontend property pointed to by **8292710C**
+to 11. The previous probe incorrectly set that unrelated property to 11 and
+therefore missed the failure.
 
-Match these exact callers and modes. The boot path has no alpha>=1 requirement;
-its flag-0 branch does not consume that fade argument. Poll both original boot
-update **8229C2C0** and secondary frontend update **822AE9F8**. A fresh Back edge
-after an observed eligible draw requests the existing confirmation and blocks
-the original title update until dismissal. Unknown callers don't arm exit.
-Initial intro screens without an observed Press Start draw remain unaffected.
+Boot draw **8229C848** calls **8229C178** at **8229CA20**, with **r4=0** (return
+**8229CA24**). Accept this exact caller only while application phase **828DA060**
+is 11. It works even before the frontend property pointer is initialized. The
+secondary frontend title at **822AE948** (return **822AE94C**) still requires
+flag 1, frontend property 15 and full fade. Poll original boot update **8229C2C0**
+and frontend update **822AE9F8**. Unknown callers, other phases, held keys and
+focus changes remain guarded. Neutral update polls no longer consume the last
+observed title draw before a later Back edge in the same frame.
 
-The 78-check probe now includes the real boot call-site instructions, flag-0 /
-mode-11 observation, actual Backspace-to-B mapping, boot hook, held-input and
-cancel behavior. Native Windows retesting remains necessary; do not equate the
-probe with a completed native playthrough. Bounded PC_QUIT_TITLE_DRAW / BACK log
-entries record the actual call site, mode, focus and input arming for diagnosis.
-Confirmation language is loaded before constructing the dialog.
+The revised probe calls the game's original **821E4EE0** transition function;
+it no longer invents a shared boot/frontend state. **98 targeted Windows/Wine
+checks passed**, including the actual Backspace-to-B path and native boot hook.
+Native Windows confirmation remains pending; the previous build's user failure
+is not counted as a success. Bounded `PC_QUIT_TITLE_DRAW` / `PC_QUIT_TITLE_BACK`
+logs now include the separate boot phase for diagnosis.
 
-The blue QUIT GAME accent color remains a **separate pending preference**.
-The user has been asked for a color name/HEX value; do not choose it for them.
-Uppercase QUIT GAME is retained.
+## White QUIT GAME accent
 
-## Previous attempted repair — 15 October 2026
-
-The user reported that Backspace/controller B did not open the initial Press
-Start confirmation. The earlier 72-check probe called the boot update directly,
-so it did not establish which callback actually ran on that screen. That attempt identified **822AE9F8**, installed by the final boot transition,
-as the live frontend update and moved the hook there, assuming **8229C2C0**
-only covered boot movies. That assumption was incomplete: the latter also
-updates the real boot Press Start screen. The current repair above hooks both
-callbacks and checks their actual draw call sites. The new label is **QUIT GAME**.
-The subsequent user report exposed the additional boot-path guard error fixed above.
+The user chose **white**. Scope the two native strip passes to the added seventh
+main-menu row, keeping the original geometry, animation, alpha and other tiles.
+The type-7 material's diffuse texture uses a separate native fetch descriptor:
+RGB samples constant ONE while alpha retains its original selector. No source
+bitmap, shared blue texture, physical texture data or runtime DLL is modified.
+Queued mesh draws receive a stable private material copy; descriptor/material
+caches are protected across native render threads and owned by guest memory
+until shutdown. `PC_QUIT_WHITE_ACCENT` records first view creation. CPU checks
+verify native material dispatch, row/caller guards and exact fetch preservation
+apart from RGB swizzle; they do not prove final Windows GPU pixels.
 
 ## Implemented behavior and intended controls
 
@@ -91,7 +91,8 @@ All addresses are for the enforced TU 0.0.1.1 executable.
   for this exact caller. Flag 0 alone does not identify an in-game overlay;
   the real boot title also uses flag 0, with a different caller and mode.
 - Startup initialization `8229CA58` installs boot update `8229C2C0` and draw
-  `8229C848`. Observe its actual flag-0 call in mode 11 and poll the boot update.
+  `8229C848`. Observe its actual flag-0 call while application phase `828DA060` is 11
+  and poll the boot update; do not compare the frontend property with 11.
   The final boot transition installs secondary update `822AE9F8` at
   `8229C630` / `8229C640`. Both updates share the same fresh-edge/modal gate;
   skip the original active update while confirmation owns input.
@@ -106,7 +107,7 @@ unchanged.
 
 ## Validation
 
-**78 targeted Windows/Wine checks passed**, using the real patched title and
+**98 targeted Windows/Wine checks passed**, using the real patched title and
 runtime. They cover descriptor/ID preservation and idempotence; original native
 navigation reaching the seventh row and wrapping in both directions; ABI
 preservation; every label character and its terminator through the original

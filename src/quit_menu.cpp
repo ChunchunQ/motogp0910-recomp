@@ -2,14 +2,22 @@
 #include <rex/hook.h>
 #include <rex/memory.h>
 #include <rex/runtime.h>
+#include <rex/graphics/xenos.h>
 #include <rex/input/input_system.h>
 #include <imgui.h>
 #include <algorithm>
 #include <array>
 #include <cstring>
 #include <mutex>
+#include <map>
+#include <set>
 
 REX_EXTERN(__imp__sub_821FC650);
+REX_EXTERN(__imp__sub_821FC9B0);
+REX_EXTERN(__imp__sub_82288CD0);
+REX_EXTERN(__imp__sub_82389D10);
+REX_EXTERN(__imp__sub_82379D38);
+REX_EXTERN(__imp__sub_8236E940);
 REX_EXTERN(__imp__sub_821FCCA8);
 REX_EXTERN(__imp__sub_822AE9F8);
 REX_EXTERN(__imp__sub_8229C2C0);
@@ -59,6 +67,7 @@ void Poll() {
   if(focused.load(std::memory_order_acquire)&&merged==0)input_armed.store(true,std::memory_order_release);
 }
 }
+#include "quit_accent.inc"
 bool AppendItem(uint8_t* base,uint32_t menu,uint32_t label) {
   if(!menu||!label||Read(base,menu)!=kMainMenuVtable)return false;
   constexpr std::array<uint32_t,7> ids={2,0,1,3,4,5,0xFFFFFFFF};
@@ -96,10 +105,11 @@ bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha,uint64_t calle
   // r4=0 (not an in-race overlay); the secondary frontend path passes r4=1.
   // Match the caller as well as the mode so arbitrary/in-game calls can't arm.
   const uint32_t trace_bit=caller==0x8229CA24?1:caller==0x822AE94C?2:0;
-  if(trace_bit&&!(title_trace_mask.fetch_or(trace_bit)&trace_bit))REXLOG_INFO("PC_QUIT_TITLE_DRAW mode={} caller=0x{:08X} flag={} alpha={} focused={}",mode,caller,startup,alpha,focused.load());
-  const bool boot=caller==0x8229CA24&&startup==0&&mode==11;
+  if(trace_bit&&!(title_trace_mask.fetch_or(trace_bit)&trace_bit))REXLOG_INFO("PC_QUIT_TITLE_DRAW mode={} caller=0x{:08X} flag={} alpha={} focused={} boot_mode={}",mode,caller,startup,alpha,focused.load(),Read(base,0x828DA060));
+  const auto boot_mode=Read(base,0x828DA060);
+  const bool boot=caller==0x8229CA24&&startup==0&&boot_mode==11;
   const bool frontend=caller==0x822AE94C&&startup==1&&mode==15&&alpha>=1.0;
-  if(boot||frontend){observed_title_mode.store(mode,std::memory_order_relaxed);title_serial.fetch_add(1,std::memory_order_release);}
+  if(boot||frontend){observed_title_mode.store(boot?11:mode,std::memory_order_relaxed);title_serial.fetch_add(1,std::memory_order_release);}
   return boot||frontend;
 }
 void PollFrontendInput(){Poll();SynchronizeBlocker();}
@@ -115,6 +125,7 @@ InputDecision Confirmation::Update(uint16_t current,bool suppress_direction) {
 }
 void Initialize(rex::Runtime* runtime) {
   input=static_cast<rex::input::InputSystem*>(runtime->input_system());
+  ResetAccent(runtime->memory());
   const auto address=runtime->memory()->SystemHeapAlloc(32);
   if(!address)throw std::runtime_error("Could not allocate the PC quit menu label");
   label_address=address;constexpr char label[]="QUIT GAME";
@@ -129,7 +140,7 @@ void SetFocused(bool value){
     focus_epoch.fetch_add(1,std::memory_order_release);
   }
 }
-void Stop(){pending=false;/* The runtime owns the stable guest label allocation. */input=nullptr;label_address=0;}
+void Stop(){ResetAccent(nullptr);pending=false;/* The runtime owns the stable guest label allocation. */input=nullptr;label_address=0;}
 bool Pending(){return pending.load(std::memory_order_acquire);}
 void SetOtherMenuCheck(bool (*check)()){other_menu.store(check,std::memory_order_release);}
 void Request(){if(auto check=other_menu.load(std::memory_order_acquire);check&&check())return;if(focused.load(std::memory_order_acquire)&&input_armed.load(std::memory_order_acquire))pending.store(true,std::memory_order_release);}
@@ -218,25 +229,62 @@ REX_HOOK_RAW(sub_8229C178) {
   __imp__sub_8229C178(ctx,base);
   motogp::quit::ObserveTitleDraw(base,startup,alpha,caller);
 }
-namespace {
-bool PollTitleUpdate(uint8_t* base,uint32_t expected_mode) {
+namespace motogp::quit {
+bool PollTitleInput(uint8_t* base,uint32_t expected_mode) {
   using namespace motogp::quit;
   PollFrontendInput();
   const bool back=(buttons.load()&rex::input::X_INPUT_GAMEPAD_B)!=0;
   const auto serial=title_serial.load(std::memory_order_acquire);
   const auto value=Read(base,0x8292710C);
-  const bool mode_matches=value>=0x82000000&&value<0x84000000&&Read(base,value)==expected_mode;
+  const bool mode_matches=expected_mode==11?Read(base,0x828DA060)==11:
+      value>=0x82000000&&value<0x84000000&&Read(base,value)==expected_mode;
   if(back&&!back_was_down&&serial&&observed_title_mode.load()==expected_mode&&back_trace_count.fetch_add(1)<8)REXLOG_INFO("PC_QUIT_TITLE_BACK mode={} fresh_draw={} focused={} armed={} pending={}",expected_mode,serial!=title_consumed,focused.load(),input_armed.load(),Pending());
   if(!Pending()&&serial!=title_consumed&&observed_title_mode.load()==expected_mode&&mode_matches&&back&&!back_was_down){Request();SynchronizeBlocker();}
-  title_consumed=serial;back_was_down=back;
+  // Several native updates may occur between draws. A neutral poll must not
+  // consume the visible title, otherwise a later Back edge in the same frame
+  // is lost before the next draw can rearm it.
+  if((back&&!back_was_down)||!mode_matches)title_consumed=serial;
+  back_was_down=back;
   return Pending();
 }
 }
 REX_HOOK_RAW(sub_8229C2C0) {
-  if(PollTitleUpdate(base,11))return;
+  if(motogp::quit::PollTitleInput(base,11))return;
   __imp__sub_8229C2C0(ctx,base);
 }
 REX_HOOK_RAW(sub_822AE9F8) {
-  if(PollTitleUpdate(base,15))return;
+  if(motogp::quit::PollTitleInput(base,15))return;
   __imp__sub_822AE9F8(ctx,base);
+}
+
+REX_HOOK_RAW(sub_821FC9B0) {
+  using namespace motogp::quit;
+  const auto previous=drawing_main_menu;drawing_main_menu=ctx.r3.u32;
+  struct Restore {uint32_t previous;~Restore(){drawing_main_menu=previous;}} restore{previous};
+  __imp__sub_821FC9B0(ctx,base);
+}
+REX_HOOK_RAW(sub_82288CD0) {
+  using namespace motogp::quit;
+  const bool previous=drawing_white_accent;
+  drawing_white_accent=IsWhiteAccentDraw(base,drawing_main_menu,ctx.r31.u32,ctx.r18.u32,ctx.lr);
+  struct Restore {bool previous;~Restore(){drawing_white_accent=previous;}} restore{previous};
+  __imp__sub_82288CD0(ctx,base);
+}
+REX_HOOK_RAW(sub_82389D10) {
+  using namespace motogp::quit;
+  if(drawing_white_accent)if(const auto material=WhiteMaterial(base,ctx.r4.u32))ctx.r4.u64=material;
+  __imp__sub_82389D10(ctx,base);
+}
+REX_HOOK_RAW(sub_82379D38) {
+  using namespace motogp::quit;
+  const bool previous=binding_white_accent;
+  binding_white_accent=drawing_white_accent||IsWhiteMaterial(ctx.r4.u32);
+  struct Restore {bool previous;~Restore(){binding_white_accent=previous;}} restore{previous};
+  __imp__sub_82379D38(ctx,base);
+}
+REX_HOOK_RAW(sub_8236E940) {
+  using namespace motogp::quit;
+  if(binding_white_accent&&ctx.r3.u32==15&&ctx.lr==0x82379EA4)
+    if(const auto descriptor=WhiteAccentDescriptor(base,ctx.r4.u32))ctx.r4.u64=descriptor;
+  __imp__sub_8236E940(ctx,base);
 }

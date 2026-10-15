@@ -89,6 +89,10 @@ def main():
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
+        "QUIT UPDATE: White QUIT GAME accent preserves original geometry/alpha.\n"
+        "Press Start Back now checks the separate native boot application phase;\n"
+        "the controls-update build still failed on the user device. 98 targeted checks pass;\n"
+        "native Windows recheck is pending. See quit-menu-readme.txt.\n\n"
         "LIVE SETTINGS: F1 opens the MotoGP settings menu (English/Turkish).\n"
         "Only immediately applied controls appear: audio, FPS/VSync, prompts,\n"
         "upscaling/sharpness, native engine effects and all 25 keyboard mappings.\n"

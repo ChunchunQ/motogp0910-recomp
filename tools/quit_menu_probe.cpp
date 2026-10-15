@@ -1,6 +1,7 @@
 #include "motogp0910_init.h"
 #include "../src/quit_menu.h"
 #include <rex/runtime.h>
+#include <rex/graphics/xenos.h>
 #include <rex/kernel/init.h>
 #include <rex/input/input_system.h>
 #include <rex/input/mnk/mnk_input_driver.h>
@@ -17,6 +18,7 @@
 using namespace rex::input;
 using rex::X_RESULT;using rex::X_STATUS;
 REX_EXTERN(sub_8227F318);
+REX_EXTERN(sub_821E4EE0);
 REX_EXTERN(sub_826EC558);
 REX_EXTERN(sub_821FCCA8);
 REX_EXTERN(sub_822AE9F8);
@@ -60,6 +62,21 @@ int main(int argc,char** argv){try{
  Check(std::memcmp(prefix.data(),base+menu,prefix.size())==0,"Original six rows and IDs unchanged");
  Check(read(quit_row+28)==label&&read(quit_row+40+28)==0,"New native label and terminator");
  Check(motogp::quit::AppendItem(base,menu,label),"Append is idempotent");
+ const auto list=allocation+0x900,descriptor=allocation+0xA00;write(list,menu+0x3c);
+ for(unsigned i=0;i<7;++i)Check(motogp::quit::IsWhiteAccentDraw(base,menu,list,i,0x8228380C)==(i==6),"Only added tile selects white accent in actual list-render call");
+ Check(motogp::quit::IsWhiteAccentDraw(base,menu,list,6,0x82283868),"Both native strip passes select white");
+ Check(!motogp::quit::IsWhiteAccentDraw(base,menu,list,6,0x12345678),"Other mesh callers stay unchanged");
+ write(list,allocation);Check(!motogp::quit::IsWhiteAccentDraw(base,menu,list,6,0x8228380C),"Other menu arrays stay unchanged");write(list,menu+0x3c);
+ Check(read(0x821038A8+32)==0x82379D38,"Original type-7 strip material resolves to scoped native draw hook");
+ rex::graphics::xenos::xe_gpu_texture_fetch_t fetch{};fetch.type=rex::graphics::xenos::FetchConstantType::kTexture;fetch.format=rex::graphics::xenos::TextureFormat::k_DXT4_5;fetch.base_address=0x12345;fetch.swizzle=0x688;fetch.tiled=1;fetch.size_2d.width=1023;fetch.size_2d.height=127;
+ for(unsigned i=0;i<6;++i)write(descriptor+28+4*i,reinterpret_cast<uint32_t*>(&fetch)[i]);
+ std::array<uint8_t,52> original_descriptor;std::memcpy(original_descriptor.data(),base+descriptor,52);
+ const auto white=motogp::quit::WhiteAccentDescriptor(base,descriptor);Check(white&&white!=descriptor,"White view gets a stable separate native texture descriptor");
+ rex::graphics::xenos::xe_gpu_texture_fetch_t white_fetch{};for(unsigned i=0;i<6;++i)reinterpret_cast<uint32_t*>(&white_fetch)[i]=read(white+28+4*i);
+ Check((white_fetch.swizzle&0x1ff)==(5|(5<<3)|(5<<6))&&(white_fetch.swizzle&0xe00)==(fetch.swizzle&0xe00),"White view samples ONE for RGB and preserves original alpha channel");
+ white_fetch.swizzle=fetch.swizzle;Check(std::memcmp(&white_fetch,&fetch,sizeof(fetch))==0,"Original pixels, pitch, tiling, size, endian and sampler descriptors remain exact");
+ Check(std::memcmp(original_descriptor.data(),base+descriptor,52)==0&&std::memcmp(base+white,base+descriptor,28)==0,"Shared blue descriptor and native resource header remain unchanged");
+ Check(motogp::quit::WhiteAccentDescriptor(base,descriptor)==white,"Repeated frames reuse the same white view");
  auto move=[&](int selection,int delta){write(screen+0x18,selection);PPCContext ctx{};ctx.r1.u64=stack;ctx.lr=0x12345678;ctx.r30.u64=0x1122334455667788;ctx.r31.u64=0x8877665544332211;ctx.r3.u32=menu+0x3c;ctx.r4.u32=screen+0x18;ctx.r5.s64=delta;ctx.r6.u64=0;sub_8227F318(ctx,base);Check(ctx.r1.u32==stack&&ctx.lr==0x12345678&&ctx.r30.u64==0x1122334455667788&&ctx.r31.u64==0x8877665544332211,"Original menu navigation preserves ABI");return read(screen+0x18);};
  Check(move(5,1)==6,"Original navigation reaches Quit game");Check(move(6,1)==0,"Original navigation wraps after seventh item");Check(move(0,-1)==6,"Original navigation wraps back to Quit game");
  write(screen+0x18,6);
@@ -94,11 +111,18 @@ int main(int argc,char** argv){try{
  Check(!motogp::quit::ObserveTitleDraw(base,1,.5,0x822AE94C),"Startup fade cannot arm title exit");
  write(mode_value,3);Check(!motogp::quit::ObserveTitleDraw(base,1,1.0,0x822AE94C),"Other game modes never arm title exit");write(mode_value,15);
  Check(motogp::quit::ObserveTitleDraw(base,1,1.0,0x822AE94C),"Visible secondary title prompt arms native Back path");
- write(mode_value,11);
+ // Boot's application phase is separate from the frontend menu property.
+ // Drive the ORIGINAL transition function instead of inventing a fixture mode.
+ const auto saved_boot=read(0x828DA060);write(mode_value,11);
+ Check(!motogp::quit::ObserveTitleDraw(base,0,0,0x8229CA24),"Frontend property 11 cannot impersonate real boot phase");write(mode_value,15);PPCContext phase{};phase.r1.u32=stack;phase.lr=0x12345678;phase.r3.u32=11;
+ sub_821E4EE0(phase,base);
+ Check(read(0x828DA060)==11&&read(mode_value)==15,"Original boot transition leaves frontend property distinct from application phase");
  Check(read(0x8229CA18)==0x38800000&&read(0x8229CA20)==0x4BFFF759,"Original boot Press Start draw passes flag 0");
+ write(mode_ptr,0);Check(motogp::quit::ObserveTitleDraw(base,0,0,0x8229CA24),"Real boot title works before the frontend property pointer is initialized");write(mode_ptr,mode_value);
  Check(!motogp::quit::ObserveTitleDraw(base,0,0,0x12345678),"Unrelated flag-0 draw cannot arm exit");
  Check(motogp::quit::ObserveTitleDraw(base,0,0,0x8229CA24),"Actual boot caller in mode 11 arms exit without a false fade requirement");
  rex::cvar::SetFlagByName("mnk_mode","true");rex::cvar::SetFlagByName("keybind_b","Quote,Backspace");pad->state.gamepad.buttons=0;
+ Check(!motogp::quit::PollTitleInput(base,11),"Neutral native poll between draw and Back does not request or consume title exit");
  rex::ui::KeyEvent backspace(nullptr,rex::ui::VirtualKey::kBack,1,false,false,false,false,false);keyboard->OnKeyDown(backspace);
  input->GetStateForUI(0,&state);Check(state.gamepad.buttons&X_INPUT_GAMEPAD_B,"Actual Backspace binding reaches the same title B input channel");
 
@@ -108,7 +132,7 @@ int main(int argc,char** argv){try{
  io.AddKeyEvent(ImGuiKey_Escape,true);frame();Check(!motogp::quit::Pending()&&exits==0,"Title cancellation returns without exit");io.AddKeyEvent(ImGuiKey_Escape,false);frame();
  motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"UI-first dismissal cannot reopen title prompt before B release");input->GetState(0,&state);Check(!(state.gamepad.buttons&X_INPUT_GAMEPAD_B),"Title dismissal B stays masked for guest");
  keyboard->OnKeyUp(backspace);
- write(mode_ptr,saved_ptr);write(mode_value,saved_value);
+ write(mode_ptr,saved_ptr);write(mode_value,saved_value);write(0x828DA060,saved_boot);
  motogp::quit::SetFocused(false);motogp::quit::Request();Check(!motogp::quit::Pending(),"Unfocused window cannot request exit");
  motogp::quit::SetFocused(true);pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;motogp::quit::PollFrontendInput();motogp::quit::Request();Check(!motogp::quit::Pending(),"Held input on focus regain cannot open confirmation");
  pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();motogp::quit::Request();motogp::quit::PollFrontendInput();frame();frame();Check(motogp::quit::Pending()&&exits==0,"Fresh neutral input rearms safe confirmation");

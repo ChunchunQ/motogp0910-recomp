@@ -10,7 +10,7 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
 2. **Achievement arayüzü:** F7 listesi ve sağ alt bildirimleri, koyu/turuncu
    MotoGP tasarımı ve kısa/yumuşak ses tamamlandı. [286 Windows/Wine kontrolü](achievements.md) geçti; native görsel/ses testi bekliyor.
 3. **Acil çıkış menüleri:** ana menüde QUIT GAME; Press Start ekranında geri
-   tuşuyla çıkış onayı uygulandı. [78 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
+   tuşuyla çıkış onayı uygulandı. [98 hedefli Windows/Wine kontrolü](quit-menu.md) geçti; native görsel/çıkış testi bekliyor.
 4. **Oyun içinden canlı ayarlar:** F1 menüsü tamamlandı; yalnızca anında uygulanan
    seçenekler var. Yeniden başlatma gerekenler eklenmedi. [337 Windows/Wine kontrolü](in-game-settings.md) geçti; native oyun içi görsel test bekliyor.
 5. **Launcher başarımlar sayfası:** mevcut MotoGP tasarımı, 50 orijinal simge,
@@ -21,7 +21,9 @@ Kullanıcının güncel sırası aşağıdaki gibidir. Her iş ayrı teslim edil
    tuş listesi eklendi; Default / Alternative A / B açıklamaları dinamik kalır.
    [259 native çizim ve 171 gerçek pencere/giriş kontrolü](controller-prompts.md)
    geçti. Önceki kaydırma, büyütme düğmesi ve gerçek boot Press Start yolu
-   bu güncellemede ele alındı; QUIT GAME vurgu rengi kullanıcı seçimini bekliyor.
+   bu güncellemede ele alındı. Sonraki kullanıcı testi Press Start sorununu yeniden
+   doğruladı: açılış durumu ayrı değişkenden okunacak şekilde düzeltildi.
+   QUIT GAME vurgu rengi kullanıcının seçimiyle beyaz yapıldı; native test bekliyor.
 7. **Launcher Controls:** bu aşamada tasarım/kapsam kullanıcıya sorulacak.
 8. **Launcher genel tasarımı:** en son; detaylar kullanıcıdan alınacak.
 
