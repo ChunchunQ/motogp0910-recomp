@@ -1,0 +1,23 @@
+# Copy after adjusting /opt/motogp-online and creating the motogp system user.
+[Unit]
+Description=MotoGP 09/10 community directory and relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=motogp
+Group=motogp
+WorkingDirectory=/opt/motogp-online
+ExecStart=/usr/bin/python3 /opt/motogp-online/community_server.py --database /var/lib/motogp-online/community.sqlite3
+Restart=on-failure
+RestartSec=3
+StateDirectory=motogp-online
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/motogp-online
+
+[Install]
+WantedBy=multi-user.target

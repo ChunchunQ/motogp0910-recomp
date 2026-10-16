@@ -1,5 +1,6 @@
 #pragma once
 #include "protocol.h"
+#include "online/relay.h"
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -12,6 +13,8 @@ struct Options {
   // Test/explicit network override; normal discovery uses the adapter broadcast.
   std::vector<uint32_t> discovery_targets;
   std::chrono::milliseconds expiry{3500};
+  // Absent for the original LAN path; obtained from the community HTTPS service.
+  std::optional<online::Ticket> relay;
 };
 struct Datagram {uint64_t peer=0;uint16_t source_port=0,destination_port=0;std::vector<uint8_t> bytes;};
 class Node {

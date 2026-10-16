@@ -177,6 +177,13 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!dialog.window&&app.settings.adaptive==initial,"Cancel preserves all pending trigger values");
     }
     app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
+    for(bool tr:{false,true})for(int mode=0;mode<3;++mode){
+      app.turkish=tr;app.Localize();SendMessageW(app.lan_enabled,CB_SETCURSEL,mode,0);app.Command(kLanEnabled,CBN_SELCHANGE);
+      SetWindowTextW(app.online_server,L"https://play.example.com");const auto actual=app.GetControls();
+      CheckUI(actual.network_mode==(mode==2?"online":mode==1?"lan":"offline"),"Actual mode selector preserves all three distinct values");
+      CheckUI(bool(IsWindowEnabled(app.online_server))==(mode==2)&&bool(IsWindowEnabled(app.lan_adapter))==(mode==1)&&bool(IsWindowEnabled(app.lan_host))==(mode==1),"Only the selected connection mode's fields are enabled");
+      app.Localize();CheckUI(app.GetControls().network_mode==actual.network_mode,"Launcher language change preserves network mode");
+    }
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
     Settings oversize;oversize.width=3840;oversize.height=2160;app.SetControls(oversize);

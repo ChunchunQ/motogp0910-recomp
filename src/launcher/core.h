@@ -137,6 +137,7 @@ struct Settings {
   motogp::adaptive::Profile adaptive;
   std::string aspect="auto";
   bool lan_enabled=false;
+  std::string network_mode="offline",online_server;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
   int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
@@ -155,6 +156,10 @@ struct Settings {
       p.mode=Get(t,key+"mode",p.mode);p.start=Get<int64_t>(t,key+"start",p.start);p.end=Get<int64_t>(t,key+"end",p.end);p.strength=Get<int64_t>(t,key+"strength",p.strength);
     }
     s.lan_enabled=Get(t,"lan_enabled",false);
+    s.network_mode=Get(t,"network_mode",std::string("legacy"));
+    if(s.network_mode=="legacy")s.network_mode=s.lan_enabled?"lan":"offline";
+    s.lan_enabled=s.network_mode=="lan";
+    s.online_server=Get(t,"online_server",std::string{});
     s.lan_player_name=Get(t,"lan_player_name",std::string("Player"));
     s.lan_room_name=Get(t,"lan_room_name",std::string("MotoGP room"));
     s.lan_bind_ip=Get(t,"lan_bind_ip",std::string{});s.lan_host_ip=Get(t,"lan_host_ip",std::string{});
@@ -197,6 +202,8 @@ struct Settings {
     return s;
   }
   void Validate() const {
+    if(network_mode!="offline" && network_mode!="lan" && network_mode!="online")throw Error(L"Choose Offline, LAN or Online.",L"Çevrimdışı, LAN veya Çevrimiçi seç.");
+    if(network_mode=="online" && (online_server.empty() || online_server.size()>512 || online_server.find_first_of("\r\n\t ")!=std::string::npos || (!online_server.starts_with("https://") && !online_server.starts_with("http://127.0.0.1:") && !online_server.starts_with("http://localhost:"))))throw Error(L"Online requires a community server HTTPS address (for example https://play.example.com).",L"Çevrimiçi için topluluk sunucusunun HTTPS adresi gerekli (örneğin https://play.example.com).");
     if(!adaptive.Valid())throw Error(L"Invalid DualSense profile. Weapon end must exceed start; positions 0-9, strength 0-8.",L"Geçersiz DualSense profili. Weapon bitişi başlangıçtan büyük olmalı; konumlar 0-9, güç 0-8.");
     const auto ipv4=[](const std::string& value){
       if(value.empty())return true;unsigned parts=0,number=0,digits=0;uint32_t address=0;
@@ -204,9 +211,9 @@ struct Settings {
         else if(c>='0' && c<='9'){if(++digits>3)return false;number=number*10+(c-'0');}else return false;}
       address=(address<<8)|number;return parts==3 && digits && number<=255 && address!=0 && address!=UINT32_MAX;
     };
-    if(lan_player_name.empty() || lan_player_name.size()>15 || lan_player_name.find('\0')!=std::string::npos ||
+    if((network_mode!="offline" && (lan_player_name.empty() || lan_player_name.size()>15 || lan_player_name.find('\0')!=std::string::npos ||
        lan_room_name.empty() || lan_room_name.size()>31 || lan_room_name.find('\0')!=std::string::npos ||
-       !ipv4(lan_bind_ip) || !ipv4(lan_host_ip))throw Error(
+       (network_mode=="lan" && (!ipv4(lan_bind_ip) || !ipv4(lan_host_ip))))))throw Error(
           L"LAN: player name must be 1-15 UTF-8 bytes, room name 1-31 bytes; use a valid IPv4 or leave it empty.",
           L"LAN: oyuncu adı 1-15 UTF-8 bayt, oda adı 1-31 bayt olmalı; geçerli IPv4 yaz veya boş bırak.");
     Wide(lan_player_name);Wide(lan_room_name);
@@ -241,7 +248,8 @@ struct Settings {
     for(int side=0;side<2;++side){const auto& p=side?adaptive.left:adaptive.right;std::string key=side?"dualsense_lt_":"dualsense_rt_";
       Put(t,key+"mode",p.mode);Put(t,key+"start",p.start);Put(t,key+"end",p.end);Put(t,key+"strength",p.strength);
     }
-    Put(t,"lan_enabled",lan_enabled);Put(t,"lan_player_name",lan_player_name);Put(t,"lan_room_name",lan_room_name);
+    Put(t,"network_mode",network_mode);Put(t,"online_server",online_server);
+    Put(t,"lan_enabled",network_mode=="lan");Put(t,"lan_player_name",lan_player_name);Put(t,"lan_room_name",lan_room_name);
     Put(t,"lan_bind_ip",lan_bind_ip);Put(t,"lan_host_ip",lan_host_ip);
     for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
     Put(t,"aspect_ratio",aspect);

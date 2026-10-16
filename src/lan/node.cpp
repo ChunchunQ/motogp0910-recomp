@@ -95,10 +95,19 @@ struct Node::Impl {
  Clock::time_point joined_seen{},last_heartbeat{};
  uint32_t next_request=static_cast<uint32_t>(RandomId());
  uint32_t search_request=0,search_target=0;
+ uint64_t relay_sequence=0;online::ReplayWindow relay_received;
+ Clock::time_point relay_heartbeat{};
+ Clock::time_point relay_search_until{},relay_search_next{};
  explicit Impl(Options v):options(std::move(v)){
   if(options.expiry<std::chrono::milliseconds(300))throw std::runtime_error("LAN expiry is too short");
+  if(options.relay){
+   if(!options.relay->endpoint.ip || !options.relay->endpoint.port)throw std::runtime_error("Invalid online relay endpoint");
+   identity=options.relay->peer;address=online::VirtualEndpoint(identity);
+   adapter={"Community online relay",address.ip,0xFF000000,false};
+   options.expiry=std::max(options.expiry,std::chrono::milliseconds(15000));
+  }
   const auto adapters=Adapters();
-  if(!options.bind_ip.empty()){
+  if(options.relay){}else if(!options.bind_ip.empty()){
    const auto ip=ParseIPv4(options.bind_ip);if(!ip || !*ip || *ip==UINT32_MAX)throw std::runtime_error("Invalid LAN local IPv4");
    adapter={"Explicit adapter",*ip,0xFFFFFF00,false};
    bool found=false;
@@ -111,17 +120,22 @@ struct Node::Impl {
 #ifdef _WIN32
   BOOL reset=FALSE;DWORD returned=0;WSAIoctl(socket.value,SIO_UDP_CONNRESET,&reset,sizeof(reset),nullptr,0,&returned,nullptr,nullptr);
 #endif
-  const unsigned count=options.port?1:kPortCount;bool bound=false;
+  const unsigned count=options.relay||options.port?1:kPortCount;bool bound=false;
   // A socket bound to a unicast address may miss subnet broadcasts. Receive on
   // all local addresses; the selected adapter determines discovery destinations
   // and the public endpoint. Directed broadcast/direct-IP sends follow its route.
-  for(unsigned i=0;i<count;++i){const uint16_t port=options.port?options.port:static_cast<uint16_t>(kFirstPort+i);auto native=Native({0,port});if(!bind(socket.value,reinterpret_cast<sockaddr*>(&native),sizeof(native))){address={adapter.ip,port};bound=true;break;}}
+  for(unsigned i=0;i<count;++i){const uint16_t port=options.relay?0:options.port?options.port:static_cast<uint16_t>(kFirstPort+i);auto native=Native({0,port});if(!bind(socket.value,reinterpret_cast<sockaddr*>(&native),sizeof(native))){if(!options.relay)address={adapter.ip,port};bound=true;break;}}
   if(!bound)throw std::runtime_error("No free LAN port; choose a different port or local adapter");
   worker=std::thread([this]{Run();});
  }
  ~Impl(){stopping.store(true);if(worker.joinable())worker.join();}
  bool Send(Endpoint to,const Packet& packet){
-  const auto bytes=Encode(packet);const auto native=Native(to);
+  auto bytes=Encode(packet);
+  if(options.relay){
+   const auto target=to==options.relay->endpoint?0:online::VirtualPeer(to);if(!target && to!=options.relay->endpoint)return false;
+   bytes=online::Seal(*options.relay,++relay_sequence,target,bytes);to=options.relay->endpoint;
+  }
+  const auto native=Native(to);
   return sendto(socket.value,reinterpret_cast<const char*>(bytes.data()),static_cast<int>(bytes.size()),0,reinterpret_cast<const sockaddr*>(&native),sizeof(native))==static_cast<int>(bytes.size());
  }
  Room PublicRoom()const{auto room=*hosted;room.members=static_cast<uint32_t>(members.size()+1);room.private_members=own_private?1:0;for(const auto& [id,m]:members)room.private_members+=m.private_slot;room.endpoint=address;return room;}
@@ -212,6 +226,14 @@ struct Node::Impl {
  }
  void Tick(){
   std::lock_guard lock(mutex);const auto now=Clock::now();
+  if(options.relay && now-relay_heartbeat>std::chrono::seconds(1)){
+   if(hosted){Send(options.relay->endpoint,{Kind::Advert,0,identity,hosted->id,EncodeRoom(PublicRoom())});Roster(options.relay->endpoint);}
+   else Send(options.relay->endpoint,{Kind::Heartbeat,0,identity,0,{}});
+   relay_heartbeat=now;
+  }
+  if(options.relay && search_request && now<relay_search_until && now>=relay_search_next){
+   Send(options.relay->endpoint,{Kind::Discover,search_request,identity,0,{}});relay_search_next=now+std::chrono::milliseconds(300);
+  }
   std::erase_if(rooms,[&](const auto& entry){return now-entry.second.seen>options.expiry;});
   if(std::erase_if(members,[&](const auto& entry){if(now-entry.second.seen<=options.expiry)return false;peers.erase(entry.first);return true;}))BroadcastRoster();
   std::erase_if(peers,[&](const auto& entry){
@@ -226,7 +248,7 @@ struct Node::Impl {
   if(joined && now-last_heartbeat>std::min(std::chrono::milliseconds(500),options.expiry/3)){Send(joined->endpoint,{Kind::Heartbeat,0,identity,joined->id,{static_cast<uint8_t>(own_private)}});last_heartbeat=now;}
  }
  void Run(){
-  std::array<uint8_t,kMaxPacket+1> buffer{};
+  std::array<uint8_t,kMaxPacket+online::kEnvelopeOverhead+1> buffer{};
   while(!stopping.load()){
    fd_set fds;FD_ZERO(&fds);FD_SET(socket.value,&fds);timeval timeout{0,20000};
    const int ready=select(static_cast<int>(socket.value)+1,&fds,nullptr,nullptr,&timeout);
@@ -237,7 +259,18 @@ struct Node::Impl {
     socklen_t length=sizeof(from);
 #endif
     const int n=recvfrom(socket.value,reinterpret_cast<char*>(buffer.data()),static_cast<int>(buffer.size()),0,reinterpret_cast<sockaddr*>(&from),&length);
-    if(n>0)if(auto packet=Decode({buffer.data(),static_cast<size_t>(n)}))Process(*packet,{ntohl(from.sin_addr.s_addr),ntohs(from.sin_port)});
+    if(n>0){
+     const Endpoint source{ntohl(from.sin_addr.s_addr),ntohs(from.sin_port)};
+     const auto data=std::span(buffer).first(static_cast<size_t>(n));
+     if(options.relay){
+      if(source!=options.relay->endpoint)continue;
+      const auto envelope=online::Open(*options.relay,data,true);
+      if(!envelope || envelope->destination!=identity || !relay_received.Accept(envelope->sequence))continue;
+      if(auto packet=Decode(envelope->packet)){
+       try{Process(*packet,online::VirtualEndpoint(packet->peer));}catch(const std::exception&){}
+      }
+     }else if(auto packet=Decode(data))Process(*packet,source);
+    }
    }
    Tick();
   }
@@ -250,9 +283,9 @@ uint64_t Node::Identity()const{return impl_->identity;}
 std::string Node::AdapterName()const{return impl_->adapter.name;}
 Room Node::Host(std::string name,uint32_t capacity,uint32_t flags,std::vector<uint8_t> properties,std::vector<uint8_t> qos,uint32_t private_slots){
  Room room;room.id=RandomId();room.host=Identity();room.endpoint=Address();room.name=std::move(name);room.capacity=capacity;room.flags=flags;room.properties=std::move(properties);room.qos=std::move(qos);RandomBytes(room.key);EncodeRoom(room);
- std::lock_guard lock(impl_->mutex);if(impl_->hosted || impl_->joined)throw std::runtime_error("Already in a LAN room");room.private_slots=private_slots;impl_->own_private=capacity==private_slots;room.private_members=impl_->own_private?1:0;if(room.qos.empty())room.qos=impl_->local_qos;EncodeRoom(room);impl_->hosted=room;return room;
+ std::lock_guard lock(impl_->mutex);if(impl_->hosted || impl_->joined)throw std::runtime_error("Already in a LAN room");room.private_slots=private_slots;impl_->own_private=capacity==private_slots;room.private_members=impl_->own_private?1:0;if(room.qos.empty())room.qos=impl_->local_qos;EncodeRoom(room);impl_->hosted=room;if(impl_->options.relay)impl_->Send(impl_->options.relay->endpoint,{Kind::Advert,0,Identity(),room.id,EncodeRoom(room)});return room;
 }
-void Node::CloseRoom(){std::lock_guard lock(impl_->mutex);if(impl_->hosted){for(const auto& [id,member]:impl_->members)impl_->Send(member.endpoint,{Kind::Left,0,Identity(),impl_->hosted->id,{}});impl_->hosted.reset();impl_->members.clear();impl_->peers.clear();impl_->datagrams.clear();impl_->queued_bytes=0;}}
+void Node::CloseRoom(){std::lock_guard lock(impl_->mutex);if(impl_->hosted){for(const auto& [id,member]:impl_->members)impl_->Send(member.endpoint,{Kind::Left,0,Identity(),impl_->hosted->id,{}});if(impl_->options.relay)impl_->Send(impl_->options.relay->endpoint,{Kind::Left,0,Identity(),impl_->hosted->id,{}});impl_->hosted.reset();impl_->members.clear();impl_->peers.clear();impl_->datagrams.clear();impl_->queued_bytes=0;}}
 void Node::UpdateRoom(const Room& room){EncodeRoom(room);std::lock_guard lock(impl_->mutex);if(!impl_->hosted || impl_->hosted->id!=room.id || room.host!=Identity() || room.capacity<impl_->members.size()+1)throw std::runtime_error("Invalid room update");const auto before=impl_->hosted;impl_->hosted=room;try{EncodeRoom(impl_->PublicRoom());}catch(...){impl_->hosted=before;throw;}impl_->BroadcastRoster();}
 void Node::Search(const std::string& direct_ip){
  std::vector<uint32_t> targets;
@@ -261,6 +294,7 @@ void Node::Search(const std::string& direct_ip){
  else {targets.push_back(impl_->adapter.ip | ~impl_->adapter.mask);targets.push_back(UINT32_MAX);targets.push_back(impl_->adapter.ip);}
  std::lock_guard lock(impl_->mutex);uint32_t request=++impl_->next_request;if(!request)request=++impl_->next_request;
  impl_->search_request=request;impl_->search_target=direct_ip.empty()?0:targets.front();
+ if(impl_->options.relay){impl_->search_target=0;impl_->rooms.clear();impl_->Send(impl_->options.relay->endpoint,{Kind::Discover,request,Identity(),0,{}});impl_->relay_search_until=Clock::now()+std::chrono::seconds(2);impl_->relay_search_next=Clock::now()+std::chrono::milliseconds(300);return;}
  if(impl_->search_target)impl_->rooms.clear();
  for(auto ip:targets)for(uint16_t i=0;i<kPortCount;++i)impl_->Send({ip,static_cast<uint16_t>(kFirstPort+i)},{Kind::Discover,request,Identity(),0,{}});
 }

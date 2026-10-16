@@ -1,4 +1,5 @@
 #include "guest_bridge.h"
+#include "online/stats.h"
 #include <rex/memory.h>
 #include <rex/string/utf8.h>
 #include <rex/system/util/object_table.h>
@@ -21,22 +22,23 @@ class Session final:public rex::system::XObject {
   std::weak_ptr<Node> network;
   uint64_t room=0,nonce=0;
   uint32_t flags=0,public_slots=0,private_slots=0,state=0;
+  std::optional<Room> statistics_room;
   std::map<uint64_t,bool> local,remote;
   explicit Session(rex::system::KernelState* kernel,std::weak_ptr<Node> owner)
       :XObject(kernel,kObjectType),network(std::move(owner)){}
   bool Initialize(){return CreateNative<rex::system::X_DISPATCH_HEADER>()!=nullptr;}
   void Close(){
-    if(auto node=network.lock())if(auto current=node->CurrentRoom();current && current->id==room){
+    if(auto node=network.lock();node && !statistics_room)if(auto current=node->CurrentRoom();current && current->id==room){
       if(flags&1)node->CloseRoom();else node->Leave();
     }
-    room=0;local.clear();remote.clear();
+    room=0;statistics_room.reset();local.clear();remote.clear();
   }
   ~Session(){Close();}
 };
 }
 GuestBridge::GuestBridge(rex::system::KernelState* kernel,std::shared_ptr<Node> node,
-                         std::string direct,std::string name)
-    :kernel_(kernel),node_(std::move(node)),direct_ip_(std::move(direct)),room_name_(std::move(name)){
+                         std::string direct,std::string name,std::shared_ptr<online::Client> service)
+    :kernel_(kernel),node_(std::move(node)),online_(std::move(service)),direct_ip_(std::move(direct)),room_name_(std::move(name)){
   if(!kernel_ || !node_ || room_name_.empty() || room_name_.size()>31 ||
      room_name_.find('\0')!=std::string::npos || (!direct_ip_.empty() && !ParseIPv4(direct_ip_)))
     throw std::runtime_error("Invalid guest LAN bridge options");
@@ -93,8 +95,27 @@ std::vector<Room> GuestBridge::KnownRooms()const{
   }
   return rooms;
 }
+std::function<uint32_t()> GuestBridge::StatisticsOperation(uint32_t message,uint32_t buffer,uint32_t size){
+  if(!online_)return {};
+  if(message==0xB0021)return online::PrepareRead(*this,buffer,size);
+  if(message!=0xB0025 && message!=0xB0026)return {};
+  std::lock_guard lock(mutex_);
+  const auto fail=[](uint32_t error){return [error](){return error;};};
+  if((size && size!=24) || !Valid(buffer,24))return fail(kInvalid);
+  const auto pointer=Load32(kernel_->memory()->TranslateVirtual(buffer));if(!Valid(pointer,16))return fail(kBadHandle);
+  auto* header=kernel_->memory()->TranslateVirtual<rex::system::X_DISPATCH_HEADER*>(pointer);
+  if(header->wait_list_flink!=rex::system::kXObjSignature)return fail(kBadHandle);
+  auto session=kernel_->object_table()->LookupObject<Session>(header->wait_list_blink);
+  if(!session || session->guest_object()!=pointer || !session->room)return fail(kBadHandle);
+  // The kernel executes this barrier after earlier queued writes. Waiting on
+  // future writes here would block the same worker that must upload them.
+  if(message==0xB0026)return [](){return 0u;};
+  return online::PrepareWrite(*this,buffer);
+}
 std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,uint32_t size){
+  if(online_ && message==0xB0021)return online::ReadStats(*this,buffer,size);
   const unsigned needed=message==0xB0006?24:message==0xB0007?28:message==0xB0010?28:
+      online_ && (message==0xB0025 || message==0xB0026)?24:
       message==0xB0012||message==0xB0013?20:message==0xB001C?36:
       message==0xB0016?32:message==0xB001D?24:
       message==0xB0011||message==0xB0014||message==0xB0015||message==0xB0018?16:0;
@@ -145,7 +166,7 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
       }
       if(bytes<8+maximum*92)return kInsufficient;
       if(!Valid(output,bytes,true))return kInvalid;
-      node_->Search(direct_ip_);std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      node_->Search(direct_ip_);std::this_thread::sleep_for(std::chrono::milliseconds(online_?800:300));
       auto rooms=node_->Rooms();
       std::vector<Metadata> fields;std::vector<Room> selected;
       for(const auto& room:rooms){
@@ -200,7 +221,13 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
       if(flags&16)return Error(50); // Ranked arbitration requires Xbox Live services.
       const auto session_nonce=RandomId();
       Room room;
-      if(flags&1){
+      if(online_ && !(flags&0x20)){
+        // The title also creates a 0x707 statistics-only session while playing
+        // solo. It must neither advertise a lobby nor occupy the race node.
+        room.id=RandomId();room.host=node_->Identity();room.endpoint=node_->Address();
+        room.name=room_name_;room.flags=flags;room.capacity=pub+priv;room.private_slots=priv;room.private_members=pub?0:1;
+        RandomBytes(room.key);session->statistics_room=room;
+      }else if(flags&1){
         room=node_->Host(room_name_,pub+priv,flags,EncodeMetadata(metadata_),{},priv);
       }else{
         auto* data=mem->TranslateVirtual(info);auto rooms=node_->Rooms();if(auto current=node_->CurrentRoom())rooms.push_back(*current);
@@ -210,19 +237,21 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
         rooms.insert(rooms.end(),search_results_.begin(),search_results_.end());
         auto found=std::find_if(rooms.begin(),rooms.end(),[&](const Room& r){return r.id==Load64(data) &&
           std::equal(r.key.begin(),r.key.end(),data+44);});
-        if(found==rooms.end() || !node_->Join(*found))return Error(1168);
+        if(found==rooms.end() || !node_->Join(*found,std::chrono::milliseconds(online_?4000:1200)))return Error(1168);
         room=*node_->CurrentRoom();
       }
       session->room=room.id;session->flags=flags;session->public_slots=pub;session->private_slots=priv;
       session->nonce=session_nonce;WriteInfo(info,room);Store64(mem->TranslateVirtual(nonce),session->nonce);return 0;
     }
     if(!session->room)return kBadHandle;
+    if(online_ && message==0xB0025)return online::WriteStats(*this,buffer);
+    if(online_ && message==0xB0026){try{online_->Flush();return 0;}catch(const std::exception&){return Error(1460);}}
     if(message==0xB0011){session->Close();return 0;}
     if(message==0xB0014 || message==0xB0015){
-      auto room=node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
+      auto room=session->statistics_room?session->statistics_room:node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
       if(message==0xB0014 && session->state==2)return kInvalid;
       session->state=message==0xB0014?2:3;
-      if(session->flags&1){room->state=message==0xB0014?1:0;node_->UpdateRoom(*room);}return 0;
+      if(session->flags&1){room->state=message==0xB0014?1:0;if(session->statistics_room)session->statistics_room=room;else node_->UpdateRoom(*room);}return 0;
     }
     if(message==0xB0012 || message==0xB0013){
       const auto count=Load32(b+4),xuids=Load32(b+8),indices=Load32(b+12),private_slots=Load32(b+16);
@@ -242,7 +271,7 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
       unsigned used_public=0,used_private=0;
       for(const auto* list:{&updated,xuids?&session->local:&session->remote})for(auto [id,priv]:*list){if(priv)++used_private;else ++used_public;}
       if(used_public>session->public_slots || used_private>session->private_slots)return Error(112);
-      if(!xuids && message==0xB0012 && updated.contains(node_->Identity()))node_->SetPrivateSlot(updated.at(node_->Identity()));
+      if(!session->statistics_room && !xuids && message==0xB0012 && updated.contains(node_->Identity()))node_->SetPrivateSlot(updated.at(node_->Identity()));
       (xuids?session->remote:session->local)=std::move(updated);return 0;
     }
     unsigned used_public=0,used_private=0;
@@ -250,16 +279,16 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
     if(message==0xB0018){
       const auto pub=Load32(b+8),priv=Load32(b+12);
       if((!pub && !priv) || pub>20 || priv>20-pub || pub<used_public || priv<used_private)return kInvalid;
-      auto room=node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
+      auto room=session->statistics_room?session->statistics_room:node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
       auto flags=(Load32(b+4)&~1u)|(session->flags&1);
-      if(session->flags&1){room->capacity=pub+priv;room->private_slots=priv;room->flags=flags;node_->UpdateRoom(*room);}
+      if(session->flags&1){room->capacity=pub+priv;room->private_slots=priv;room->flags=flags;if(session->statistics_room)session->statistics_room=room;else node_->UpdateRoom(*room);}
       session->public_slots=pub;session->private_slots=priv;session->flags=flags;return 0;
     }
     if(message==0xB001D){
       const auto bytes=Load32(b+4),output=Load32(b+8),count=used_public+used_private;
       if(bytes<128+count*16)return kInsufficient;
       if(!Valid(output,128+count*16,true))return kInvalid;
-      auto room=node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
+      auto room=session->statistics_room?session->statistics_room:node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
       auto* p=mem->TranslateVirtual(output);std::memset(p,0,128+count*16);
       Store32(p,0);Store32(p+12,session->flags);Store32(p+16,session->public_slots);Store32(p+20,session->private_slots);
       Store32(p+24,session->public_slots-used_public);Store32(p+28,session->private_slots-used_private);

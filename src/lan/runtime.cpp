@@ -1,15 +1,22 @@
 #include "runtime.h"
 #include "socket_bridge.h"
+#include "online/client.h"
+#include "online/stats.h"
 #include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/system/xevent.h>
 #include <rex/system/xio.h>
 #include <rex/system/xthread.h>
+#include <rex/system/xam/user_profile.h>
 #include <shared_mutex>
 #ifdef _WIN32
 #include <Windows.h>
 #endif
 REXCVAR_DEFINE_BOOL(lan_enabled,false,"LAN","Experimental LAN multiplayer; offline is the default")
+    .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
+REXCVAR_DEFINE_STRING(network_mode,"legacy","Network","offline, lan or online; legacy respects the existing lan_enabled setting")
+    .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
+REXCVAR_DEFINE_STRING(online_server,"","Network","Community server HTTPS origin; used only in online mode")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REXCVAR_DEFINE_STRING(lan_bind_ip,"","LAN","Local adapter IPv4; empty automatically prefers Radmin VPN")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
@@ -55,13 +62,29 @@ bool Message(PPCContext& ctx,uint8_t* base,bool async){
       ctx.r3.u64=0x80070057;return true;
     }
   }
+  if(overlapped && bridge->Online())if(auto operation=bridge->StatisticsOperation(ctx.r4.u32,ctx.r6.u32,ctx.r7.u32)){
+    if(!rex::system::XThread::IsInThread()){
+      const auto result=operation();kernel->CompleteOverlappedEx(overlapped,result,result,result?UINT32_MAX:0);ctx.r3.u64=997;return true;
+    }
+    // Input structs are stack-backed in the generated XDK wrappers. Copy them
+    // before returning; HTTPS runs on the kernel completion worker, never on
+    // the racing thread. Keep the completion event handle valid until finished.
+    std::shared_ptr<rex::system::XEvent> event_hold;
+    if(retained_event.value){event_hold={retained_event.value,[](auto* event){event->ReleaseHandle();}};retained_event.value=nullptr;}
+    kernel->CompleteOverlappedDeferredEx([operation=std::move(operation),event_hold](uint32_t& extended,uint32_t& length){
+      (void)event_hold;
+      const auto result=operation();extended=result;length=result?UINT32_MAX:0;return result;
+    },overlapped);
+    ctx.r3.u64=997;return true;
+  }
+  const auto before_delete=ctx.r4.u32==0xB0011?bridge->Network().CurrentRoom():std::nullopt;
   const auto result=bridge->Dispatch(ctx.r4.u32,async?ctx.r6.u32:ctx.r5.u32,async?ctx.r7.u32:ctx.r6.u32);
   if(!result)return false;
   if(ctx.r4.u32!=0xB0006 && ctx.r4.u32!=0xB0007){
     const auto room=bridge->Network().CurrentRoom();
     REXLOG_INFO("LAN_SESSION: message={:08X} result={:08X} room={:016X} members={}",ctx.r4.u32,*result,room?room->id:0,room?room->members:0);
   }
-  if(ctx.r4.u32==0xB0011 && *result==0 && sockets)sockets->CancelSessionReceives();
+  if(ctx.r4.u32==0xB0011 && *result==0 && sockets && before_delete && !bridge->Network().CurrentRoom())sockets->CancelSessionReceives();
   if(overlapped){
     if(rex::system::XThread::IsInThread())kernel->CompleteOverlappedImmediate(overlapped,*result);
     else kernel->CompleteOverlappedEx(overlapped,*result,*result,*result?UINT32_MAX:0);
@@ -93,14 +116,23 @@ void Start(rex::system::KernelState* kernel){
   std::unique_lock lock(bridge_mutex);
   sockets.reset();
   bridge.reset();
-  if(!rex::cvar::Query<bool>("lan_enabled"))return;
+  auto mode=rex::cvar::Query<std::string>("network_mode");
+  if(mode=="legacy")mode=rex::cvar::Query<bool>("lan_enabled")?"lan":"offline";
+  if(mode=="offline")return;
+  if(mode!="lan" && mode!="online")throw std::runtime_error("Invalid network_mode; choose offline, lan or online");
 #ifdef _WIN32
   Options options;options.bind_ip=rex::cvar::Query<std::string>("lan_bind_ip");
   const auto player=rex::cvar::Query<std::string>("lan_player_name");
   if(player.empty() || player.size()>15 || player.find('\0')!=std::string::npos)throw std::runtime_error("LAN player name must contain 1-15 UTF-8 bytes");
+  std::shared_ptr<online::Client> service;
+  if(mode=="online"){
+    service=std::make_shared<online::Client>(rex::cvar::Query<std::string>("online_server"),player);
+    options.bind_ip.clear();options.relay=service->Connection();
+    REXLOG_INFO("ONLINE_STARTUP: authenticated community connection; relay port={}",options.relay->endpoint.port);
+  }
   REXLOG_INFO("LAN_STARTUP: initializing adapter={}",options.bind_ip.empty()?"automatic":options.bind_ip);
   auto node=std::make_shared<Node>(options);
-  auto next_bridge=std::make_unique<GuestBridge>(kernel,node,rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"));
+  auto next_bridge=std::make_unique<GuestBridge>(kernel,node,mode=="online"?"":rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"),service);
   auto next_sockets=std::make_unique<SocketBridge>(*next_bridge);
   bridge=std::move(next_bridge);sockets=std::move(next_sockets);
   REXLOG_INFO("LAN_LOBBY: adapter={} endpoint={}:{} discovery={} transport=guest-UDP/VDP protocol=LAN02",node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
@@ -115,6 +147,24 @@ void Stop(){
 }
 std::optional<Room> CurrentRoom(){std::shared_lock lock(bridge_mutex);return bridge?bridge->Network().CurrentRoom():std::nullopt;}
 #ifdef _WIN32
+REX_HOOK_RAW(__imp__XamUserCreateStatsEnumerator){
+  std::shared_lock lock(bridge_mutex);
+  if(!bridge || !bridge->Online()){Original("__imp__XamUserCreateStatsEnumerator",ctx,base);return;}
+  if(ctx.r3.u32 && ctx.r3.u32!=kTitle){ctx.r3.u64=87;return;}
+  auto first=ctx.r5.u64;
+  if(ctx.r4.u32==0 && first==bridge->Kernel()->user_profile()->xuid())first=bridge->Network().Identity();
+  ctx.r3.u64=online::CreateEnumerator(*bridge,ctx.r4.u32,first,ctx.r6.u32,ctx.r7.u32,ctx.r8.u32,ctx.r9.u32,ctx.r10.u32);
+}
+REX_HOOK_RAW(__imp__XamEnumerate){
+  std::shared_lock lock(bridge_mutex);
+  if(bridge && bridge->Online())if(const auto size=online::EnumeratorSize(bridge->Kernel(),ctx.r3.u32)){
+    // XamEnumerate ABI: handle, flags, buffer, length, items, overlapped.
+    if(ctx.r4.u32 || ctx.r6.u32<*size || !bridge->Valid(ctx.r5.u32,*size,true) ||
+       (ctx.r7.u32 && !bridge->Valid(ctx.r7.u32,4,true)) ||
+       (ctx.r8.u32 && !bridge->Valid(ctx.r8.u32,sizeof(rex::system::XAM_OVERLAPPED),true))){ctx.r3.u64=ctx.r6.u32<*size?122:87;return;}
+  }
+  Original("__imp__XamEnumerate",ctx,base);
+}
 REX_HOOK_RAW(__imp__XamUserGetSigninState){
   std::shared_lock lock(bridge_mutex);if(bridge && ctx.r3.u32==0)ctx.r3.u64=2;else Original("__imp__XamUserGetSigninState",ctx,base);
 }

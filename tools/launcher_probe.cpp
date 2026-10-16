@@ -44,6 +44,12 @@ int wmain(int argc,wchar_t** argv) {
     Check(Settings::Load(config.table).width==1600,"Nested SDK key loading");
     Check(Settings::Load(config.table).mute,"Nested audio loading");
     Settings settings=Settings::Load(config.table);settings.width=1920;settings.height=1080;settings.fullscreen=false;
+    {toml::table old;Put(old,"lan_enabled",true);Check(Settings::Load(old).network_mode=="lan","Legacy enabled LAN migrates to explicit LAN mode");
+      Put(old,"network_mode",std::string("offline"));Check(Settings::Load(old).network_mode=="offline","Explicit Offline takes precedence over legacy LAN");
+      for(const auto* mode:{"offline","lan","online"}){Settings network;network.network_mode=mode;network.online_server="https://play.example.com";toml::table t;network.Store(t);auto loaded=Settings::Load(t);
+        Check(loaded.network_mode==mode && loaded.lan_enabled==(loaded.network_mode=="lan") && loaded.online_server==network.online_server,"Three network modes round-trip without conflating LAN and Online");}
+      Settings missing;missing.network_mode="online";bool rejected=false;try{missing.Validate();}catch(const Error&){rejected=true;}Check(rejected,"Online cannot launch without a community endpoint");
+    }
     settings.backend="xinput";settings.keyboard=false;settings.mute=true;
     settings.engine_effects={"off","off","off"};settings.shadow_distance=90;
     settings.effect="fsr";settings.scale_x=2;settings.scale_y=3;settings.volume=37;

@@ -24,6 +24,7 @@ Don't publish original game data, personal logs or preview screenshots.
 | PS3 / Xbox / keyboard prompts | Original supplied PS3 artwork, correct texture pitch and replay row; new dark/orange keyboard font | User accepted PS3/replay fixes; latest keyboard visual check pending |
 | Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
+| Community Online / VDS | Separate Offline/LAN/Online launcher modes; Linux/Windows Python service, HTTPS identities, authenticated UDP relay and native 378-view persistent leaderboards | Local Windows PEs exercised with Linux and Windows Python backends under Wine; public VDS/TLS/firewall and Internet race pending. Use Player Match; no official Xbox Live ranked/friends/voice. See community-online.md. |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
 | Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 345 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
 | Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
@@ -70,8 +71,9 @@ revert are preserved.
 7. DualSense adaptive triggers and remaining white cap follow-up implemented;
    [source research, settings and hardware verification boundary](adaptive-triggers.md).
 8. Turkish written localization and Marketplace removal completed; native visual review pending. [Scope and validation](turkish-localization.md).
-9. Launcher Controls simplification: ask the user for details before designing.
-10. Final launcher redesign: ask the user for details before designing.
+9. Community Online service and native leaderboards implemented at the user's new priority. Public VDS deployment and Internet playtest require the future server endpoint. LAN remains available.
+10. Launcher Controls simplification: ask the user for details before designing.
+11. Final launcher redesign: ask the user for details before designing.
 
 The FPS/physics investigation was explicitly cancelled and reverted. Don't
 resume speculative simulation or handling changes. Frame generation is excluded
@@ -83,6 +85,7 @@ limitations; don't present compatibility dispatch as full temporal support.
 - User observations and current order: ongoing conversation.
 - [Roadmap](roadmap.md), [launcher requests](launcher-next-steps.md).
 - [LAN findings](lan-lobby-stability.md), [crash reporting](crash-reports.md).
+- [Community server, modes, deployment and original statistics ABI](community-online.md).
 - [Runtime safety / validation limits](stability-quality-control.md).
 - [Experimental rendering](experimental-rendering.md).
 - [Career readback](career-textures.md), [collision repair](collision-data.md).

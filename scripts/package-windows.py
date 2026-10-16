@@ -22,8 +22,10 @@ def main():
     parser.add_argument('--build-dir',type=Path,default=ROOT/'out/build/windows-nightly-release')
     parser.add_argument('--archive',default='MotoGP0910-Windows-x64-stability-update.zip')
     parser.add_argument('--lan-preview',action='store_true',help='Include the experimental LAN multiplayer integration and Windows test instructions')
+    parser.add_argument('--online-preview',action='store_true',help='Include community Online/LAN/Offline instructions')
     parser.add_argument('--include-one-pc-test', action='store_true', help='Include optional loopback test helpers; omitted from clean two-PC packages')
     args=parser.parse_args();BUILD=args.build_dir.resolve()
+    if args.online_preview:args.lan_preview=True
     if Path(args.archive).name!=args.archive or not args.archive.endswith('.zip'):
         parser.error('--archive must be a ZIP filename')
     sdk=json.loads((ROOT/'sdk-version.json').read_text())
@@ -66,10 +68,11 @@ def main():
     shutil.copy2(ROOT / "docs/in-game-settings.md", STAGE / "in-game-settings-readme.txt")
     shutil.copy2(ROOT / "docs/adaptive-triggers.md", STAGE / "adaptive-triggers-readme.txt")
     shutil.copy2(ROOT / "docs/turkish-localization.md", STAGE / "turkish-localization-readme.txt")
+    if args.online_preview:shutil.copy2(ROOT / "docs/community-online.md", STAGE / "online-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
-        "General > Enable LAN (Experimental); automatic rooms, optional host IPv4 fallback.\n"
+        "General > Connection mode > LAN / Radmin; automatic rooms, optional host IPv4 fallback.\n"
         "Use the same package on both PCs and unranked Player Match on LAN / Radmin.\n"
         "No Xbox Live login or dedicated server. Offline remains the default.\n"
         "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
@@ -81,6 +84,17 @@ def main():
         "ICONS: Game EXE uses the supplied MotoGP 09/10 cover. Launcher EXE uses\n"
         "the supplied MotoGP logo. Both embed seven Windows icon sizes (16-256 px).\n\n"
     ) if args.lan_preview else ""
+    if args.online_preview:
+        milestone="Experimental community Online / LAN / Offline"
+        preview_notes=(
+            "COMMUNITY ONLINE: General > Connection mode > Online. Enter the community HTTPS server.\n"
+            "The VDS provides room discovery, authenticated UDP relay and persistent native leaderboards.\n"
+            "No Radmin or player router forwarding is required for Online. LAN / Radmin remains separate.\n"
+            "The race simulation stays on a player's PC. Use Player Match; official Xbox Live ranked/friends/voice are not restored.\n"
+            "There is no default public server yet. Deploy the separate Linux/Windows community server package first.\n"
+            "Local Windows/Wine protocol and original stats-wrapper checks passed; public internet racing still needs testing.\n"
+            "Offline is the default. See online-readme.txt for deployment, scope and remaining validation.\n\n"
+        )+preview_notes
     if args.lan_preview:
         shutil.copy2(ROOT / "docs/lan-multiplayer-test.md", STAGE / "lan-readme.txt")
         shutil.copy2(ROOT / "docs/lan-startup-fix.md", STAGE / "lan-startup-fix.txt")

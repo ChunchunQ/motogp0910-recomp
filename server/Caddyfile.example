@@ -1,0 +1,8 @@
+# Replace play.example.com with your own DNS name pointing to the VDS IPv4.
+# HTTPS certificates are automatic; allow inbound TCP 80 and 443.
+play.example.com {
+    reverse_proxy 127.0.0.1:30820
+    request_body {
+        max_size 64KB
+    }
+}

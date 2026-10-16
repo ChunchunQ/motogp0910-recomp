@@ -1,6 +1,6 @@
 # MotoGP 09/10 — ReXGlue Nightly 0.10.0.24-dev.gbd833a2
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-turkish-language.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-community-online.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 [Türkçe oyun metinleri](docs/turkish-localization.md) eklendi: **General → Game language → Türkçe**. Menü, kariyer, eğitim, yarış mesajları, teknik açıklamalar ve 50 başarım çevrildi; sesler korunur. Orijinal yazı tiplerine Ğ/ğ, İ/ı ve Ş/ş eklendi. İşlevsiz **Xbox LIVE Marketplace** seçeneği Seçenekler menüsünden kaldırıldı. Yeni çevirinin Windows GPU üzerinde görsel kontrolü bekleniyor.
 
@@ -16,7 +16,7 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 [Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); [Yenilenen İngilizce/Türkçe launcher; 720p/1440p/4K, FSR 1.0, ses ve sade tuş eşlemeleri](docs/launcher.md). [Stabilite düzeltmeleri ve Windows regresyon sonuçları](docs/stability-quality-control.md) mevcut; [Radmin VPN/LAN kaynak araştırması ve rota](docs/lan-research.md) hazır. [İlk LAN keşif/guest oturum altyapısı](docs/lan-lobby-preview.md) iki ayrı Windows süreciyle doğrulandı. [Yeni deneysel LAN entegrasyonu ve iki-PC kullanım adımları](docs/lan-multiplayer-test.md) hazır; **kullanıcı iki oyunculu Radmin yarışının sorunsuz çalıştığını bildirdi**. İlk lobi girişlerinde görülen iki hata [lobi düzeltmesinde](docs/lan-lobby-stability.md) giderildi; yeni EXE için Radmin testi bekleniyor. [Boş IP ile launcher başlangıç çökmesi düzeltildi](docs/lan-startup-fix.md); 17 hedefli Windows/Wine başlangıç kontrolü geçti. [Otomatik çökme raporları](docs/crash-reports.md) ve isteğe bağlı launcher izleyicisi eklendi. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
 
-[Deneysel LAN Windows build'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-turkish-language.zip): oyun EXE'si kullanıcıdan gelen MotoGP 09/10 kapağını, launcher ayrı MotoGP logosunu kullanır. Çevrimdışı oyun varsayılan kalır; Launcher her açılışta General sayfasında başlar. Temiz paket oyun verisi, kayıt, kişisel ayar ve log içermez. İsteğe bağlı [tek PC bağlantı testi](docs/lan-one-pc-test.md) betiği kaynak depoda bulunur. General sayfasındaki LAN seçeneği otomatik oda aramasını ve isteğe bağlı IP yedeğini açar. [Kapsam, sınırlamalar ve kullanım](docs/lan-multiplayer-test.md).
+[Deneysel LAN Windows build'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-community-online.zip): oyun EXE'si kullanıcıdan gelen MotoGP 09/10 kapağını, launcher ayrı MotoGP logosunu kullanır. Çevrimdışı oyun varsayılan kalır; Launcher her açılışta General sayfasında başlar. Temiz paket oyun verisi, kayıt, kişisel ayar ve log içermez. İsteğe bağlı [tek PC bağlantı testi](docs/lan-one-pc-test.md) betiği kaynak depoda bulunur. General sayfasındaki LAN seçeneği otomatik oda aramasını ve isteğe bağlı IP yedeğini açar. [Kapsam, sınırlamalar ve kullanım](docs/lan-multiplayer-test.md).
 
 **Güncel kullanım: [güncel kaynak depo](https://github.com/inflamesgo/motogp0910-recomp/tree/main) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
 
@@ -50,9 +50,13 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 - DualSense / Edge adaptif tetikler **deneysel** olarak eklendi: Launcher → Controls ve F1 → Controls içinde sağ/sol mod, başlangıç, bitiş ve güç ayrı ayarlanır. Varsayılan kapalı; yerel SDL gerekir. Downpour’un SDL yaklaşımı kaynaklardan incelendi. 8BitDo/DS3/DS4’e efekt gönderilmez; fiziksel DualSense direnç testi henüz yapılmadı. [Kaynaklar ve kapsam](docs/adaptive-triggers.md).
 - Kullanıcı Press Start’tan geri basınca çıkış onayının artık çalıştığını doğruladı. QUIT GAME’in üstte kalan mavi parçası da katman parlaklığı ve alfa korunarak beyaz/griye çevrildi; üst katmanın görünümü de kullanıcı tarafından onaylandı.
 
+## Topluluk sunucusu: Offline / LAN / Online
+
+General menüsünde **Connection mode** ile Çevrimdışı, LAN/Radmin veya deneysel Çevrimiçi seçilebilir. [Linux ve Windows VDS sunucu paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Community-Server.zip) oda keşfi, doğrulanmış UDP aktarımı ve 378 yerel leaderboard görünümünde kalıcı sonuçları sağlar. [Kurulum ve kapsam](docs/community-online.md). Online için kendi HTTPS sunucu adresin gerekir; henüz ortak bir sunucu kurulmadı. Yarış simülasyonu oyunculardan birinde çalışır; **Player Match** kullanılır. Resmî Xbox Live ranked/arkadaş/ses hizmetleri geri getirilmez. Mevcut LAN seçeneği korunur. Yerel Windows/Wine kontrolleri geçti; gerçek VDS üzerinden yarış ve canlı leaderboard ekranı testi bekleniyor.
+
 ## Hazır Windows paketi
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-turkish-language.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** kullanır; Visual Studio/derleme araçları gerekmez.
+[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-community-online.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** kullanır; Visual Studio/derleme araçları gerekmez.
 
 1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
 2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
@@ -64,7 +68,7 @@ Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yok
 
 Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki yarış düzeltmesini ve `game/` düzenini sorunsuz çalıştırdığını bildirdi. Bu teslimattaki giriş tercihi kontrolleri Windows PE probunda Wine altında 5/5 geçti; yeni EXE bu bulut ortamında Windows GPU üzerinde oynanmadı. Tüm mod/pistlerin kalite kontrolü ve duyulabilir ses kalitesi henüz doğrulanmadı. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `d7f6423ec2fb96b9db2297c53fcae996c2407fdfc21bba324cbc9ea7f6b9972b`.
+Paket SHA-256: `26b8c11b5258179a2823e871d2f26742f562f8a0f1148fb2084e35653eb8d281`.
 
 ## Windows'ta kaynaktan derleme
 

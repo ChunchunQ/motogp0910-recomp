@@ -44,7 +44,7 @@ struct App {
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
   std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{},online_server{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -135,6 +135,12 @@ struct App {
     for(auto& item:items)SendMessageW(c,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(item.c_str()));
     SendMessageW(c,CB_SETCURSEL,index<0?0:index,0);
   }
+  void NetworkControls(){
+    const auto mode=SendMessageW(lan_enabled,CB_GETCURSEL,0,0);
+    for(auto control:{lan_player,lan_room})EnableWindow(control,!process && mode>0);
+    for(auto control:{lan_adapter,lan_host})EnableWindow(control,!process && mode==1);
+    EnableWindow(online_server,!process && mode==2);
+  }
   void CancelCapture(){
     capturing=false;for(auto c:binding_buttons)if(c)SetWindowTextW(c,L"…");
   }
@@ -195,7 +201,7 @@ struct App {
     SetWindowTextW(adaptive_triggers,T(L"DualSense adaptive triggers (Experimental)…",L"DualSense adaptif tetikler (Deneysel)…"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
     SetWindowTextW(crash_diagnostics,T(L"Extended crash diagnostics",L"Gelişmiş çökme tanılaması"));
-    SetWindowTextW(lan_enabled,T(L"Enable LAN (Experimental)",L"LAN’ı etkinleştir (Deneysel)"));
+    FillCombo(lan_enabled,{T(L"Offline",L"Çevrimdışı"),L"LAN / Radmin",T(L"Online — community server (Experimental)",L"Çevrimiçi — topluluk sunucusu (Deneysel)")});
     SetWindowTextW(mute,T(L"Mute game audio",L"Oyun sesini kapat"));
     SetWindowTextW(save,T(L"Save settings",L"Ayarları kaydet"));
     SetWindowTextW(defaults,T(L"Restore defaults",L"Varsayılanlar"));
@@ -225,7 +231,7 @@ struct App {
       SendMessageW(size,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
     SendMessageW(size,CB_SETCURSEL,selected<0?0:selected,0);
     SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();RefreshRates();
-    RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    NetworkControls();RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   bool CaptureKey(const MSG& message){
     if(!capturing || (message.message!=WM_KEYDOWN && message.message!=WM_SYSKEYDOWN))return false;
@@ -238,9 +244,11 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
-    SetCheck(lan_enabled,s.lan_enabled);
+    SendMessageW(lan_enabled,CB_SETCURSEL,s.network_mode=="online"?2:s.network_mode=="lan"?1:0,0);
+    SetWindowTextW(online_server,Wide(s.online_server).c_str());
     SetWindowTextW(lan_player,Wide(s.lan_player_name).c_str());SetWindowTextW(lan_room,Wide(s.lan_room_name).c_str());
     SetWindowTextW(lan_adapter,Wide(s.lan_bind_ip).c_str());SetWindowTextW(lan_host,Wide(s.lan_host_ip).c_str());
+    NetworkControls();
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
@@ -283,7 +291,8 @@ struct App {
   }
   Settings GetControls()const{
     Settings s=settings;
-    s.lan_enabled=Checked(lan_enabled);s.lan_player_name=Utf8(Text(lan_player));s.lan_room_name=Utf8(Text(lan_room));
+    s.network_mode=SendMessageW(lan_enabled,CB_GETCURSEL,0,0)==2?"online":SendMessageW(lan_enabled,CB_GETCURSEL,0,0)==1?"lan":"offline";
+    s.lan_enabled=s.network_mode=="lan";s.online_server=Utf8(Text(online_server));s.lan_player_name=Utf8(Text(lan_player));s.lan_room_name=Utf8(Text(lan_room));
     s.lan_bind_ip=Utf8(Text(lan_adapter));s.lan_host_ip=Utf8(Text(lan_host));
     const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
@@ -362,14 +371,16 @@ struct App {
     FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
     LabelControl(3,L"Button prompts",L"Tuş simgeleri",260,462,374);prompt_style=combo(3,260,488,374,kPromptStyle);
     LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,374,92);
-    lan_enabled=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,245,374,28,kLanEnabled);
+    LabelControl(3,L"Connection mode",L"Bağlantı modu",696,245,374);
+    lan_enabled=combo(3,696,271,374,kLanEnabled);
     const auto lan_field=[&](int y,int id,int limit){auto c=PageControl(3,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,696,y,374,28,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
-    LabelControl(3,L"Player name",L"Oyuncu adı",696,290,374);lan_player=lan_field(316,kLanPlayer,15);
-    LabelControl(3,L"Room name (host)",L"Oda adı (kurucu)",696,364,374);lan_room=lan_field(390,kLanRoom,31);
-    LabelControl(3,L"Local IPv4 (empty = Auto / Radmin)",L"Yerel IPv4 (boş = Otomatik / Radmin)",696,438,374);lan_adapter=lan_field(464,kLanAdapter,15);
-    LabelControl(3,L"Host IPv4 (empty = automatic discovery)",L"Kurucu IPv4 (boş = otomatik oda arama)",696,512,374);lan_host=lan_field(538,kLanHost,15);
-    LabelControl(3,L"Same build on both PCs. Use Player Match.\nJoin the same LAN / Radmin network.\nRanked matches and Xbox Live are unsupported.\nGameplay verification is pending.",
-        L"İki PC’de aynı build: Player Match kullan.\nAynı LAN / Radmin ağına bağlan.\nRanked ve Xbox Live desteklenmiyor.\nOyun içi doğrulama henüz yapılmadı.",696,590,374,106);
+    LabelControl(3,L"Player name",L"Oyuncu adı",696,312,374);lan_player=lan_field(338,kLanPlayer,15);
+    LabelControl(3,L"Room name (host)",L"Oda adı (kurucu)",696,376,374);lan_room=lan_field(402,kLanRoom,31);
+    LabelControl(3,L"LAN local IPv4 (empty = Auto / Radmin)",L"LAN yerel IPv4 (boş = Otomatik / Radmin)",696,440,374);lan_adapter=lan_field(466,kLanAdapter,15);
+    LabelControl(3,L"LAN host IPv4 (empty = automatic discovery)",L"LAN kurucu IPv4 (boş = otomatik oda arama)",696,504,374);lan_host=lan_field(530,kLanHost,15);
+    LabelControl(3,L"Online server (HTTPS address)",L"Çevrimiçi sunucu (HTTPS adresi)",696,568,374);online_server=lan_field(594,kOnlineServer,512);
+    LabelControl(3,L"LAN uses your local network / Radmin.\nOnline uses the same community server on both PCs.\nUse the same build and Player Match.",
+        L"LAN, yerel ağı / Radmin’i kullanır.\nÇevrimiçi için iki PC’de aynı sunucu adresini seç.\nAynı buildi ve Player Match seçeneğini kullan.",696,640,374,82);
     crash_diagnostics=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,260,654,374,28,kCrashDiagnostics);
     SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
     LabelControl(4,L"POST-PROCESSING",L"SON İŞLEME",260,247,374);
@@ -583,6 +594,7 @@ struct App {
         edited_bindings[id-kBindingBase]=Utf8(Text(binding_fields[id-kBindingBase]));
       }else if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
+      }else if(id==kLanEnabled && event==CBN_SELCHANGE){NetworkControls();
       }else if(id==kLanguage && event==CBN_SELCHANGE){
         turkish=SendMessageW(language,CB_GETCURSEL,0,0)==1;Localize();Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
