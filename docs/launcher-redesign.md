@@ -12,11 +12,10 @@ window at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
   The left surface stays opaque for legibility; artwork continues behind both
   title buttons. Hover changes only the glyph color. Maximize remains absent.
 - Scrollable child content preserves every existing setting, all 25 keyboard
-  bindings, connection modes and the independent native achievement scrollbar.
+  bindings, connection modes and the independent achievement scrollbar.
   Keyboard focus reveals off-screen fields. Action buttons and status remain
   pinned below the content. Settings and existing saves retain their formats.
-- Native dropdowns and scrollbar tracks are painted with the charcoal palette;
-  their existing selection, mouse-drag and keyboard behavior is retained.
+- Closed dropdowns and client-drawn scrollbar rails use the charcoal palette. There is no native nonclient scrollbar underneath the rails. Mouse dragging, keyboard navigation and page scrolling are retained. A wheel over a closed selector scrolls its surrounding page without changing the selection; explicit open-list selection remains supported.
 - The background is cached by window size, so hovering title buttons does not
   repeatedly resample the original artwork.
 
@@ -73,3 +72,33 @@ Future development packages omit README/feature instructions, SHA256SUMS and the
 Current package: `downloads/MotoGP0910-Windows-x64-launcher-racing-lines.zip`.
 
 SHA-256: `07ae02b2cd5439a8bdf401fb82c4facbb0ebd46251b5f442e294e42f03f80ccc`.
+
+## Quality hotfix after Windows user feedback
+
+The earlier layout checks did not capture the reported interaction stutter and
+intermittent native scrollbar paint. Page switches previously rebuilt every
+selector via Localize (including synchronous display-mode enumeration), and
+root repaints could paint over child controls. Native scrollbar tracking could
+also repaint white after the dark overpaint. These paths were removed:
+
+- Tabs change only outgoing/incoming page visibility, with redraw held during
+  the batch and focus moved out of hidden controls. They never rebuild lists or
+  re-enumerate monitor modes. Root painting clips child windows.
+- Page/achievement rails are painted inside their client windows and handle
+  their own capture/drag input; no WS_VSCROLL/nonclient recoloring remains.
+- Closed combo fields paint once, rather than repainting a native white face
+  and then covering it. Wheel input does not change closed selectors, including
+  the DualSense dialog. Open lists remain intentionally selectable.
+- Idle achievement polling does not invalidate unchanged progress every tick.
+- Body fonts, label/field gaps and row spacing are normalized; Graphics shows
+  five complete pairs of label/selector rows in its initial viewport.
+
+The final Windows PE/Wine test run passed 72,730 checks. New regressions cover
+120 rendered rapid tab switches without localization/list resets, unchanged
+pending settings, closed-selector wheel behavior, actual drag input and scroll
+rail pixels after parent/nonclient repaint. In this cloud Wine fixture the 120
+painted switches took 3,048 ms total (slowest 60 ms). These are fixture timings,
+not measurements on the user's native Windows hardware.
+
+Current hotfix: `downloads/MotoGP0910-Windows-x64-launcher-quality-fix.zip`.
+SHA-256: `459cefc704156a7609ccf335f8f557c3d26db6e648d80da1a021e0b3e0125048`.

@@ -29,9 +29,8 @@
     achievement_filter=add(L"COMBOBOX",WS_TABSTOP|CBS_DROPDOWNLIST,310,96,184,180,kAchievementFilter);
     WNDCLASSW list_class{};list_class.lpfnWndProc=DefWindowProcW;list_class.hInstance=GetModuleHandleW(nullptr);list_class.lpszClassName=L"MotoGPAchievementList";list_class.hCursor=LoadCursorW(nullptr,IDC_ARROW);
     if(!GetClassInfoW(list_class.hInstance,list_class.lpszClassName,&list_class)&&!RegisterClassW(&list_class))throw std::runtime_error("Cannot register achievement list window");
-    achievement_list=add(L"MotoGPAchievementList",WS_TABSTOP|WS_VSCROLL,0,136,494,152,kAchievementList);
+    achievement_list=add(L"MotoGPAchievementList",WS_TABSTOP,0,136,494,152,kAchievementList);
     SetWindowSubclass(achievement_list,AchievementListProc,1,reinterpret_cast<DWORD_PTR>(this));
-    SetWindowSubclass(achievement_list,DarkScrollProc,9,reinterpret_cast<DWORD_PTR>(this));
     achievement_note=add(L"STATIC",0,0,296,494,22,0);
     page_extent[5]=kPageHeight;
   }
@@ -39,6 +38,8 @@
   int AchievementLanguage()const{const auto index=SendMessageW(game_language,CB_GETCURSEL,0,0);return index>=0&&index<6?std::array{1,4,3,5,6,1000}[index]:settings.game_language;}
   std::wstring CatalogKey()const{return GameRoot().wstring()+L"|"+achievements::MetadataRoot(exe,Get(config.table,"metadata_root",std::string{})).wstring()+L"|"+std::to_wstring(AchievementLanguage());}
   void PollAchievements(){
+    const auto before_catalog=catalog_key,before_error=catalog_error;
+    const auto before_unlocks=unlocks;const bool before_known=unlocks_known,before_stale=unlocks_stale;
     try {
       const auto wanted=CatalogKey();
       if(catalog_future.valid()&&catalog_future.wait_for(std::chrono::seconds(0))==std::future_status::ready){
@@ -64,9 +65,11 @@
       }catch(const std::exception&){unlocks_stale=true;}
       try {achievement_options=motogp::achievements::ReadOptions(root/"achievement-ui.toml");SetCheck(achievement_popup,achievement_options.popup);SetCheck(achievement_sound,achievement_options.sound);EnableWindow(achievement_popup,TRUE);EnableWindow(achievement_sound,TRUE);}
       catch(const std::exception&){EnableWindow(achievement_popup,FALSE);EnableWindow(achievement_sound,FALSE);}
-      SetWindowTextW(achievement_note,unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7."));
-      RECT summary{0,0,S(494),S(60)};InvalidateRect(page_view,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);
-    }catch(const std::exception& e){catalog_error=ErrorDetails(e);InvalidateRect(achievement_list,nullptr,FALSE);}
+      const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7.");
+      if(Text(achievement_note)!=note)SetWindowTextW(achievement_note,note);
+      if(before_catalog!=catalog_key||before_error!=catalog_error||before_unlocks!=unlocks||before_known!=unlocks_known||before_stale!=unlocks_stale){
+      RECT summary{0,0,S(494),S(60)};InvalidateRect(page_view,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}
+    }catch(const std::exception& e){catalog_error=ErrorDetails(e);if(before_error!=catalog_error)InvalidateRect(achievement_list,nullptr,FALSE);}
   }
   void SaveAchievementOption(int id){
     const auto root=AchievementRoot();const auto file=root/"achievement-ui.toml";
@@ -116,11 +119,12 @@
   void PaintAchievementList(HDC target){
     RECT client;GetClientRect(achievement_list,&client);auto dc=CreateCompatibleDC(target);auto bitmap=CreateCompatibleBitmap(target,std::max<LONG>(1,client.right),std::max<LONG>(1,client.bottom));auto old=SelectObject(dc,bitmap);
     FillRect(dc,&client,card);SetBkMode(dc,TRANSPARENT);
+    const int bitmap_width=client.right;client.right-=S(20);
     const auto description=[&](size_t index)->std::wstring{const auto& info=catalog.entries[index].info;return Wide(AchievementEarned(info.id)||info.unachieved_description.empty()?info.description:info.unachieved_description);};
     auto height=[&](size_t index){SelectObject(dc,font);RECT r{0,0,std::max<LONG>(S(80),client.right-S(205)),0};auto text=description(index);DrawTextW(dc,text.c_str(),-1,&r,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);return std::max<int>(S(98),r.bottom+S(58));};
     int total=0;for(auto index:achievement_rows)total+=height(index)+S(8);
     achievement_scroll=std::clamp(achievement_scroll,0,std::max<int>(0,total-client.bottom));
-    SCROLLINFO scroll{sizeof(scroll),SIF_RANGE|SIF_PAGE|SIF_POS,0,std::max(0,total-1),static_cast<UINT>(client.bottom),achievement_scroll};SetScrollInfo(achievement_list,SB_VERT,&scroll,TRUE);
+    achievement_total=total;
     int y=-achievement_scroll;
     for(auto index:achievement_rows){const int h=height(index);if(y+h>0&&y<client.bottom){
       const auto& info=catalog.entries[index].info;const bool earned=AchievementEarned(info.id);
@@ -135,10 +139,15 @@
     }y+=h+S(8);}
     if(achievement_rows.empty()){SelectObject(dc,font);SetTextColor(dc,kMuted);RECT r{S(18),S(25),client.right-S(24),client.bottom-S(18)};
       const auto message=!catalog_error.empty()?catalog_error:catalog.entries.empty()?std::wstring(T(L"Loading achievements from your game folder...",L"Başarımlar oyun klasöründen yükleniyor...")):std::wstring(T(L"No achievements match this filter.",L"Bu filtreye uygun başarım bulunamadı."));DrawTextW(dc,message.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX);}
-    BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
+    PaintRail(dc,achievement_list,achievement_total,client.bottom,achievement_scroll);
+    BitBlt(target,0,0,bitmap_width,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   static LRESULT CALLBACK AchievementListProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    RECT area;GetClientRect(control,&area);auto requested=app.achievement_scroll;
+    if(app.RailInput(control,message,lparam,app.achievement_total,area.bottom,requested,app.achievement_drag)){
+      if(requested!=app.achievement_scroll){app.achievement_scroll=requested;InvalidateRect(control,nullptr,FALSE);}return 0;
+    }
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT){PAINTSTRUCT ps;auto dc=BeginPaint(control,&ps);app.PaintAchievementList(dc);EndPaint(control,&ps);return 0;}
     if(message==WM_GETDLGCODE)return DLGC_WANTARROWS;

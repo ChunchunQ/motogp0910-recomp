@@ -79,7 +79,7 @@ int wmain(int argc,wchar_t** argv){
     const auto pictures=fs::path(argv[2]);fs::create_directories(pictures);
     App app;app.scale=1;const auto game=fs::path(argv[1]);
     WNDCLASSW cls{};cls.hInstance=GetModuleHandleW(nullptr);cls.lpfnWndProc=WindowProc;cls.lpszClassName=L"MotoGPLauncherUIProbe";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);RegisterClassW(&cls);
-    RECT bounds{0,0,kWidth,kHeight+kCaptionHeight};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX;
+    RECT bounds{0,0,kWidth,kHeight+kCaptionHeight};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX|WS_CLIPCHILDREN;
     AdjustWindowRectEx(&bounds,style,FALSE,0);
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
@@ -173,17 +173,19 @@ int wmain(int argc,wchar_t** argv){
     SendMessageW(app.achievement_filter,CB_SETCURSEL,0,0);app.FilterAchievements();
     app.ShowPage(5);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
     { // Actual OS mouse input, not a fabricated WM_VSCROLL / direct scroll call.
-      SCROLLBARINFO bar{sizeof(bar)};CheckUI(GetScrollBarInfo(app.achievement_list,OBJID_VSCROLL,&bar),"Read native scrollbar geometry");
-      const int x=(bar.rcScrollBar.left+bar.rcScrollBar.right)/2;
-      const int start=bar.rcScrollBar.top+(bar.xyThumbTop+bar.xyThumbBottom)/2;
-      const int end=bar.rcScrollBar.bottom-bar.dxyLineButton-6;std::atomic<bool> done=false,mouse_ok=true;
+      RECT list;GetWindowRect(app.achievement_list,&list);RECT client;GetClientRect(app.achievement_list,&client);
+      const auto rail=app.Rail(app.achievement_list,app.achievement_total,client.bottom,app.achievement_scroll);
+      CheckUI(rail.maximum>0&&!(GetWindowLongPtrW(app.achievement_list,GWL_STYLE)&WS_VSCROLL),"Scroll rail has no native white scrollbar underneath");
+      const int x=list.left+(rail.thumb.left+rail.thumb.right)/2;
+      const int start=list.top+(rail.thumb.top+rail.thumb.bottom)/2;
+      const int end=list.top+rail.track.bottom-6;std::atomic<bool> done=false,mouse_ok=true;
       std::thread mouse([&]{auto button=[&](DWORD flags){INPUT event{};event.type=INPUT_MOUSE;event.mi.dwFlags=flags;if(SendInput(1,&event,sizeof(event))!=1)mouse_ok=false;};
         SetCursorPos(x,start);button(MOUSEEVENTF_LEFTDOWN);Sleep(120);
         for(int i=1;i<=4;++i){SetCursorPos(x,start+(end-start)*i/4);Sleep(60);}button(MOUSEEVENTF_LEFTUP);done=true;
       });
       while(!done){MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}Sleep(5);}mouse.join();
       MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}UpdateWindow(app.achievement_list);
-      CheckUI(mouse_ok&&app.achievement_scroll>0,"Dragging the actual native scrollbar thumb scrolls achievements");
+      CheckUI(mouse_ok&&app.achievement_scroll>0,"Dragging the actual painted scrollbar thumb scrolls achievements");
       SendMessageW(app.achievement_list,WM_KEYDOWN,VK_HOME,0);UpdateWindow(app.achievement_list);
     }
 
@@ -192,7 +194,7 @@ int wmain(int argc,wchar_t** argv){
       app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};AdjustWindowRectEx(&size,style,FALSE,0);
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
-        app.turkish=tr;
+        app.turkish=tr;app.Localize();
         for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
           app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
@@ -202,6 +204,28 @@ int wmain(int argc,wchar_t** argv){
           }
         }
       }
+    }
+    { // Regression for the reported stutter: tabs must never repopulate all
+      // selectors / enumerate monitor modes or modify pending game settings.
+      const auto generation=app.localization_generation;toml::table before;app.GetControls().Store(before);std::ostringstream original;original<<toml::toml_formatter{before};
+      const auto begin=GetTickCount64();uint64_t slowest=0;
+      for(int i=0;i<120;++i){const auto start=GetTickCount64();app.ShowPage(i%6);RedrawWindow(app.page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);slowest=std::max<uint64_t>(slowest,GetTickCount64()-start);CheckUI(app.current_page==i%6,"Rapid switching leaves the requested tab selected");}
+      CheckUI(app.localization_generation==generation,"Rapid tabs never rebuild selectors or query refresh modes");
+      toml::table after;app.GetControls().Store(after);std::ostringstream current;current<<toml::toml_formatter{after};CheckUI(original.str()==current.str(),"Rapid switching preserves all unsaved settings");
+      std::cout<<"120 painted tab switches: "<<GetTickCount64()-begin<<" ms total; slowest "<<slowest<<" ms\n";
+      app.ShowPage(3);app.ScrollPage(0);
+      const auto selected=SendMessageW(app.game_language,CB_GETCURSEL,0,0);
+      SendMessageW(app.game_language,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);
+      CheckUI(SendMessageW(app.game_language,CB_GETCURSEL,0,0)==selected&&app.page_scroll[3]>0,"Wheel over closed Game language scrolls the page without changing the language");
+      SendMessageW(app.game_language,WM_MOUSEWHEEL,MAKEWPARAM(0,WHEEL_DELTA),0);
+      CheckUI(SendMessageW(app.game_language,CB_GETCURSEL,0,0)==selected&&app.page_scroll[3]==0,"Reverse wheel preserves the selected language too");
+      for(auto control:{app.effect,app.fullscreen,app.prompt_style,app.fps_limit,app.lan_enabled}){
+        const auto saved=SendMessageW(control,CB_GETCURSEL,0,0);SendMessageW(control,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(saved==SendMessageW(control,CB_GETCURSEL,0,0),"A closed selector cannot be changed accidentally by the wheel");
+      }
+      app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+      CheckUI(!(GetWindowLongPtrW(app.page_view,GWL_STYLE)&WS_VSCROLL),"The page has no native scrollbar that could repaint white");
+      const auto rail=app.Rail(app.page_view,app.page_extent[3],App::kPageHeight,0);
+      for(int i=0;i<12;++i){SendMessageW(app.page_view,WM_NCPAINT,1,0);InvalidateRect(window,nullptr,FALSE);UpdateWindow(window);UpdateWindow(app.page_view);const auto dc=GetDC(app.page_view);CheckUI(GetPixel(dc,rail.track.left,rail.track.bottom-1)==kBackground,"Parent/nonclient repaint never turns the scroll rail white");ReleaseDC(app.page_view,dc);}
     }
     app.ShowPage(2);app.ScrollPage(0);app.Command(kCaptureBase+static_cast<int>(kBindings.size())-1,BN_CLICKED);
     CheckUI(app.capturing&&app.page_scroll[2]>0&&GetFocus()==app.binding_buttons.back(),"Focusing the final keyboard binding automatically reveals it in the compact viewport");
@@ -236,6 +260,7 @@ int wmain(int argc,wchar_t** argv){
           RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);
           CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"DualSense controls fit scaled modal");
         }
+        {auto selector=GetDlgItem(modal,110);const auto mode=SendMessageW(selector,CB_GETCURSEL,0,0);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed DualSense selectors also ignore the mouse wheel");}
         SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendDlgItemMessageW(modal,113,TBM_SETPOS,TRUE,8);
         CheckUI(dialog.Commit()&&app.settings.adaptive.enabled&&app.settings.adaptive.right.strength==8,"Modal commits all trigger controls");
         SendDlgItemMessageW(modal,111,TBM_SETPOS,TRUE,9);

@@ -1,6 +1,7 @@
 #include "core.h"
 #include "file_verification.h"
 #include "notices_dialog.h"
+#include "scroll_rail.h"
 #include "adaptive_triggers_dialog.h"
 #include "hardware.h"
 #include "achievements.h"
@@ -61,6 +62,8 @@ struct App {
   std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum);
   std::vector<int> refresh_rates{0},fps_limits{0,30,60,90,120,144,165,180,240};
   int current_page=3,binding_index=0;
+  bool pages_ready=false,switching_page=false;
+  unsigned localization_generation=0;
   bool filling_binding=false,capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{};
   HBRUSH background=CreateSolidBrush(kBackground),card=CreateSolidBrush(kCard),field=CreateSolidBrush(kField);
@@ -77,7 +80,7 @@ struct App {
   void CreateFonts(){
     auto make=[&](int size,int weight){return CreateFontW(-S(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");};
-    font=make(13,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(13,FW_SEMIBOLD);logo=make(36,FW_BOLD);
+    font=make(14,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(14,FW_SEMIBOLD);logo=make(36,FW_BOLD);
   }
   HWND Control(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0,HWND parent=nullptr){
     bool button=std::wstring_view(cls)==L"BUTTON";
@@ -92,7 +95,7 @@ struct App {
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
     SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
     if(std::wstring_view(cls)==L"EDIT")SetWindowTheme(c,L"",L"");
-    if(std::wstring_view(cls)==L"COMBOBOX")SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));
+    if(std::wstring_view(cls)==L"COMBOBOX"){SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));SendMessageW(c,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}
     return c;
   }
   static LRESULT CALLBACK CheckProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
@@ -109,7 +112,7 @@ struct App {
   }
   HWND PageControl(int page,const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
     auto c=Control(cls,text,style,x,y,w,h,id,page_view);pages[page].push_back(c);
-    page_extent[page]=std::max(page_extent[page],y+(std::wstring_view(cls)==L"COMBOBOX"?28:h)+8);
+    page_extent[page]=std::max(page_extent[page],y+(std::wstring_view(cls)==L"COMBOBOX"?32:h)+8);
     SetWindowSubclass(c,PageChildProc,7,reinterpret_cast<DWORD_PTR>(this));return c;
   }
   HWND LabelControl(int page,const wchar_t* en,const wchar_t* tr,int x,int y,int w,int h=22){
@@ -122,7 +125,7 @@ struct App {
     auto v=Text(path);if(v.empty())return exe/L"game";
     auto root=fs::path(v);return fs::absolute(root.is_absolute()?root:exe/root).lexically_normal();
   }
-  void SetCheck(HWND c,bool value){checks[c]=value;InvalidateRect(c,nullptr,FALSE);}
+  void SetCheck(HWND c,bool value){auto i=checks.find(c);if(i!=checks.end()&&i->second==value)return;checks[c]=value;InvalidateRect(c,nullptr,FALSE);}
   bool Checked(HWND c)const{return checks.at(c);}
   void Status(std::wstring en,std::wstring tr,bool positive=false){
     status_positive=positive;InvalidateRect(window,nullptr,FALSE);
@@ -148,12 +151,25 @@ struct App {
     EnableWindow(online_server,!process && mode==2);
   }
   void CancelCapture(){
-    capturing=false;for(auto c:binding_buttons)if(c)SetWindowTextW(c,L"…");
+    if(!capturing)return;
+    capturing=false;if(binding_buttons[binding_index])SetWindowTextW(binding_buttons[binding_index],L"…");
   }
   void ShowPage(int page){
-    CancelCapture();current_page=page;
-    for(int i=0;i<6;++i)for(auto c:pages[i])ShowWindow(c,i==page?SW_SHOW:SW_HIDE);
-    ScrollPage(page_scroll[page]);Localize();if(page==5){if(!catalog_error.empty())catalog_key.clear();SetTimer(window,2,500,nullptr);PollAchievements();}else if(!catalog_future.valid())KillTimer(window,2);InvalidateRect(window,nullptr,FALSE);
+    if(page<0||page>=6||switching_page||(pages_ready&&current_page==page))return;
+    switching_page=true;CancelCapture();
+    // Move focus out of the outgoing page before hiding it. Focus-driven
+    // scrolling cannot re-enter the transition or reveal an old field.
+    if(GetParent(GetFocus())==page_view)SetFocus(navigation[page]);
+    SendMessageW(page_view,WM_SETREDRAW,FALSE,0);
+    for(auto c:pages[current_page])ShowWindow(c,SW_HIDE);
+    current_page=page;
+    ScrollPage(page_scroll[page],true);
+    for(auto c:pages[page])ShowWindow(c,SW_SHOW);
+    pages_ready=true;switching_page=false;SendMessageW(page_view,WM_SETREDRAW,TRUE,0);
+    for(auto c:navigation)InvalidateRect(c,nullptr,FALSE);
+    RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    if(page==5){if(!catalog_error.empty())catalog_key.clear();SetTimer(window,2,500,nullptr);PollAchievements();}
+    else if(!catalog_future.valid())KillTimer(window,2);
   }
   void UpdateSharpness(){
     const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
@@ -190,6 +206,7 @@ struct App {
     SendMessageW(render_resolution,CB_SETCURSEL,selection<0?0:selection,0);
   }
   void Localize(){
+    ++localization_generation;
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
     if(auto menu=GetSystemMenu(window,FALSE))ModifyMenuW(menu,kNoticesCommand,MF_BYCOMMAND|MF_STRING,kNoticesCommand,T(L"Third-party notices…",L"Üçüncü taraf bildirimleri…"));
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
@@ -208,7 +225,7 @@ struct App {
     SetWindowTextW(adaptive_triggers,T(L"DualSense adaptive triggers (Experimental)…",L"DualSense adaptif tetikler (Deneysel)…"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
     SetWindowTextW(crash_diagnostics,T(L"Extended crash diagnostics",L"Gelişmiş çökme tanılaması"));
-    FillCombo(lan_enabled,{T(L"Offline",L"Çevrimdışı"),L"LAN / Radmin",T(L"Online — community server (Experimental)",L"Çevrimiçi — topluluk sunucusu (Deneysel)")});
+    FillCombo(lan_enabled,{T(L"Offline",L"Çevrimdışı"),L"LAN / Radmin",T(L"Online (Experimental)",L"Çevrimiçi (Deneysel)")});
     SetWindowTextW(mute,T(L"Mute game audio",L"Oyun sesini kapat"));
     SetWindowTextW(save,T(L"Save",L"Kaydet"));
     SetWindowTextW(defaults,T(L"Defaults",L"Varsayılan"));
@@ -216,7 +233,7 @@ struct App {
     SetWindowTextW(verify_files,verifying?T(L"Cancel check",L"Kontrolü iptal et"):T(L"Verify game files",L"Dosyaları doğrula"));
     SetWindowTextW(play,T(process?L"GAME RUNNING":L"PLAY",process?L"OYUN ÇALIŞIYOR":L"OYUNU BAŞLAT"));
     FillCombo(post_effect,{T(L"Off",L"Kapalı"),L"FXAA",L"FXAA Extreme"});
-    FillCombo(backend,{L"SDL — Xbox / PlayStation / USB",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
+    FillCombo(backend,{L"SDL — Xbox / PlayStation",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
     FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
     FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS",T(L"AMD FSR 2 (Experimental)",L"AMD FSR 2 (Deneysel)"),T(L"AMD FSR 3 (Experimental)",L"AMD FSR 3 (Deneysel)")});
     FillCombo(fsr_quality,{T(L"Auto",L"Otomatik"),T(L"Native AA",L"Yerel AA"),T(L"Quality",L"Kalite"),T(L"Balanced",L"Dengeli"),T(L"Performance",L"Performans"),T(L"Ultra Performance",L"Ultra Performans")});
@@ -410,8 +427,8 @@ struct App {
   void Rescale(double value){
     DeleteFonts();scale=value;CreateFonts();
     for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y+(GetParent(p.control)==page_view?0:kCaptionHeight)),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
-      wchar_t cls[32];GetClassNameW(p.control,cls,32);if(std::wstring_view(cls)==L"COMBOBOX"){SendMessageW(p.control,CB_SETITEMHEIGHT,0,S(22));SendMessageW(p.control,CB_SETITEMHEIGHT,WPARAM(-1),S(22));}}
-    ScrollPage(page_scroll[current_page]);
+      wchar_t cls[32];GetClassNameW(p.control,cls,32);if(std::wstring_view(cls)==L"COMBOBOX"){SendMessageW(p.control,CB_SETITEMHEIGHT,0,S(24));SendMessageW(p.control,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}}
+    ScrollPage(page_scroll[current_page],true);
     SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     for(auto c:{folder_label,status})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
@@ -606,7 +623,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int show){
     RECT work{};SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
     app.scale=std::max(0.55,std::min({GetDpiForSystem()/96.0,(work.right-work.left-40)/double(kWidth),(work.bottom-work.top-50)/double(kHeight+kCaptionHeight)}));
     WNDCLASSW cls{};cls.lpfnWndProc=WindowProc;cls.hInstance=instance;cls.lpszClassName=L"MotoGP0910Launcher";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);cls.hIcon=LoadIconW(instance,MAKEINTRESOURCEW(motogp::kIconResource));RegisterClassW(&cls);
-    RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX;
+    RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};constexpr DWORD style=WS_POPUP|WS_SYSMENU|WS_MINIMIZEBOX|WS_CLIPCHILDREN;
     AdjustWindowRectEx(&size,style,FALSE,0);
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,(work.right-size.right+size.left)/2,(work.bottom-size.bottom+size.top)/2,
         size.right-size.left,size.bottom-size.top,nullptr,nullptr,instance,&app);

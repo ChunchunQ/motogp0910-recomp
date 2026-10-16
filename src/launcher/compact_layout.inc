@@ -2,7 +2,7 @@
   // traversal stay accessible without shrinking text to fit every page at once.
   HWND page_view{},verify_files{};
   std::array<int,6> page_scroll{},page_extent{};
-  static constexpr int kPageX=28,kPageY=144,kPageWidth=520,kPageHeight=318;
+  static constexpr int kPageX=28,kPageY=136,kPageWidth=520,kPageHeight=328;
   std::unique_ptr<Gdiplus::Bitmap> cover,paint_background;
   std::future<GameVerification> verify_future;
   std::atomic<bool> verify_cancel{false};
@@ -15,19 +15,22 @@
     return nullptr;
   }
   int PageMaximum()const{return std::max(0,page_extent[current_page]-kPageHeight);}
-  void ScrollPage(int requested){
+  void ScrollPage(int requested,bool force=false){
     const int next=std::clamp(requested,0,PageMaximum());
+    if(!force&&page_scroll[current_page]==next)return;
     page_scroll[current_page]=next;
-    for(const auto& p:placements)if(std::find(pages[current_page].begin(),pages[current_page].end(),p.control)!=pages[current_page].end())
-      SetWindowPos(p.control,nullptr,S(p.x),S(p.y-next),S(p.w),S(p.h),SWP_NOACTIVATE|SWP_NOZORDER);
-    SCROLLINFO si{sizeof(si),SIF_RANGE|SIF_PAGE|SIF_POS,0,std::max(0,page_extent[current_page]-1),kPageHeight,next};
-    SetScrollInfo(page_view,SB_VERT,&si,TRUE);
-    RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    auto batch=BeginDeferWindowPos(static_cast<int>(pages[current_page].size()));
+    for(const auto& p:placements)if(GetParent(p.control)==page_view&&std::find(pages[current_page].begin(),pages[current_page].end(),p.control)!=pages[current_page].end()){
+      if(batch)batch=DeferWindowPos(batch,p.control,nullptr,S(p.x),S(p.y-next),S(p.w),S(p.h),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
+      else SetWindowPos(p.control,nullptr,S(p.x),S(p.y-next),S(p.w),S(p.h),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
+    }
+    if(batch)EndDeferWindowPos(batch);
+    if(!switching_page)RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   void Reveal(HWND control){
     for(const auto& p:placements)if(p.control==control){
       wchar_t cls[32];GetClassNameW(control,cls,32);
-      const int h=std::wstring_view(cls)==L"COMBOBOX"?28:p.h;
+      const int h=std::wstring_view(cls)==L"COMBOBOX"?32:p.h;
       const int offset=page_scroll[current_page];
       if(p.y<offset)ScrollPage(p.y);
       else if(p.y+h>offset+kPageHeight)ScrollPage(p.y+h-kPageHeight+4);
@@ -36,15 +39,19 @@
   }
   static LRESULT CALLBACK PageChildProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
-    if(message==WM_SETFOCUS)app.Reveal(control);
+    if(message==WM_SETFOCUS&&!app.switching_page)app.Reveal(control);
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,PageChildProc,id);
     return DefSubclassProc(control,message,wparam,lparam);
   }
   static LRESULT CALLBACK PageProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    int requested=app.page_scroll[app.current_page];
+    if(app.RailInput(control,message,lparam,app.page_extent[app.current_page],kPageHeight,requested,app.page_drag)){
+      app.ScrollPage(requested);return 0;
+    }
     switch(message){
       case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);
-        if(app.current_page==5)app.PaintAchievementSummary(dc);EndPaint(control,&ps);return 0;}
+        if(app.current_page==5)app.PaintAchievementSummary(dc);app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);EndPaint(control,&ps);return 0;}
       case WM_ERASEBKGND:return 1;
       case WM_VSCROLL:{int next=app.page_scroll[app.current_page];
         switch(LOWORD(wparam)){case SB_LINEUP:next-=28;break;case SB_LINEDOWN:next+=28;break;
@@ -97,18 +104,16 @@
     ShowWindow(title,SW_HIDE);ShowWindow(subtitle,SW_HIDE);
     const std::array<int,6> nav_x{104,278,336,28,186,420},nav_w{76,52,78,70,86,128};
     for(int i=0;i<6;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,nav_x[i],94,nav_w[i],32,kNavGraphics+i);
-    page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN|WS_VSCROLL,kPageX,kPageY,kPageWidth,kPageHeight);
+    page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN,kPageX,kPageY,kPageWidth,kPageHeight);
     SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
     SetWindowSubclass(page_view,PageProc,1,reinterpret_cast<DWORD_PTR>(this));
-    SetWindowTheme(page_view,L"DarkMode_Explorer",nullptr);
-    SetWindowSubclass(page_view,DarkScrollProc,9,reinterpret_cast<DWORD_PTR>(this));
     auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,220,id);};
-    auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,28,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
+    auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,30,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
     auto check=[&](int page,int x,int y,int w,int id){return PageControl(page,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,x,y,w,28,id);};
-    auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){LabelControl(page,en,tr,x,y,236,32);return combo(page,x,y+34,236,id);};
+    auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){LabelControl(page,en,tr,x,y,236,24);return combo(page,x,y+26,236,id);};
     folder_label=PageControl(3,L"STATIC",L"",0,0,0,494,20);
     path=edit(3,0,24,388,kPath,32760);SetWindowTextW(path,ResolveGameRoot(exe,config.table).c_str());
-    browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,400,24,94,28,kBrowse);
+    browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,400,24,94,30,kBrowse);
     verify_files=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,64,164,30,kVerifyFiles);
     LabelControl(3,L"Checks original files. No changes are made.",L"Özgün dosyaları kontrol eder. Değişiklik yapmaz.",176,66,318,32);
     language=field(3,L"Launcher language",L"Launcher dili",0,112,kLanguage);
@@ -125,21 +130,21 @@
     LabelControl(3,L"LAN uses your local network / Radmin. Online uses a community server.\nUse the same build and Player Match.",L"LAN, yerel ağı / Radmin’i kullanır. Çevrimiçi için aynı sunucuyu seç.\nAynı buildi ve Player Match seçeneğini kullan.",0,550,494,64);
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
     render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",258,0,kRenderResolution);
-    size=field(0,L"Output window size",L"Çıkış pencere boyutu",0,78,kSize);
-    anisotropic=field(0,L"Texture filtering",L"Doku filtreleme",258,78,kAnisotropic);
-    fullscreen=field(0,L"Display mode",L"Ekran modu",0,156,kFullscreen);
-    post_effect=field(0,L"Anti-aliasing",L"Kenar yumuşatma",258,156,kPostEffect);
-    refresh_rate=field(0,L"Refresh rate",L"Yenileme hızı",0,234,kRefreshRate);
-    fps_limit=field(0,L"FPS limit",L"FPS sınırı",258,234,kFpsLimit);
-    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,312,kEffect);
-    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",258,312,kFsrQuality);
-    vsync=check(0,0,392,236,kVsync);msaa=check(0,258,392,236,kMsaa);
-    letterbox=check(0,0,434,236,kLetterbox);aspect=combo(0,258,434,236,kAspect);
-    dither=check(0,0,476,236,kDither);shader_cache=check(0,258,476,236,kShaderCache);
-    LabelControl(0,L"Sharpness",L"Keskinlik",0,524,400);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,424,524,70,22);
-    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,552,494,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
-    fsr_notice=PageControl(0,L"STATIC",L"",0,0,606,494,44);
-    LabelControl(0,L"Borderless and windowed use desktop Hz. FPS cap does not unlock the game’s own limit.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır. FPS sınırı, oyunun kendi sınırını kaldırmaz.",0,668,494,48);
+    size=field(0,L"Output window size",L"Çıkış pencere boyutu",0,68,kSize);
+    anisotropic=field(0,L"Texture filtering",L"Doku filtreleme",258,68,kAnisotropic);
+    fullscreen=field(0,L"Display mode",L"Ekran modu",0,136,kFullscreen);
+    post_effect=field(0,L"Anti-aliasing",L"Kenar yumuşatma",258,136,kPostEffect);
+    refresh_rate=field(0,L"Refresh rate",L"Yenileme hızı",0,204,kRefreshRate);
+    fps_limit=field(0,L"FPS limit",L"FPS sınırı",258,204,kFpsLimit);
+    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,272,kEffect);
+    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",258,272,kFsrQuality);
+    vsync=check(0,0,354,236,kVsync);msaa=check(0,258,354,236,kMsaa);
+    letterbox=check(0,0,396,236,kLetterbox);aspect=combo(0,258,396,236,kAspect);
+    dither=check(0,0,438,236,kDither);shader_cache=check(0,258,438,236,kShaderCache);
+    LabelControl(0,L"Sharpness",L"Keskinlik",0,480,400);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,424,480,70,22);
+    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,508,494,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
+    fsr_notice=PageControl(0,L"STATIC",L"",0,0,560,494,44);
+    LabelControl(0,L"Borderless and windowed use desktop Hz. FPS cap does not unlock the game’s own limit.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır. FPS sınırı, oyunun kendi sınırını kaldırmaz.",0,620,494,48);
     for(size_t i=0;i<engine_choices.size();++i)engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(i%2)*258,(i/2)*82,kEngineBase+i);
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",258,82,kShadowDistance);
     LabelControl(4,L"Game default preserves the original effects and track settings.\nOff disables the selected effect. Higher distance can increase GPU work.",L"Oyunun ayarı, özgün efektleri ve pist ayarlarını korur.\nKapalı seçimi ilgili efekti kapatır. Yüksek mesafe GPU yükünü artırabilir.",0,190,494,70);
@@ -147,10 +152,10 @@
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,494,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     mute=check(1,0,100,494,kMute);
     LabelControl(1,L"One level for music, engines and menu sounds. Use the in-game options for separate music and effects levels.\nLauncher changes apply on the next game launch.",L"Müzik, motor ve menü sesleri için toplam ses düzeyi. Ayrı ses düzeyleri için oyun içi seçenekleri kullan.\nLauncher değişiklikleri sonraki açılışta uygulanır.",0,160,494,86);
-    backend=field(2,L"Controller",L"Kontrolcü",0,0,kBackend);keyboard=check(2,258,34,236,kKeyboard);
-    adaptive_triggers=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,86,494,32,kAdaptiveTriggers);
-    LabelControl(2,L"Type a key or use … to capture. Right-click to unbind or reset. Esc cancels capture.",L"Tuşu yaz veya … ile yakala. Sağ tık: tuşu kaldır / sıfırla. Esc: iptal.",0,134,494,44);
-    for(size_t i=0;i<kBindings.size();++i){const int y=194+static_cast<int>(i)*36;
+    backend=field(2,L"Controller",L"Kontrolcü",0,0,kBackend);keyboard=check(2,258,26,236,kKeyboard);
+    adaptive_triggers=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,76,494,32,kAdaptiveTriggers);
+    LabelControl(2,L"Type a key or use … to capture. Right-click to unbind or reset. Esc cancels capture.",L"Tuşu yaz veya … ile yakala. Sağ tık: tuşu kaldır / sıfırla. Esc: iptal.",0,120,494,38);
+    for(size_t i=0;i<kBindings.size();++i){const int y=170+static_cast<int>(i)*34;
       LabelControl(2,kBindings[i].english,kBindings[i].turkish,0,y+3,232,26);
       binding_fields[i]=edit(2,244,y,210,kBindingBase+i,512);SetWindowSubclass(binding_fields[i],BindingProc,1,reinterpret_cast<DWORD_PTR>(this));
       binding_buttons[i]=PageControl(2,L"BUTTON",L"…",WS_TABSTOP|BS_PUSHBUTTON,466,y,28,28,kCaptureBase+i);
@@ -162,7 +167,7 @@
     logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,252,510,68,32,kLogs);
     report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,328,510,78,32,kReport);
     play=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,414,504,134,40,kPlay);
-    Localize();SetControls(settings);ShowPage(3);ReadyStatus();
+    Localize();SetControls(settings);for(auto& page:pages)for(auto c:page)ShowWindow(c,SW_HIDE);ShowPage(3);ReadyStatus();
   }
   void StartVerification(){
     if(process)return;
@@ -212,33 +217,55 @@
     }catch(const std::exception& e){ErrorBox(e);}
   }
   static LRESULT CALLBACK ComboFrameProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
-    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,ComboFrameProc,id);
-    const auto result=DefSubclassProc(control,message,wparam,lparam);
-    if(message==WM_PAINT){auto& app=*reinterpret_cast<App*>(data);const auto dc=GetDC(control);RECT r;GetClientRect(control,&r);
-      auto brush=CreateSolidBrush(kField);RECT arrow{r.right-app.S(26),r.top+1,r.right-1,r.bottom-1};FillRect(dc,&arrow,brush);DeleteObject(brush);
-      auto pen=CreatePen(PS_SOLID,std::max(1,app.S(1)),GetFocus()==control?kAccent:kBorder);auto old_pen=SelectObject(dc,pen),old_brush=SelectObject(dc,GetStockObject(NULL_BRUSH));
-      Rectangle(dc,0,0,r.right,r.bottom);Rectangle(dc,1,1,r.right-1,r.bottom-1);SelectObject(dc,old_pen);SelectObject(dc,old_brush);DeleteObject(pen);
-      pen=CreatePen(PS_SOLID,std::max(1,app.S(1)),IsWindowEnabled(control)?kMuted:kBorder);old_pen=SelectObject(dc,pen);
-      const int x=r.right-app.S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-app.S(4),y-app.S(2),nullptr);LineTo(dc,x,y+app.S(2));LineTo(dc,x+app.S(4),y-app.S(2));
-      SelectObject(dc,old_pen);DeleteObject(pen);ReleaseDC(control,dc);
+    auto& app=*reinterpret_cast<App*>(data);
+    if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0)){
+      // A closed selector never changes a saved setting just because the
+      // pointer happens to be over it. Scroll the surrounding page instead.
+      return SendMessageW(app.page_view,WM_MOUSEWHEEL,wparam,lparam);
     }
-    return result;
+    if(message==WM_ERASEBKGND)return 1;
+    if(message==WM_PAINT){
+      PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);
+      app.Rounded(dc,r,kField,GetFocus()==control?kAccent:kBorder,6);
+      DRAWITEMSTRUCT item{};item.CtlType=ODT_COMBOBOX;item.hwndItem=control;item.hDC=dc;item.rcItem=r;item.rcItem.left+=app.S(1);item.rcItem.top+=app.S(1);item.rcItem.right-=app.S(27);item.rcItem.bottom-=app.S(1);
+      item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));if(!IsWindowEnabled(control))item.itemState=ODS_DISABLED;
+      app.DrawCombo(item);
+      const auto pen=CreatePen(PS_SOLID,std::max(1,app.S(1)),IsWindowEnabled(control)?kMuted:kBorder);const auto old=SelectObject(dc,pen);
+      const int x=r.right-app.S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-app.S(4),y-app.S(2),nullptr);LineTo(dc,x,y+app.S(2));LineTo(dc,x+app.S(4),y-app.S(2));SelectObject(dc,old);DeleteObject(pen);
+      EndPaint(control,&ps);return 0;
+    }
+    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,ComboFrameProc,id);
+    return DefSubclassProc(control,message,wparam,lparam);
   }
-  void DarkScrollbar(HWND control){
-    SCROLLBARINFO info{sizeof(info)};if(!GetScrollBarInfo(control,OBJID_VSCROLL,&info)||(info.rgstate[0]&STATE_SYSTEM_INVISIBLE))return;
-    RECT window_rect;GetWindowRect(control,&window_rect);RECT r=info.rcScrollBar;OffsetRect(&r,-window_rect.left,-window_rect.top);
-    if(r.right<=r.left||r.bottom<=r.top)return;
-    const auto dc=GetWindowDC(control);FillRect(dc,&r,background);
-    if(info.xyThumbBottom>info.xyThumbTop){RECT thumb{r.left+S(5),r.top+info.xyThumbTop,r.right-S(4),r.top+info.xyThumbBottom};Rounded(dc,thumb,RGB(79,86,99),RGB(79,86,99),6);}
-    auto pen=CreatePen(PS_SOLID,std::max(1,S(1)),kMuted);auto old=SelectObject(dc,pen);const int x=(r.left+r.right)/2;
-    for(bool down:{false,true}){const int y=down?r.bottom-info.dxyLineButton/2:r.top+info.dxyLineButton/2;
-      MoveToEx(dc,x-S(3),y+(down?-S(2):S(2)),nullptr);LineTo(dc,x,y+(down?S(1):-S(1)));LineTo(dc,x+S(3),y+(down?-S(2):S(2)));}
-    SelectObject(dc,old);DeleteObject(pen);ReleaseDC(control,dc);
+  ScrollDrag page_drag,achievement_drag;
+  int achievement_total=0;
+  ScrollRail Rail(HWND control,int total,int view,int offset)const{
+    RECT client;GetClientRect(control,&client);ScrollRail r;
+    r.track={client.right-S(18),S(3),client.right-S(2),client.bottom-S(3)};
+    r.maximum=std::max(0,total-view);
+    const int height=std::max<int>(1,r.track.bottom-r.track.top);
+    const int thumb=std::min(height,std::max(S(24),total>0?static_cast<int>(int64_t(height)*view/total):height));
+    r.travel=height-thumb;
+    const int y=r.track.top+(r.maximum?static_cast<int>(int64_t(r.travel)*std::clamp(offset,0,r.maximum)/r.maximum):0);
+    r.thumb={r.track.left+S(4),y,r.track.right-S(3),y+thumb};return r;
   }
-  static LRESULT CALLBACK DarkScrollProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
-    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,DarkScrollProc,id);
-    const auto result=DefSubclassProc(control,message,wparam,lparam);
-    if(message==WM_NCPAINT||message==WM_PAINT||message==WM_VSCROLL||message==WM_NCMOUSEMOVE)
-      reinterpret_cast<App*>(data)->DarkScrollbar(control);
-    return result;
+  void PaintRail(HDC dc,HWND control,int total,int view,int offset){
+    RECT client;GetClientRect(control,&client);RECT clear{client.right-S(20),0,client.right,client.bottom};FillRect(dc,&clear,background);
+    const auto r=Rail(control,total,view,offset);
+    if(r.maximum)Rounded(dc,r.thumb,RGB(85,93,107),RGB(85,93,107),6);
+  }
+  bool RailInput(HWND control,UINT message,LPARAM lparam,int total,int view,int& next,ScrollDrag& drag){
+    const auto rail=Rail(control,total,view,next);
+    if(message==WM_LBUTTONDOWN){POINT p{GET_X_LPARAM(lparam),GET_Y_LPARAM(lparam)};
+      if(!rail.maximum||!PtInRect(&rail.track,p))return false;
+      if(PtInRect(&rail.thumb,p)){drag={true,p.y,next};SetCapture(control);}
+      else next=std::clamp(next+(p.y<rail.thumb.top?-view:view),0,rail.maximum);
+      return true;
+    }
+    if(message==WM_MOUSEMOVE&&drag.active&&GetCapture()==control){
+      next=std::clamp(drag.origin_offset+static_cast<int>(int64_t(GET_Y_LPARAM(lparam)-drag.origin_y)*rail.maximum/std::max(1,rail.travel)),0,rail.maximum);return true;
+    }
+    if(message==WM_LBUTTONUP&&drag.active){drag.active=false;if(GetCapture()==control)ReleaseCapture();return true;}
+    if(message==WM_CAPTURECHANGED)drag.active=false;
+    return false;
   }

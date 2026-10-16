@@ -43,7 +43,13 @@ class AdaptiveDialog {
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return tr_?tr:en;}
   HWND Add(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
     auto child=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y),S(w),S(h),window,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
-    SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);return child;
+    SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);
+    if(std::wstring_view(cls)==L"COMBOBOX")SetWindowSubclass(child,NoClosedWheel,5,0);return child;
+  }
+  static LRESULT CALLBACK NoClosedWheel(HWND control,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR){
+    if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0))return 0;
+    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,NoClosedWheel,id);
+    return DefSubclassProc(control,message,wp,lp);
   }
   void Build(){
     auto enabled=Add(L"BUTTON",T(L"Enable DualSense adaptive triggers",L"DualSense adaptif tetikleri etkinleştir"),WS_TABSTOP|BS_AUTOCHECKBOX,24,20,632,30,100);
