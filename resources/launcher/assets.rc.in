@@ -1,2 +1,3 @@
 102 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/launcher/background.png"
 103 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/verification/game-files.sha256"
+104 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/launcher/third-party-notices.txt"

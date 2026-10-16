@@ -68,8 +68,7 @@ The final run passed **65,756 actual launcher UI checks**, plus ten actions agai
 [Turkish achievements screenshot](screenshots/launcher-racing-lines-achievements.png)
 show the actual compiled launcher under Wine, not the earlier generated concept.
 
-Development packages omit README/feature instructions by default. Required
-resources, embedded art/reference data, licenses, debug map and checksums remain.
+Future development packages omit README/feature instructions, SHA256SUMS and the external licenses directory. Required third-party notices are embedded in resource 104 and can be read through the launcher system menu (Alt+Space → Third-party notices). The packager checks that the launcher contains the complete notice bundle before omitting sidecar licenses. Runtime pins and the separate archive hash remain; required resources and debug map are preserved. Existing published ZIPs are not rewritten by this policy change.
 
 Current package: `downloads/MotoGP0910-Windows-x64-launcher-racing-lines.zip`.
 

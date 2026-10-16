@@ -27,7 +27,7 @@
     if(!small_font||!IsWindowVisible(window)||IsIconic(window))return;
     const auto dc=GetDC(window);if(!dc)return;DrawCaption(dc);ReleaseDC(window,dc);
   }
-  void SetupCaption(){if(auto menu=GetSystemMenu(window,FALSE))DeleteMenu(menu,SC_MAXIMIZE,MF_BYCOMMAND);}
+  void SetupCaption(){if(auto menu=GetSystemMenu(window,FALSE)){DeleteMenu(menu,SC_MAXIMIZE,MF_BYCOMMAND);AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING,kNoticesCommand,T(L"Third-party notices…",L"Üçüncü taraf bildirimleri…"));}}
   void CaptionMove(POINT screen){
     const int hit=CaptionHit(screen);const int hover=hit==HTCLOSE||hit==HTMINBUTTON?hit:0;
     if(hover!=caption_hover){caption_hover=hover;PaintCaption();}

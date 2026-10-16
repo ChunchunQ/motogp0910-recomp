@@ -45,12 +45,35 @@ void LayoutCheck(App& app){
   }
 }
 }
+void CheckEmbeddedNotices(){
+  const auto source=Wide(EmbeddedBytes(104));
+  CheckUI(source.size()>50000&&source.find(L"ReXGlue-LICENSE")!=std::wstring::npos&&source.find(L"FidelityFX-LICENSE")!=std::wstring::npos,"Required third-party notices are embedded in the Windows resource");
+  const auto owner=CreateWindowExW(0,L"STATIC",L"Notices test owner",WS_OVERLAPPEDWINDOW,20,20,1000,800,nullptr,nullptr,GetModuleHandleW(nullptr),nullptr);
+  const auto font=CreateFontW(-13,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
+  for(bool turkish:{false,true})for(double scale:{1.,1.5}){
+    NoticesDialog dialog(owner,font,scale,turkish,source);const auto modal=dialog.Create();ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);
+    CheckUI(modal&&dialog.text_control&&GetDlgItem(modal,IDOK),"Notices window creates its full text and close action");
+    std::wstring text(GetWindowTextLengthW(dialog.text_control)+1,L'\0');text.resize(GetWindowTextW(dialog.text_control,text.data(),static_cast<int>(text.size())));
+    std::wstring expected;for(size_t i=0;i<source.size();++i){if(source[i]==L'\n'&&(i==0||source[i-1]!=L'\r'))expected+=L'\r';expected+=source[i];}
+    CheckUI(text==expected,"Every notice, including the end of the bundle, is available in the viewer");
+    CheckUI(GetWindowLongPtrW(dialog.text_control,GWL_STYLE)&ES_READONLY,"The notice viewer is read-only");
+    SendMessageW(dialog.text_control,WM_CHAR,L'x',0);CheckUI(GetWindowTextLengthW(dialog.text_control)==static_cast<int>(text.size()),"Typing cannot alter the notice text");
+    SendMessageW(dialog.text_control,EM_LINESCROLL,0,100000);CheckUI(SendMessageW(dialog.text_control,EM_GETFIRSTVISIBLELINE,0,0)>0,"The complete legal bundle can be scrolled");
+    RECT client;GetClientRect(modal,&client);for(auto control:{dialog.text_control,GetDlgItem(modal,IDOK)}){RECT r;GetWindowRect(control,&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Notice controls fit their window at different scales");}
+    SendMessageW(modal,WM_COMMAND,IDCANCEL,0);CheckUI(!dialog.window&&IsWindow(owner),"Closing the viewer leaves its launcher owner intact");
+  }
+  DeleteObject(font);DestroyWindow(owner);std::cout<<ui_checks<<" embedded-notices checks passed\n";
+}
 int wmain(int argc,wchar_t** argv){
   if(argc==2&&std::wstring_view(argv[1])==L"--fixture-child")return 0;
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
   Gdiplus::GdiplusStartupInput gdip;ULONG_PTR token{};Gdiplus::GdiplusStartup(&token,&gdip,nullptr);
   INITCOMMONCONTROLSEX common{sizeof(common),ICC_STANDARD_CLASSES|ICC_BAR_CLASSES};InitCommonControlsEx(&common);
   int result=0;
+  if(argc==2&&std::wstring_view(argv[1])==L"--notices-only"){
+    try{CheckEmbeddedNotices();}catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';result=1;}
+    Gdiplus::GdiplusShutdown(token);CoUninitialize();return result;
+  }
   try{
     if(argc!=3)throw std::runtime_error("Usage: launcher_ui_probe GAME_ROOT SCREENSHOT_DIRECTORY (run in an isolated executable folder)");
     const auto pictures=fs::path(argv[2]);fs::create_directories(pictures);

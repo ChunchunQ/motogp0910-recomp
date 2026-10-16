@@ -2,7 +2,7 @@
 
 [Yeni Racing Lines launcher](docs/launcher-redesign.md): B konsepti uygulandı; 940 × 578 pencere, yatay sekmeler, arka planın üzerinde küçültme/kapatma simgeleri ve General içinde iptal edilebilir oyun dosyası doğrulaması.
 
-Geliştirme paketlerine README/özellik yönergeleri varsayılan olarak eklenmez; lisanslar ve gerekli kaynak dosyaları korunur.
+Sonraki geliştirme paketlerine README, özellik yönergeleri, SHA256SUMS dosyası veya ayrı `licenses` klasörü eklenmez. Zorunlu üçüncü taraf bildirimleri launcher içine gömülür; Alt+Space → Üçüncü taraf bildirimleri üzerinden okunabilir. Gerekli kaynak dosyaları korunur.
 
 Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-racing-lines.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 

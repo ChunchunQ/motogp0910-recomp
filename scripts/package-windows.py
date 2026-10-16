@@ -273,12 +273,16 @@ def main():
             "Bu paket oyun dosyalarini icermiyor.\n",
             encoding="utf-8",
         )
-    files = sorted(p for p in STAGE.rglob("*") if p.is_file())
-    hashes = "".join(
-        f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(STAGE).as_posix()}\n"
-        for p in files
-    )
-    (STAGE / "SHA256SUMS.txt").write_text(hashes)
+    # Required notices are embedded and accessible in the launcher. Do not
+    # distribute a separate licenses folder, and reject stale launchers or
+    # newly added dependencies whose notices have not been incorporated.
+    notices = (ROOT / "resources/launcher/third-party-notices.txt").read_text(encoding="utf-8")
+    if notices.encode("utf-8") not in (BUILD / "motogp0910-launcher.exe").read_bytes():
+        raise SystemExit("Rebuild the launcher with the embedded third-party notices before packaging")
+    for notice in (STAGE / "licenses").rglob("*"):
+        if notice.is_file() and notice.read_text(encoding="utf-8-sig") not in notices:
+            raise SystemExit(f"Missing embedded notice: {notice.relative_to(STAGE / 'licenses')}")
+    shutil.rmtree(STAGE / "licenses")
     archive = DIST / args.archive
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         # Preserve the player's game-data destination even without a README.

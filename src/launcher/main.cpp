@@ -1,5 +1,6 @@
 #include "core.h"
 #include "file_verification.h"
+#include "notices_dialog.h"
 #include "adaptive_triggers_dialog.h"
 #include "hardware.h"
 #include "achievements.h"
@@ -190,6 +191,7 @@ struct App {
   }
   void Localize(){
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
+    if(auto menu=GetSystemMenu(window,FALSE))ModifyMenuW(menu,kNoticesCommand,MF_BYCOMMAND|MF_STRING,kNoticesCommand,T(L"Third-party notices…",L"Üçüncü taraf bildirimleri…"));
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
     SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):current_page==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
     SetWindowTextW(subtitle,current_page==0?T(L"Display, detail and upscaling.",L"Görüntü, detay ve ölçekleme."):
@@ -561,7 +563,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_MOUSEMOVE:if(app->caption_pressed){POINT p;GetCursorPos(&p);app->CaptionMove(p);return 0;}break;
     case WM_LBUTTONUP:if(app->caption_pressed){POINT p;GetCursorPos(&p);app->CaptionRelease(p);return 0;}break;
     case WM_CAPTURECHANGED:app->caption_pressed=0;app->PaintCaption();return 0;
-    case WM_SYSCOMMAND:if((wparam&0xFFF0)==SC_MAXIMIZE)return 0;break;
+    case WM_SYSCOMMAND:if((wparam&0xFFF0)==SC_MAXIMIZE)return 0;
+      if((wparam&0xFFF0)==kNoticesCommand){try{NoticesDialog(window,app->font,app->scale,app->turkish,Wide(EmbeddedBytes(104))).Show();}catch(const std::exception& e){app->ErrorBox(e);}return 0;}break;
     case WM_COMMAND:app->Command(LOWORD(wparam),HIWORD(wparam));return 0;
     case WM_CONTEXTMENU:app->BindingMenu(reinterpret_cast<HWND>(wparam),{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});return 0;
     case WM_TIMER:if(wparam==2)app->PollAchievements();else if(wparam==3)app->PollVerification();else app->Poll();return 0;
