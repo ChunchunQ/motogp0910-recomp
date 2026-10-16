@@ -54,6 +54,8 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 **Sunucu güvenlik güncellemesi:** Online protokolü **MGO2 / v2** oldu; oyun ve sunucu paketlerini birlikte güncelle. UDP adres kanıtı, eski oda yanıtlarına karşı üyelik kontrolü, HTTP/TLS bağlantı sınırları, doğrulanmış proxy başlıkları ve veritabanı kotaları eklendi. [Ayrıntılı güvenlik incelemesi ve kalan sınırlar](docs/community-security.md). Mevcut veritabanı/profiller korunur; LAN02 ve çevrimdışı oyun değişmez.
 
+İkinci incelemede sahte/tekrar UDP paketlerinin normal oyuncu kotasını tüketmesi ve geçersiz kimliklerin kota tablosunu doldurması düzeltildi. Aynı modem arkasındaki 20 oyuncunun eşzamanlı bağlantısı ve art arda yeniden bağlanması için sınırlar düzeltildi; Windows Python/Wine testleri geçti. [Mevcut profil kimliği ve kurtarma sınırları](docs/community-online.md#how-player-identity-works) belgelendi. Kullanıcı adı/şifreyle taşınabilir hesap sistemi **henüz eklenmedi**, [tasarım notu](docs/community-accounts-plan.md) ileride uygulanmak üzere saklandı.
+
 General menüsünde **Connection mode** ile Çevrimdışı, LAN/Radmin veya deneysel Çevrimiçi seçilebilir. [Linux ve Windows VDS sunucu paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Community-Server.zip) oda keşfi, doğrulanmış UDP aktarımı ve 378 yerel leaderboard görünümünde kalıcı sonuçları sağlar. [Kurulum ve kapsam](docs/community-online.md). Online için kendi HTTPS sunucu adresin gerekir; henüz ortak bir sunucu kurulmadı. Yarış simülasyonu oyunculardan birinde çalışır; **Player Match** kullanılır. Resmî Xbox Live ranked/arkadaş/ses hizmetleri geri getirilmez. Mevcut LAN seçeneği korunur. Yerel Windows/Wine kontrolleri geçti; gerçek VDS üzerinden yarış ve canlı leaderboard ekranı testi bekleniyor.
 
 ## Hazır Windows paketi
@@ -70,7 +72,7 @@ Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yok
 
 Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki yarış düzeltmesini ve `game/` düzenini sorunsuz çalıştırdığını bildirdi. Bu teslimattaki giriş tercihi kontrolleri Windows PE probunda Wine altında 5/5 geçti; yeni EXE bu bulut ortamında Windows GPU üzerinde oynanmadı. Tüm mod/pistlerin kalite kontrolü ve duyulabilir ses kalitesi henüz doğrulanmadı. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `406b1f63d9cf06b19feb886ff0d9335d72b9b8d28223165da25961bd8eab1ef9`.
+Paket SHA-256: `d87e64f4c27f2733e193c23f8b06f917fec646d500769f1394593a62c0b69510`.
 
 ## Windows'ta kaynaktan derleme
 

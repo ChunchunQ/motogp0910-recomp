@@ -21,11 +21,19 @@ class Bucket:
 
 class Limits:
     """Do not evict live entries: address churn must not reset active quotas."""
-    def __init__(self, capacity=4096): self.entries, self.capacity = OrderedDict(), capacity
+    def __init__(self, capacity=4096):
+        self.entries, self.capacity = OrderedDict(), capacity
+        self.pruned_at = float('-inf')
     def prune(self):
         now = time.monotonic()
-        while self.entries and now-next(iter(self.entries.values())).at > 3600:
-            self.entries.popitem(last=False)
+        if now-self.pruned_at<1: return
+        self.pruned_at=now
+        # A fully replenished bucket is equivalent to a new entry. Discarding
+        # it cannot reset a live quota; retaining every failed identity for an
+        # hour instead lets attackers reserve the entire admission table.
+        for key,entry in list(self.entries.items()):
+            if entry.tokens+max(0,now-entry.at)*entry.rate>=entry.burst:
+                self.entries.pop(key,None)
     def take(self, key, rate, burst):
         entry = self.entries.get(key)
         if entry is None:
@@ -86,3 +94,12 @@ def read_proxy_secret(path):
     value=raw.strip()
     if not _HEX.fullmatch(value.decode('ascii')): raise Invalid('proxy key must contain exactly 64 hexadecimal characters')
     return value.decode('ascii').lower()
+
+
+def network_key(value):
+    """Privacy IPv6 addresses in one /64 must not each obtain a fresh quota."""
+    address=ipaddress.ip_address(value)
+    if isinstance(address,ipaddress.IPv6Address):
+        if address.ipv4_mapped:return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network((address,64),strict=False))
+    return str(address)

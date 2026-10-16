@@ -4,6 +4,8 @@
 	admin off
 	persist_config off
 	servers {
+		# WinHTTP uses HTTP/1.1 or HTTP/2; the control API needs no QUIC listener.
+		protocols h1 h2
 		max_header_size 8KB
 		timeouts {
 			read_header 5s

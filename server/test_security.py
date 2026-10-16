@@ -248,7 +248,7 @@ class HttpSecurityTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue((await self.request(self.connect_request())).startswith(b'HTTP/1.1 429'))
         raw=self.connect_request().replace(b'/v2/connect',b'/v2/stats/write')
         self.assertTrue((await self.request(raw)).startswith(b'HTTP/1.1 400'))
-        self.assertFalse(any(k[0]=='/v2/stats/write' for k in self.service.limits.entries))
+        self.assertFalse(any(k[0]=='/v2/stats/write' for k in self.service.profile_limits.entries))
     async def test_database_failure_is_generic_and_service_recovers(self):
         self.service.store.db.execute('PRAGMA query_only=ON')
         reply=await self.request(self.connect_request())
@@ -259,12 +259,14 @@ class HttpSecurityTests(unittest.IsolatedAsyncioTestCase):
 
 class LimitSecurityTests(unittest.TestCase):
     def test_rate_table_has_hard_capacity_and_does_not_evict_live_victims(self):
-        limits=Limits(4)
-        for n in range(4):self.assertTrue(limits.take(n,0,1))
-        for n in range(4,1000):self.assertFalse(limits.take(n,0,1))
-        self.assertFalse(limits.take(0,0,1));self.assertEqual(len(limits.entries),4)
-        for entry in limits.entries.values():entry.at-=3601
-        self.assertTrue(limits.take(9999,0,1));self.assertEqual(len(limits.entries),1)
+        from unittest.mock import patch
+        with patch('security.time.monotonic',return_value=100) as clock:
+            limits=Limits(4)
+            for n in range(4):self.assertTrue(limits.take(n,1,1))
+            for n in range(4,1000):self.assertFalse(limits.take(n,1,1))
+            self.assertFalse(limits.take(0,1,1));self.assertEqual(len(limits.entries),4)
+            clock.return_value=3702
+            self.assertTrue(limits.take(9999,1,1));self.assertEqual(len(limits.entries),1)
     def test_token_bucket_hard_burst(self):
         b=Bucket(0,3)
         self.assertTrue(b.take(3));self.assertFalse(b.take());self.assertFalse(b.take(1000))

@@ -6,6 +6,7 @@
 /CMakeUserPresets.json
 *.log
 __pycache__/
+.hypothesis/
 # Local community service state and credentials are never distributable assets.
 /server/data/
 /data/community.sqlite3*

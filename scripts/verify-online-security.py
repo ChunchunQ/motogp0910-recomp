@@ -31,14 +31,15 @@ def request(url,context=None,body=None,headers=None):
         with opener.open(urllib.request.Request(url,data=body,headers=headers or {}),timeout=2) as r:return r.status,r.read()
     except urllib.error.HTTPError as error:return error.code,error.read()
 def ready(url,context,process):
-    deadline=time.monotonic()+10
+    deadline=time.monotonic()+10;last='no response'
     while time.monotonic()<deadline:
         if process.poll() is not None:raise RuntimeError('Test service exited; inspect the local test logs')
         try:
-            if request(url,context)[0]==200:return
-        except (OSError,urllib.error.URLError):pass
+            status,body=request(url,context);last=f'HTTP {status}: '+body[:128].decode('utf-8','replace')
+            if status==200:return
+        except (OSError,urllib.error.URLError) as error:last=type(error).__name__+': '+str(error)
         time.sleep(0.05)
-    raise RuntimeError('Local test service did not become ready')
+    raise RuntimeError('Local test service did not become ready: '+last)
 checks=0
 def check(value,message):
     global checks

@@ -65,5 +65,5 @@ int main(int argc,char** argv){try{
  online::ReplayWindow window;Check(window.Accept(100)&&window.Accept(98)&&!window.Accept(98)&&window.Accept(101)&&window.Accept(500)&&!window.Accept(1),"Replay window supports reordering and rejects duplicates/old packets");
  auto ticket=api_host.Connection();auto bytes=online::Seal(ticket,1,0,lan::Encode({lan::Kind::Discover,1,ticket.peer,0,{}}));
  Check(online::Open(ticket,bytes).has_value() && !online::Open(ticket,bytes,true),"Relay MAC separates client/server directions");bytes.back()^=1;Check(!online::Open(ticket,bytes),"Changed packet MAC rejected");
- std::cout<<checks<<" Windows HTTPS/directory/relay/persistence checks passed\n";return 0;
+ std::cout<<checks<<" Windows control/directory/relay/persistence checks passed\n";return 0;
 }catch(const std::exception& error){std::cerr<<"FAIL after "<<checks<<": "<<error.what()<<'\n';return 1;}}

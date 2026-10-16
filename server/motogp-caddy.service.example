@@ -1,0 +1,42 @@
+# Optional standalone proxy unit; do not also run the distribution Caddy unit.
+# Provision the same private key as the backend, owned by caddy, mode 0600.
+[Unit]
+Description=MotoGP community HTTPS proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=caddy
+Group=caddy
+WorkingDirectory=/opt/motogp-online
+ExecStart=/usr/bin/python3 /opt/motogp-online/proxy_config.py run --secret-file /var/lib/motogp-caddy/proxy.key --config /etc/motogp-online/Caddyfile
+Environment=XDG_DATA_HOME=/var/lib/motogp-caddy/data
+Environment=XDG_CONFIG_HOME=/var/lib/motogp-caddy/config
+StateDirectory=motogp-caddy
+StateDirectoryMode=0700
+UMask=0077
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=384M
+TasksMax=128
+LimitNOFILE=2048
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=500
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

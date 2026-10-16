@@ -33,7 +33,7 @@ ONLINE_MAGIC = b'MGO2'
 NATIVE_COLUMNS = {1:1, 2:1, 3:2, 4:1, 5:1, 6:1, 7:1, 13:1, 0x8011:1}
 # Also support the isolated python.org Windows embeddable runtime.
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from security import Invalid, Limited, Bucket, Limits, parse_headers, credential_header, client_ip, read_proxy_secret
+from security import Invalid, Limited, Bucket, Limits, parse_headers, credential_header, client_ip, read_proxy_secret, network_key
 
 class Reader:
     def __init__(self, data): self.data, self.pos = data, 0
@@ -263,12 +263,19 @@ class Service(asyncio.DatagramProtocol):
         self.max_clients, self.max_rooms = max_clients, max_rooms
         self.clients, self.tickets, self.rooms = {}, {}, {}
         self.limits = Limits()
+        # Only existing authenticated profiles can allocate this separate pool.
+        # Four endpoint budgets per persistent player fit even at capacity.
+        self.profile_limits = Limits(4*max(store.max_players,store.player_count))
+        self.registrations = Bucket(1,200)
         self.http_connections = 0
         self.http_ips = {}
-        self.max_http_connections, self.max_http_per_ip = 128, 16
+        # A full 20-player room may share one public NAT address. Keep
+        # headroom for concurrent reconnect/health traffic from that network.
+        self.max_http_connections, self.max_http_per_ip = 128, 32
         self.header_timeout, self.body_timeout, self.write_timeout = 5, 5, 3
         self.proxy_secret = proxy_secret
         self.http_global = Bucket(100,250)
+        self.udp_checks = Bucket(40000,80000)
         self.udp_packets = Bucket(20000,40000)
         self.udp_incoming = Bucket(16000000,32000000)
         self.udp_outgoing = Bucket(32000000,64000000)
@@ -286,8 +293,8 @@ class Service(asyncio.DatagramProtocol):
         if len(self.clients)>=self.max_clients and not old:raise Limited('server is full')
         if old:
             if time.monotonic()-old.seen < 15 and old.endpoint: raise Invalid('this online profile is already connected')
-            self.remove(peer)
         peer=self.store.connect(credential,name)
+        if old:self.remove(peer)
         client=Client(peer); self.clients[peer]=client; self.tickets[client.ticket]=client
         LOG.info('Connected player %016x', peer)
         return struct.pack('>Q16s32sH', peer, client.ticket, client.key, self.udp_port)
@@ -309,11 +316,15 @@ class Service(asyncio.DatagramProtocol):
     def datagram_received(self, data, address):
         # Apply cheap size/global admission before any cryptography. Unknown
         # tickets are silent; malformed traffic never generates a reply.
-        if not 84 <= len(data) <= 1468 or not self.udp_packets.take() or not self.udp_incoming.take(len(data)): return
+        if not 84 <= len(data) <= 1468: return
         magic, ticket, seq, target = ENVELOPE.unpack(data[:36])
         client=self.tickets.get(ticket)
-        if magic != ONLINE_MAGIC or not client or not client.packets.take(): return
+        if magic != ONLINE_MAGIC or not client or not self.udp_checks.take(): return
         if not hmac.compare_digest(data[-32:], hmac.digest(client.key,b'C'+data[:-32],'sha256')) or not client.replay.accept(seq): return
+        # Unauthenticated traffic/replays must never spend another player's
+        # quota, or the verified global gameplay budget. Crypto work has its
+        # own bounded gate so failure-path CPU is still capped.
+        if not client.packets.take() or not self.udp_packets.take() or not self.udp_incoming.take(len(data)): return
         now=time.monotonic()
         client.allowance=min(256000, client.allowance+(now-client.budget_at)*128000);client.budget_at=now
         if client.allowance < len(data): return
@@ -485,18 +496,21 @@ class Service(asyncio.DatagramProtocol):
             else:room.pending={p:v for p,v in room.pending.items() if now-v[1]<10}
         for peer,c in list(self.clients.items()):
             if now-c.seen>45:self.remove(peer)
-        self.limits.prune()
+        self.limits.prune();self.profile_limits.prune()
         for client in self.clients.values():
             client.queries={p:v for p,v in client.queries.items() if now-v[1]<5}
             if client.candidate and now-client.challenge_at>5:
                 client.candidate=None;client.challenge=b'';client.deferred=None
     async def housekeeping(self):
         while True:await asyncio.sleep(1);self.expire()
+    def connect_name(self, body):
+        r=Reader(body)
+        if r.u64()!=COMPAT:raise Invalid('client build/protocol is incompatible')
+        name=r.text(15);r.end()
+        if not name or any(ord(c)<32 or ord(c)==127 for c in name):raise Invalid('invalid player name')
+        return name
     def handle(self, path, credential, body):
-        if path == '/v2/connect':
-            r=Reader(body)
-            if r.u64()!=COMPAT:raise Invalid('client build/protocol is incompatible')
-            name=r.text(15);r.end();return self.connect(credential,name)
+        if path == '/v2/connect':return self.connect(credential,self.connect_name(body))
         owner=self.store.owner(credential)
         if path == '/v2/disconnect':
             current=self.clients.get(PEER_BASE | owner)
@@ -541,7 +555,7 @@ class Service(asyncio.DatagramProtocol):
         status,response=400,b'Invalid request'
         try:
             if not self.proxy_secret:
-                address=socket_ip
+                address=network_key(socket_ip)
                 if self.http_ips.get(address,0)>=self.max_http_per_ip:raise Limited('connection limit')
                 self.http_ips[address]=self.http_ips.get(address,0)+1;admitted=True
             if not self.http_global.take():raise Limited('service request limit')
@@ -552,7 +566,7 @@ class Service(asyncio.DatagramProtocol):
                 # Only a configured local reverse proxy may assert client IPs.
                 if socket_ip not in ('127.0.0.1','::1') or not hmac.compare_digest(headers.get('x-motogp-proxy-key',''),self.proxy_secret):
                     raise Invalid('untrusted proxy')
-                address=client_ip(headers.get('x-motogp-client-ip',''))
+                address=network_key(client_ip(headers.get('x-motogp-client-ip','')))
                 if self.http_ips.get(address,0)>=self.max_http_per_ip:raise Limited('connection limit')
                 self.http_ips[address]=self.http_ips.get(address,0)+1;admitted=True
             if not self.limits.take(('http',address),5,300):raise Limited('request limit')
@@ -561,18 +575,20 @@ class Service(asyncio.DatagramProtocol):
             else:
                 credential=credential_header(headers.get('authorization',''))
                 owner_key=hashlib.sha256(credential).digest()
-                if path=='/v2/connect':
-                    # Persistent registrations and ticket churn have independent
-                    # IP/global bounds, in addition to transient client capacity.
-                    if not self.limits.take(('connect',address),0.5,30) or not self.limits.take(('connect-owner',owner_key),0.2,8):raise Limited('connection request limit')
-                    known=self.store.db.execute('SELECT 1 FROM players WHERE credential=?',(owner_key.hex(),)).fetchone()
-                    if not known and (not self.limits.take(('register',address),1/60,20) or not self.limits.take(('register-global',),1,200)):
-                        raise Limited('registration limit')
-                else:
-                    self.store.owner(credential)  # never allocate quotas for invented profiles
+                if path!='/v2/connect':
+                    self.store.owner(credential)  # invented profiles never allocate state
                     rate,burst=(1,64) if path.endswith('/write') else (5,64)
-                    if not self.limits.take((path,owner_key),rate,burst):raise Limited('profile request limit')
+                    if not self.profile_limits.take((path,owner_key),rate,burst):raise Limited('profile request limit')
                 body=await asyncio.wait_for(reader.readexactly(size),self.body_timeout)
+                if path=='/v2/connect':
+                    self.connect_name(body)
+                    known=self.store.db.execute('SELECT 1 FROM players WHERE credential=?',(owner_key.hex(),)).fetchone()
+                    if known:
+                        # Existing players behind one NAT must not spend the
+                        # same scarce new-profile quota when reconnecting.
+                        if not self.profile_limits.take(('connect-owner',owner_key),1,20):raise Limited('profile connection request limit')
+                    elif not self.limits.take(('register',address),1/60,20) or not self.registrations.take():
+                        raise Limited('registration limit')
                 if not self.db_cpu.take(0.001):raise Limited('storage work limit')
                 began=time.monotonic();self.store.deadline=began+0.05
                 try:response=self.handle(path,credential,body)
@@ -638,7 +654,7 @@ class ControlServer:
         loop=asyncio.get_running_loop()
         try:
             while True:
-                connection,endpoint=await loop.sock_accept(self.socket);address=endpoint[0]
+                connection,endpoint=await loop.sock_accept(self.socket);address=network_key(endpoint[0])
                 per_ip=self.service.max_http_connections if self.service.proxy_secret else self.service.max_http_per_ip
                 if len(self.tasks)>=self.service.max_http_connections or self.addresses.get(address,0)>=per_ip:
                     connection.close();await asyncio.sleep(0);continue
@@ -666,6 +682,13 @@ async def run(args):
         raise Invalid('Public control API requires --cert and --key; use loopback behind an HTTPS reverse proxy')
     loop=asyncio.get_running_loop()
     transport,_=await loop.create_datagram_endpoint(lambda:service,local_addr=(args.udp_bind,args.udp_port))
+    # A bounded queue absorbs short bursts without changing the protocol or
+    # rejecting slow clients. OS policy may cap it: keep its working defaults
+    # if tuning is unsupported rather than failing to start on Windows.
+    udp_socket=transport.get_extra_info('socket')
+    for option in (socket.SO_RCVBUF,socket.SO_SNDBUF):
+        try:udp_socket.setsockopt(socket.SOL_SOCKET,option,1024*1024)
+        except OSError:LOG.debug('OS kept the default UDP socket buffer')
     server=ControlServer(service,args.http_bind,args.http_port,ssl_context)
     task=asyncio.create_task(service.housekeeping())
     LOG.info('Control API %s:%s (%s), UDP relay %s:%s',args.http_bind,args.http_port,'TLS' if ssl_context else 'loopback HTTP',args.udp_bind,service.udp_port)

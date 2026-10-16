@@ -44,6 +44,31 @@ Existing `lan_enabled = true` configurations load as LAN if `network_mode` was
 never set. Explicit `network_mode = 'offline'` wins over a stale legacy LAN flag.
 These mode choices apply at game launch; they are not added to the F1 live menu.
 
+## How player identity works
+
+Identity uses a randomly generated 256-bit profile secret, not the player name
+or IP address. Windows DPAPI protects the secret for the current Windows user
+and machine. The default profile lives at
+`%LOCALAPPDATA%\MotoGP0910\Online\<server-address-hash>.profile`.
+The server stores only its SHA-256 digest and the assigned persistent player ID.
+HTTPS authenticates subsequent requests with that secret; short-lived UDP
+tickets and MAC keys are separate and rotate on reconnect.
+
+Changing the player name or IP retains the same records when the same profile
+is used. Multiple players behind one router have independent identities. Names
+are display names and are **not unique or verified account names**: choosing
+someone else's name does not grant access to that person's records. The player
+database has no IP column; live socket endpoints and temporary traffic quotas
+still use addresses. The administrator's proxy/OS logging policy is separate.
+
+There is currently **no account login, portable export or recovery service**.
+Deleting a profile loses access to its records; copying the DPAPI-protected file
+to another PC/Windows user is not a portable backup. A clean Windows reinstall
+can also lose access. Profiles are currently selected by the exact configured
+server address, so keep that address consistent; changing the hostname/port or
+its spelling can select a different profile. Do not delete profiles to resolve
+a connection problem, and never send them in public logs or bug reports.
+
 ## Linux server
 
 **Security update:** Online now uses **MGO2 / `/v2`**. Upgrade the game and
@@ -96,6 +121,15 @@ Caddy through the administrator's secret manager; do not make the service's
 private state directory world-readable. The template also applies a dedicated
 user, restrictive file permissions, memory/process/file-descriptor limits and
 Linux service isolation. The scripts do not install services or change firewalls.
+
+`motogp-caddy.service.example` is an optional **alternative** standalone proxy
+unit. Use it only if the distribution's Caddy unit is not also running. Adjust
+its paths, provision its `caddy` user and copy the same proxy key privately to
+`/var/lib/motogp-caddy/proxy.key` (owned by `caddy`, mode 0600). Place the edited
+Caddyfile at `/etc/motogp-online/Caddyfile`. It grants only the port-binding
+capability and bounds proxy memory, threads and open files; its private state
+directory holds Caddy certificate data. These optional Linux service settings
+do not change the Windows launcher or require extra player setup.
 
 ## Windows server
 
