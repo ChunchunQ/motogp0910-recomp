@@ -35,6 +35,17 @@ def extend_font(bank, preview=None):
     def glyph(c):
         m=metrics[ord(c)-32]
         return image.crop((round(m[0]*w),round(m[2]*h),round(m[1]*w),round(m[3]*h)))
+    def dot_parts(letter):
+        # BC3 leaves faint alpha (7/255 in the small Impact face) across the
+        # visual gap. Testing for *any* alpha joined dot and stem, duplicated
+        # the whole i above İ, and erased the whole body of dotless ı.
+        a=letter.getchannel('A');visible=a.point(lambda value:255 if value>=32 else 0)
+        bb=visible.getbbox();assert bb
+        rows=[a.crop((0,y,a.width,y+1)).getextrema()[1]>=32 for y in range(a.height)]
+        end=next(y for y in range(bb[1]+1,a.height) if not rows[y])
+        stem=next(y for y in range(end+1,a.height) if rows[y])
+        assert end-bb[1]<letter.height/3 and stem<bb[3], 'Dot must be separate from the preserved stem'
+        return bb[1],end,stem
     patch = Image.new('RGBA',(w,h))
     modified={}
     x=4
@@ -53,16 +64,14 @@ def extend_font(bank, preview=None):
             mark=mark.resize((mw,mh+3),Image.Resampling.LANCZOS)
             above=mark.height+max(2,round(h*.002))
         elif target=='İ':
-            donor=glyph('i');a=donor.getchannel('A');bb=a.getbbox()
+            donor=glyph('i');top,end,_=dot_parts(donor)
             # The detached top component of the lowercase i is its native dot.
-            rows=[a.crop((0,y,a.width,y+1)).getbbox() is not None for y in range(a.height)]
-            end=next(y for y in range(bb[1]+1,a.height) if not rows[y])
-            mark=donor.crop((0,bb[1],donor.width,end));mb=mark.getchannel('A').getbbox();mark=mark.crop(mb)
+            mark=donor.crop((0,top,donor.width,end));mb=mark.getchannel('A').getbbox();mark=mark.crop(mb)
             above=mark.height+max(2,round(h*.003))
         elif target=='ı':
-            rows=[alpha.crop((0,y,alpha.width,y+1)).getbbox() is not None for y in range(alpha.height)]
-            end=next(y for y in range(bbox[1]+1,alpha.height) if not rows[y])
-            ImageDraw.Draw(letter).rectangle((0,0,letter.width,end),fill=(0,0,0,0))
+            _,_,stem=dot_parts(letter)
+            ImageDraw.Draw(letter).rectangle((0,0,letter.width,stem-1),fill=(0,0,0,0))
+            assert letter.getchannel('A').getbbox(), 'Dotless i must retain the letter body'
         else:
             donor=glyph('ç');db=donor.getchannel('A').getbbox()
             # ç's baseline-bearing delta identifies the cedilla even in the

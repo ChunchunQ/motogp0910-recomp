@@ -9,6 +9,7 @@
 #include <rex/filesystem/vfs.h>
 #include <rex/filesystem/file.h>
 #include <array>
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <cstring>
@@ -31,6 +32,14 @@ std::vector<uint8_t> Read(rex::filesystem::VirtualFileSystem* vfs,const std::str
  std::vector<uint8_t> bytes(entry->size());size_t read=0;const auto status=file->ReadSync(bytes,0,&read);file->Destroy();
  Check(!XFAILED(status)&&read==bytes.size(),"VFS reads complete overlay bytes");return bytes;
 }
+std::vector<uint8_t> OpenRead(rex::filesystem::VirtualFileSystem* vfs,const std::string& path,rex::filesystem::Entry* root=nullptr){
+ rex::filesystem::File* file=nullptr;rex::filesystem::FileAction action{};
+ const auto opened=vfs->OpenFile(root,path,rex::filesystem::FileDisposition::kOpen,rex::filesystem::FileAccess::kFileReadData,false,true,&file,&action);
+ if(XFAILED(opened)||!file)throw std::runtime_error("Guest OpenFile failed for "+path+" status="+std::to_string(opened));
+ ++checks;
+ std::vector<uint8_t> bytes(file->entry()->size());size_t read=0;const auto status=file->ReadSync(bytes,0,&read);file->Destroy();
+ Check(!XFAILED(status)&&read==bytes.size(),"Actual guest open reads complete bytes");return bytes;
+}
 uint32_t U32(const uint8_t* p){return rex::memory::load_and_swap<uint32_t>(p);}
 }
 int main(int argc,char** argv){try{
@@ -42,6 +51,8 @@ int main(int argc,char** argv){try{
  const auto read=[&](uint32_t at){return U32(base+at);};
  Check(!motogp::localization::Turkish(),"Default language uses original data");
  const auto original=Read(vfs,"game:\\xenondata\\text\\english.msg");
+ const auto original_path=vfs->ResolvePath("game:\\xenondata\\text\\english.msg")->absolute_path();
+ const auto fallback=Read(vfs,"game:\\xenondata\\scripts\\bike_setup.english.lua");
  motogp::localization::Install(&runtime,"does-not-exist");
  Check(Read(vfs,"game:\\xenondata\\text\\english.msg")==original,"Disabled localization does not redirect assets");
  Check(rex::cvar::SetFlagByName("user_language","4")&&rex::cvar::SetFlagByName("game_text_language","turkish"),"Language flags register");
@@ -53,6 +64,30 @@ int main(int argc,char** argv){try{
  motogp::localization::Install(&runtime,std::filesystem::canonical(argv[2]));
  const auto translated=Read(vfs,"game:\\xenondata\\text\\english.msg");
  Check(translated!=original&&U32(translated.data())==2102,"Turkish bank replaces only virtual text path");
+ Check(OpenRead(vfs,"game:\\xenondata\\text\\english.msg")==translated,"Native OpenFile must read Turkish, not bypass a leaf symlink");
+ Check(OpenRead(vfs,original_path)==translated,"Physical path alias uses the same translated bank");
+ for(const char* directory:{"game:\\","game:\\xenondata","game:\\xenondata\\text"}){
+  rex::filesystem::File* folder=nullptr;rex::filesystem::FileAction action{};
+  Check(!XFAILED(vfs->OpenFile(nullptr,directory,rex::filesystem::FileDisposition::kOpen,rex::filesystem::FileAccess::kFileReadData,true,false,&folder,&action))&&folder,"Guest directory handle opens");
+  const auto relative=std::string_view(directory)=="game:\\"?"xenondata\\text\\english.msg":std::string_view(directory)=="game:\\xenondata"?"text\\english.msg":"ENGLISH.MSG";
+  const auto bytes=OpenRead(vfs,relative,folder->entry());folder->Destroy();
+  Check(bytes==translated,"Directory-handle relative opens retain Turkish routing");
+ }
+ Check(OpenRead(vfs,"game:\\xenondata\\scripts\\bike_setup.english.lua")==fallback,"Nontranslated files fall back byte-exactly to original game data");
+ for(const char* path:{"scripts/riders.english.lua","music/track_1_2009.ogg"}){
+  // Read the expectation from the host, without populating the original VFS
+  // entry first: this catches lost lazy children under directory symlinks.
+  std::ifstream input(std::filesystem::path(argv[1])/"xenondata"/path,std::ios::binary);
+  const std::vector<uint8_t> expected((std::istreambuf_iterator<char>(input)),{});
+  std::string guest=std::string("game:\\xenondata\\")+path;std::replace(guest.begin(),guest.end(),'/','\\');
+  Check(!expected.empty()&&OpenRead(vfs,guest)==expected,"Previously unopened scripts/audio remain byte-exact and accessible");
+ }
+ for(const char* path:{"scripts/bikes.english.lua","scripts/tracks.english.lua","scripts/upgrades.english.lua","scripts/unlockables.english.lua","scripts/credits.english.lua","fonts/impact_17pt.font","fonts/impact_small.font","fonts/arial_bold_17pt.font","fonts/arial_bold_small.font"}){
+  std::ifstream input(std::filesystem::path(argv[2])/path,std::ios::binary);
+  const std::vector<uint8_t> expected((std::istreambuf_iterator<char>(input)),{});
+  std::string guest=std::string("game:\\xenondata\\")+path;std::replace(guest.begin(),guest.end(),'/','\\');
+  Check(!expected.empty()&&OpenRead(vfs,guest)==expected,"All translated scripts/fonts load through actual guest OpenFile");
+ }
  Check(Read(vfs,"GAME:\\XENONDATA\\TEXT\\ENGLISH.MSG")==translated,"Case-insensitive game paths select the overlay");
  const auto ach=runtime.kernel_state()->loaded_achievements();Check(ach.size()==before.size()&&ach[0].label=="Zafer","Actual runtime achievement store uses Turkish names");
  Check(runtime.kernel_state()->achievements().IsUnlocked(1)==unlocked,"Localization preserves achievement unlock state");

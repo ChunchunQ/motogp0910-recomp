@@ -9,10 +9,86 @@
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
+#include <unordered_map>
 
 REXCVAR_DEFINE_STRING(game_text_language,"original","Language","Written language: original or turkish; Turkish keeps existing English voices")
     .allowed({"original","turkish"}).lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 namespace motogp::localization {
+namespace {
+using namespace rex::filesystem;
+using rex::X_STATUS;
+// VFS::OpenFile resolves the parent then calls GetChild, and relative opens
+// walk the directory handle directly. Leaf symlinks do not cover either path.
+// Keep a merged read-only entry tree so all three operations see the same file.
+class OverlayFile final:public File {
+ public:
+  OverlayFile(uint32_t access,Entry* entry,File* backing):File(access,entry),backing_(backing){}
+  ~OverlayFile() override {backing_->Destroy();}
+  void Destroy() override {delete this;}
+  X_STATUS ReadSync(std::span<uint8_t> bytes,size_t offset,size_t* read) override {return backing_->ReadSync(bytes,offset,read);}
+  X_STATUS ReadAsync(std::span<uint8_t> bytes,size_t offset,size_t* read) override {return backing_->ReadAsync(bytes,offset,read);}
+  X_STATUS WriteSync(std::span<const uint8_t>,size_t,size_t* written) override {if(written)*written=0;return X_STATUS_ACCESS_DENIED;}
+ private:
+  File* backing_;
+};
+using Replacements=std::unordered_map<Entry*,Entry*>;
+class OverlayEntry final:public Entry {
+ public:
+  OverlayEntry(Device* device,Entry* parent,Entry* original,const Replacements& replacements)
+      :Entry(device,parent,original->path()),backing_(replacements.contains(original)?replacements.at(original):original){
+    attributes_=backing_->attributes()|kFileAttributeReadOnly;size_=backing_->size();allocation_size_=backing_->allocation_size();
+    if(!original->children().empty())attributes_=(attributes_|kFileAttributeDirectory)&~kFileAttributeNormal;
+    create_timestamp_=backing_->create_timestamp();access_timestamp_=backing_->access_timestamp();write_timestamp_=backing_->write_timestamp();
+    for(const auto& child:original->children())children_.push_back(std::make_unique<OverlayEntry>(device,this,child.get(),replacements));
+  }
+  X_STATUS Open(uint32_t access,File** output) override {
+    if(access&(FileAccess::kFileWriteData|FileAccess::kFileAppendData))return X_STATUS_ACCESS_DENIED;
+    File* file=nullptr;const auto status=backing_->Open(access,&file);
+    if(!XFAILED(status))*output=new OverlayFile(access,this,file);
+    return status;
+  }
+  bool can_map() const override {return backing_->can_map();}
+  std::unique_ptr<rex::memory::MappedMemory> OpenMapped(rex::memory::MappedMemory::Mode mode,size_t offset=0,size_t length=0) override {
+    return mode==rex::memory::MappedMemory::Mode::kRead?backing_->OpenMapped(mode,offset,length):nullptr;
+  }
+ private:
+  Entry* backing_;
+};
+class OverlayDevice final:public HostPathDevice {
+ public:
+  OverlayDevice(std::string_view mount,const std::filesystem::path& resources,Entry* original,
+                std::vector<std::pair<Entry*,std::string>> files)
+      :HostPathDevice(mount,resources,true),original_(original),files_(std::move(files)){}
+  bool Initialize() override {
+    if(!HostPathDevice::Initialize())return false;
+    // The SDK lazily discovers entries beneath host directory symlinks. Prime
+    // those before taking our snapshot, or only the ten translated paths would
+    // be visible and unrelated scripts/voices could disappear from the tree.
+    if(auto* host=dynamic_cast<HostPathDevice*>(original_->device())){
+      const auto& folder=host->host_path();
+      for(auto it=std::filesystem::recursive_directory_iterator(folder,std::filesystem::directory_options::follow_directory_symlink);
+          it!=std::filesystem::recursive_directory_iterator();++it){
+        if(it.depth()>=64){it.disable_recursion_pending();continue;}
+        auto path=it->path().lexically_relative(folder).generic_string();std::replace(path.begin(),path.end(),'/','\\');
+        if(!host->ResolvePath(path))return false;
+      }
+    }
+    Replacements replacements;
+    for(const auto& [original,path]:files_){
+      auto* translated=HostPathDevice::ResolvePath(path);
+      if(!translated)return false;
+      replacements.emplace(original,translated);
+    }
+    root_=std::make_unique<OverlayEntry>(this,nullptr,original_,replacements);return true;
+  }
+  Entry* ResolvePath(std::string_view path) override {return root_->ResolvePath(path);}
+  void Dump(rex::string::StringBuffer* buffer) override {root_->Dump(buffer,0);}
+ private:
+  Entry* original_;
+  std::vector<std::pair<Entry*,std::string>> files_;
+  std::unique_ptr<OverlayEntry> root_;
+};
+}
 bool Turkish(){return rex::cvar::Query<std::string>("game_text_language")=="turkish";}
 void ApplyStartupLanguage(){
   if(Turkish()&&!rex::cvar::SetFlagByName("user_language","1"))throw std::runtime_error("Could not select the base voice language");
@@ -24,7 +100,9 @@ void Install(rex::Runtime* runtime,const std::filesystem::path& resources){
       "fonts/impact_17pt.font","fonts/impact_small.font","fonts/arial_bold_17pt.font","fonts/arial_bold_small.font"};
   auto* vfs=runtime->file_system();
   constexpr const char* mount="\\Device\\MotoGPTurkishText";
-  struct Mapping{std::string original,target;};std::vector<Mapping> mappings;
+  auto* original_root=vfs->ResolvePath("game:\\");
+  if(!original_root)throw std::runtime_error("Turkish localization requires the game data root");
+  std::vector<std::pair<rex::filesystem::Entry*,std::string>> mappings;
   for(const char* file:files){
     if(!std::filesystem::is_regular_file(resources/file))throw std::runtime_error("Turkish text resources are missing. Extract the complete build including resources/localization.");
     if(std::string_view(file).starts_with("fonts/")){
@@ -41,7 +119,7 @@ void Install(rex::Runtime* runtime,const std::filesystem::path& resources){
     const auto guest="game:\\xenondata\\"+relative;
     auto* original=vfs->ResolvePath(guest);
     if(!original)throw std::runtime_error("Turkish localization requires the complete game's xenondata folder: "+guest);
-    mappings.push_back({original->absolute_path(),std::string(mount)+"\\"+relative});
+    mappings.emplace_back(original,relative);
   }
   // Validate all files before changing VFS routing. A truncated bank must never
   // be handed to the title's unchecked pointer relocation loop.
@@ -53,11 +131,11 @@ void Install(rex::Runtime* runtime,const std::filesystem::path& resources){
   for(unsigned i=0;i<2102;++i){const auto offset=uint64_t(u32(4+4*i))+4;
     if(offset<8412||offset>=bytes.size()||std::find(bytes.begin()+offset,bytes.end(),0)==bytes.end())throw std::runtime_error("Invalid Turkish message offset");
   }
-  auto device=std::make_unique<rex::filesystem::HostPathDevice>(mount,resources,true);
+  auto device=std::make_unique<OverlayDevice>(mount,resources,original_root,std::move(mappings));
   if(!device->Initialize()||!vfs->RegisterDevice(std::move(device)))throw std::runtime_error("Could not mount Turkish text resources");
-  // Route resolved physical filenames, rather than overlapping game: prefixes.
-  // SDK symbolic links use first-prefix matching, not longest-prefix matching.
-  for(const auto& map:mappings)vfs->RegisterSymbolicLink(map.original,map.target);
+  // Route the root once. Original files remain backing entries for everything
+  // outside the ten whitelisted replacements, including every voice bank.
+  vfs->RegisterSymbolicLink(original_root->absolute_path(),mount);
   auto achievements=runtime->kernel_state()->loaded_achievements();
   for(auto& entry:achievements)TranslateAchievement(entry);
   runtime->kernel_state()->SetLoadedAchievements(std::move(achievements));

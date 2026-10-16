@@ -36,6 +36,13 @@ breve is composed at matching scale. The atlas is extended vertically. Existing
 BC3 blocks are preserved byte for byte, normalized vertical metrics rescale,
 and physical advances/bearings are retained. Only Turkish selects these fonts.
 
+The small Impact atlas contains BC3 alpha noise of 7/255 in the gap between the
+lowercase i's dot and stem. The old generator treated any alpha as ink, joining
+those components: dotted İ received an extra full i above it and dotless ı lost
+its stem. Dot separation now uses visible alpha (>=32/255), checks the dot's
+height and preserves the stem explicitly. All four banks were regenerated with
+the original BC3 blocks still byte-exact.
+
 ## Resource loading
 
 The SDK has no Turkish Xbox language enum. Launcher value 1000 is UI-only;
@@ -43,11 +50,25 @@ the saved/native `user_language` remains 1, while `game_text_language` selects
 Turkish text. The native language-to-filename routine therefore still selects
 English voice paths and supported resources.
 
-A read-only VFS device redirects ten resolved physical filenames to the overlay:
-one message bank, five script files and four font banks. Physical file aliases
-avoid the SDK's first-prefix symbolic-link ordering. Original disk files are
-never rewritten, and choosing another game language restores ordinary loading
-on the next launch. No render-loop string search or per-frame translation runs.
+A read-only merged VFS device replaces one message bank, five script files and
+four font banks, while all other entries use original game data. A single
+physical-root alias selects that tree. Open directory handles retain the merged
+entries, so absolute, case-insensitive and directory-relative native opens all
+see the same translated file and its actual size. Original host entries are
+fully discovered first, including beneath directory symlinks, so nontranslated
+scripts, voices and music remain accessible. Original disk files are never
+rewritten, and choosing another game language restores ordinary loading on the
+next launch. There is no render-loop search or per-frame translation work.
+
+### Fix for English menus with only OYUNDAN ÇIK translated
+
+The previous file-level symbolic links passed a direct `ResolvePath`/`Entry::Open`
+probe, but the game's `NtCreateFile` uses VFS `OpenFile`: it resolves the **parent**
+and calls `GetChild`, bypassing those leaf links. A regression reproduced this
+before the fix: direct reads returned Turkish while the actual native open path
+returned the original English bank. Native OpenFile and directory-handle paths
+are now tested explicitly, rather than treating a direct resource read as proof
+that the title loaded it.
 
 The nonfunctional **Xbox LIVE Marketplace** row is removed in **every language**:
 the validated Options ID list terminates after Credits before native row
@@ -80,6 +101,11 @@ Windows PE checks run under Wine with the pinned actual SDK and patched title:
 - Actual read-only VFS routing, filename case handling, incomplete-overlay
   rejection, independent voice enum, achievement metadata preservation, and
   native five-row Options wraparound are checked in `localization_probe`.
+- The revised probe checks absolute/physical paths, three directory-handle
+  scopes, every replacement through actual VFS `OpenFile`, and byte-exact
+  fallback for previously unopened rider-script/music files. The complete
+  symlinked game fixture passed **74,861** checks on Windows PE/Wine and Linux;
+  most checks are per-codepoint/font-metric comparisons, not playthroughs.
 - A separate Lua interpreter loaded the original/translated data in empty
   environments: **6,140** non-display values/keys matched; **610** display fields
   changed. All five files passed a real Lua parser.
@@ -92,6 +118,12 @@ Windows PE checks run under Wine with the pinned actual SDK and patched title:
 root containing XEX/XEXP and xenondata, rather than an XEX-only build fixture.
 
 These checks are CPU/UI validation, not a native Windows GPU playthrough.
+The corrected loader was also exercised in the real running title with the
+Linux Vulkan software renderer: Press Start and the main menu showed Turkish,
+and all **2,102 live relocated message strings** matched the Turkish catalog.
+This additionally verifies the engine's actual loading/decoding, rather than
+only the probe's manual relocation fixture. The small-font pixel defect found
+in that visual check was corrected in the generator as described above.
 Final glyph appearance, long-text wrapping, every career screen and captions
 inside video playback still need native visual review. The supplied dump had
 no separate subtitles to retime. Burned-in video/art text is not translated.

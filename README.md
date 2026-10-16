@@ -58,6 +58,8 @@ Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok
 
 General menüsünde **Connection mode** ile Çevrimdışı, LAN/Radmin veya deneysel Çevrimiçi seçilebilir. [Linux ve Windows VDS sunucu paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Community-Server.zip) oda keşfi, doğrulanmış UDP aktarımı ve 378 yerel leaderboard görünümünde kalıcı sonuçları sağlar. [Kurulum ve kapsam](docs/community-online.md). Online için kendi HTTPS sunucu adresin gerekir; henüz ortak bir sunucu kurulmadı. Yarış simülasyonu oyunculardan birinde çalışır; **Player Match** kullanılır. Resmî Xbox Live ranked/arkadaş/ses hizmetleri geri getirilmez. Mevcut LAN seçeneği korunur. Yerel Windows/Wine kontrolleri geçti; gerçek VDS üzerinden yarış ve canlı leaderboard ekranı testi bekleniyor.
 
+**Türkçe yükleme düzeltmesi:** Çeviri dosyalarının oyunun gerçek dosya açma yolunda atlanması giderildi. Ana menü/Press Start Türkçe olarak açıldı; çalışan oyundaki 2.102 metnin tamamı katalogla eşleşti. Küçük fonttaki İ/ı çizimi de düzeltildi. Tam ZIP'i çıkarıp **General → Game language → Türkçe** seç. [Ayrıntılar](docs/turkish-localization.md).
+
 ## Hazır Windows paketi
 
 [Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-community-online.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** kullanır; Visual Studio/derleme araçları gerekmez.
@@ -72,7 +74,7 @@ Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yok
 
 Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki yarış düzeltmesini ve `game/` düzenini sorunsuz çalıştırdığını bildirdi. Bu teslimattaki giriş tercihi kontrolleri Windows PE probunda Wine altında 5/5 geçti; yeni EXE bu bulut ortamında Windows GPU üzerinde oynanmadı. Tüm mod/pistlerin kalite kontrolü ve duyulabilir ses kalitesi henüz doğrulanmadı. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
 
-Paket SHA-256: `d87e64f4c27f2733e193c23f8b06f917fec646d500769f1394593a62c0b69510`.
+Paket SHA-256: `d7de8a7ca1abda4b8245d096f56ceef40d42dc9753dd3aa5a20c78fb472724f8`.
 
 ## Windows'ta kaynaktan derleme
 
