@@ -1,5 +1,6 @@
 #include "motogp0910_init.h"
 #include "../src/quit_menu.h"
+#include "../src/localization.h"
 #include <rex/runtime.h>
 #include <rex/graphics/xenos.h>
 #include <rex/kernel/init.h>
@@ -154,5 +155,8 @@ int main(int argc,char** argv){try{
  Check(ImGui::GetCurrentContext()->ColorStack.Size==0&&ImGui::GetCurrentContext()->StyleVarStack.Size==0,"Dialog style remains scoped");dialog.reset();Check(!drawer.HasDialogs(),"App-owned dialog detaches without self-deletion");
  }
  motogp::quit::Stop();memory->SystemHeapFree(allocation);
+ rex::cvar::SetFlagByName("game_text_language","turkish");motogp::quit::Initialize(&runtime);
+ Check(std::string(reinterpret_cast<char*>(base+motogp::quit::LabelAddress()))=="OYUNDAN ÇIK","Native added menu label follows Turkish written language");
+ motogp::quit::Stop();
  std::cout<<checks<<" native quit menu, original navigation, ABI, confirmation and input checks passed\n";return 0;
 }catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}}

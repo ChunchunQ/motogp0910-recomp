@@ -176,7 +176,7 @@ struct Settings {
     s.post_effect = Get(t, "swap_post_effect", std::string("none"));
     s.backend = Get(t, "input_backend", std::string("sdl"));
     s.prompt_style = Get(t, "button_prompt_style", std::string("auto"));
-    s.game_language = Get<int64_t>(t, "user_language", 1);
+    s.game_language = Get(t,"game_text_language",std::string("original"))=="turkish"?1000:Get<int64_t>(t, "user_language", 1);
     s.effect = Get(t, "present_effect", std::string("bilinear"));
     s.aspect=Get(t,"aspect_ratio",std::string("auto"));
     s.fsr_quality=Get(t,"present_fsr_quality_mode",std::string("auto"));
@@ -222,7 +222,7 @@ struct Settings {
        (backend!="sdl" && backend!="xinput") ||
        refresh_rate<0 || refresh_rate>1000 || fps_limit<0 || fps_limit>1000 ||
        (display_mode!="auto" && display_mode!="fullscreen" && display_mode!="borderless" && display_mode!="windowed") ||
-       (game_language!=1 && game_language!=3 && game_language!=4 && game_language!=5 && game_language!=6) ||
+       (game_language!=1 && game_language!=3 && game_language!=4 && game_language!=5 && game_language!=6 && game_language!=1000) ||
        (prompt_style!="auto" && prompt_style!="playstation" && prompt_style!="xbox" && prompt_style!="keyboard") ||
        (effect!="bilinear" && effect!="cas" && effect!="fsr" && effect!="fsr2" && effect!="fsr3") ||
        (fsr_quality!="auto" && fsr_quality!="nativeaa" && fsr_quality!="quality" && fsr_quality!="balanced" && fsr_quality!="performance" && fsr_quality!="ultra_performance") ||
@@ -254,7 +254,8 @@ struct Settings {
     Put(t, "mnk_mode", keyboard); Put(t, "audio_mute", mute);
     Put(t, "input_backend", backend); Put(t, "present_effect", effect);Put(t,"present_fsr_quality_mode",fsr_quality);
     Put(t, "button_prompt_style", prompt_style);
-    Put(t, "user_language", game_language);
+    Put(t, "user_language", game_language==1000?1:game_language);
+    Put(t,"game_text_language",std::string(game_language==1000?"turkish":"original"));
     Put(t, "draw_resolution_scale_x", scale_x); Put(t, "draw_resolution_scale_y", scale_y);
     // Reset the alias so it cannot override the two edited axes.
     Put(t, "resolution_scale", 1);

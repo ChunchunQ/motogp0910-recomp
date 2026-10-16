@@ -141,6 +141,7 @@ cmake --build --preset win-amd64-release --target quit_menu_probe --parallel 2
 
 These checks don't establish the final appearance of the seven-row game menu
 on a native Windows GPU or a complete user-profile save/exit playthrough.
-The user confirmed Press Start exit on native Windows; the new cap recoloring
-still needs local visual review. Extract the complete
+The user confirmed Press Start exit on native Windows; the user also accepted the final white cap recoloring. Extract the complete
 Windows ZIP; preserve the existing game directory, saves and configuration.
+
+Turkish game text selects the native **OYUNDAN ÇIK** label; the white layered accent and working Press Start exit path are preserved.

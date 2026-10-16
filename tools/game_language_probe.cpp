@@ -1,5 +1,6 @@
 // Exercise the shipped selector with the real title's localization mapping.
 #include "motogp0910_init.h"
+#include "../src/localization.h"
 #include <rex/cvar.h>
 #include <rex/kernel/init.h>
 #include <rex/memory.h>
@@ -43,6 +44,9 @@ int main(int argc,char** argv) {
       if(!rex::cvar::SetFlagByName("user_language",std::to_string(id)))throw std::runtime_error("Language flag not registered");
       call(name);
     }
+    rex::cvar::SetFlagByName("user_language","4");
+    rex::cvar::SetFlagByName("game_text_language","turkish");
+    motogp::localization::ApplyStartupLanguage();call("english");
     rex::memory::store_and_swap<uint32_t>(base+property_slot,saved);
     memory->SystemHeapFree(allocation);
     std::cout<<"Passed "<<checks<<" native localization, override preservation and ABI checks\n";

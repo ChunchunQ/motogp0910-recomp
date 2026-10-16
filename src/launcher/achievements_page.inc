@@ -34,7 +34,7 @@
     achievement_note=add(L"STATIC",0,260,697,810,24,0);
   }
   fs::path AchievementRoot()const{return achievements::UserRoot(exe,Get(config.table,"user_data_root",std::string{}));}
-  int AchievementLanguage()const{const auto index=SendMessageW(game_language,CB_GETCURSEL,0,0);return index>=0&&index<5?std::array{1,4,3,5,6}[index]:settings.game_language;}
+  int AchievementLanguage()const{const auto index=SendMessageW(game_language,CB_GETCURSEL,0,0);return index>=0&&index<6?std::array{1,4,3,5,6,1000}[index]:settings.game_language;}
   std::wstring CatalogKey()const{return GameRoot().wstring()+L"|"+achievements::MetadataRoot(exe,Get(config.table,"metadata_root",std::string{})).wstring()+L"|"+std::to_wstring(AchievementLanguage());}
   void PollAchievements(){
     try {

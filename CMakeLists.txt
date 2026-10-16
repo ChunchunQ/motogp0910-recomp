@@ -57,6 +57,11 @@ target_compile_definitions(motogp_settings PUBLIC REX_HAS_FIDELITYFX_SDK=1)
 target_link_libraries(motogp_settings PUBLIC rex::runtime motogp_adaptive)
 rexglue_apply_target_settings(motogp_settings)
 
+# Text overlays are separate from the original game and its voice selection.
+add_library(motogp_localization STATIC src/localization.cpp)
+target_link_libraries(motogp_localization PUBLIC rex::runtime)
+rexglue_apply_target_settings(motogp_localization)
+
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
@@ -66,6 +71,7 @@ set(MOTOGP0910_SOURCES
     src/physics_assets.cpp
     src/livery_readback.cpp
     src/game_language.cpp
+    src/options_menu.cpp
     src/frame_pacing.cpp
     src/display_settings.cpp
     src/engine_settings.cpp
@@ -170,6 +176,14 @@ if(TARGET motogp0910_recomp)
         target_link_libraries(in_game_settings_probe PRIVATE motogp0910_recomp motogp_settings bcrypt)
         rexglue_apply_target_settings(in_game_settings_probe)
     endif()
+    add_executable(localization_probe EXCLUDE_FROM_ALL tools/localization_probe.cpp src/options_menu.cpp src/game_language.cpp)
+    target_include_directories(localization_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(localization_probe PRIVATE motogp0910_recomp motogp_localization)
+    rexglue_apply_target_settings(localization_probe)
+    add_executable(localization_asset_tool EXCLUDE_FROM_ALL tools/localization_asset_tool.cpp)
+    target_include_directories(localization_asset_tool PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(localization_asset_tool PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(localization_asset_tool)
     add_executable(quit_menu_probe EXCLUDE_FROM_ALL tools/quit_menu_probe.cpp src/quit_menu.cpp)
     target_include_directories(quit_menu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(quit_menu_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -256,7 +270,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -266,7 +280,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -307,9 +321,26 @@ endif()
 # Build the CPU/UI suite explicitly; probes stay out of ordinary release builds.
 if(WIN32 AND TARGET motogp0910_recomp)
     add_custom_target(windows_validation_probes DEPENDS
-        motogp0910 runtime_stability_probe nightly_input_probe fsr_provider_probe
+        motogp0910 localization_probe runtime_stability_probe nightly_input_probe fsr_provider_probe
         engine_settings_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
         launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe in_game_settings_probe adaptive_triggers_probe)
 endif()
+
+foreach(locale_target motogp0910 quit_menu_probe button_prompt_probe button_prompt_gpu_probe game_language_probe)
+    if(TARGET ${locale_target})
+        target_link_libraries(${locale_target} PRIVATE motogp_localization)
+    endif()
+endforeach()
+foreach(locale_target motogp0910 motogp0910-launcher localization_probe)
+    if(TARGET ${locale_target})
+        file(GLOB_RECURSE locale_files CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/localization/tr/overlay/*")
+        set_property(TARGET ${locale_target} APPEND PROPERTY LINK_DEPENDS ${locale_files})
+        add_custom_command(TARGET ${locale_target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/resources/localization/tr/overlay"
+                "$<TARGET_FILE_DIR:${locale_target}>/resources/localization/tr/overlay"
+            VERBATIM)
+    endif()
+endforeach()

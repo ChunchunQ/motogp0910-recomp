@@ -1,4 +1,5 @@
 #include "quit_menu.h"
+#include "localization.h"
 #include <rex/hook.h>
 #include <rex/memory.h>
 #include <rex/runtime.h>
@@ -129,9 +130,9 @@ void Initialize(rex::Runtime* runtime) {
   ResetAccent(runtime->memory());
   const auto address=runtime->memory()->SystemHeapAlloc(32);
   if(!address)throw std::runtime_error("Could not allocate the PC quit menu label");
-  label_address=address;constexpr char label[]="QUIT GAME";
+  label_address=address;const char* label=motogp::localization::Turkish()?"OYUNDAN ÇIK":"QUIT GAME";
   // The title's 826EC558 decoder consumes UTF-8 bytes, not Xbox WCHAR data.
-  std::memcpy(runtime->virtual_membase()+address,label,sizeof(label));
+  std::memcpy(runtime->virtual_membase()+address,label,std::strlen(label)+1);
   pending=false;buttons=0;title_serial=0;observed_title_mode=0;title_trace_mask=0;back_trace_count=0;title_consumed=0;held_blocker=false;back_was_down=false;
 }
 uint32_t LabelAddress(){return label_address;}

@@ -1,4 +1,5 @@
 #include "control_diagram.h"
+#include "localization.h"
 #include "button_prompts.h"
 #include "button_prompt_mapping.h"
 #include "ps3_prompt_textures.h"
@@ -19,7 +20,7 @@ std::string Binding(const char* key){
     if(!token.empty()){if(!out.empty())out+=" / ";out+=motogp::prompts::PrimaryLabel(token);}
     if(end==std::string::npos)break;at=end+1;
   }
-  return out.empty()?"Unbound":out;
+  return out.empty()?(motogp::localization::Turkish()?"ATANMADI":"Unbound"):out;
 }
 }
 bool IsDrawing(){return drawing;}

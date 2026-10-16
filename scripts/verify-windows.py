@@ -16,7 +16,7 @@ import tempfile
 import time
 
 PROBES = {
-    'runtime_stability_probe': 'game', 'nightly_input_probe': '',
+    'localization_probe': 'localization', 'runtime_stability_probe': 'game', 'nightly_input_probe': '',
     'fsr_provider_probe': '', 'engine_settings_probe': 'game',
     'game_language_probe': 'game', 'physics_asset_probe': 'game',
     'button_prompt_probe': 'game', 'livery_readback_probe': 'gpu',
@@ -90,6 +90,8 @@ def main():
         if kind == 'ui' and args.skip_ui:
             continue
         extra = [target(game)] if kind in ('game', 'ui') else [target(build / 'rexgpu-xenos.dll')] if kind == 'gpu' else []
+        if kind == 'localization':
+            extra = [target(game), target(build / 'resources/localization/tr/overlay')]
         if kind == 'achievements':
             extra = [target(build / 'resources/ui/OpenSans-Semibold.ttf'), target(root / 'achievement-preview')]
         if kind == 'quit':

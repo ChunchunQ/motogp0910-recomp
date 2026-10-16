@@ -1,4 +1,4 @@
-# Project status — 15 October 2026
+# Project status — 16 October 2026
 
 This is the current status entry point. Older milestone documents describe
 historical builds; a stable SDK version or old ZIP mentioned there does not
@@ -26,7 +26,8 @@ Don't publish original game data, personal logs or preview screenshots.
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
 | Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 345 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
-| Quit menu | Uppercase entry; white stripe and upper cap with brightness/alpha retained; separate boot/frontend guards; 109 checks | User confirmed Press Start Back now opens exit confirmation. New upper-cap GPU appearance pending. See quit-menu.md. |
+| Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
+| Quit menu | Uppercase entry; white stripe and upper cap with brightness/alpha retained; separate boot/frontend guards; 109 checks | User confirmed Press Start Back now opens exit confirmation. User also accepted the white upper cap. See quit-menu.md. |
 | Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 60,132 actual launcher UI checks | EN/TR previews inspected. Native scrollbar now passes actual mouse-drag input; title bar has only minimize/close. Native game GPU/listening check pending |
 | DualSense adaptive triggers | Downpour SDL approach researched first; nine shared launcher/F1 parameters, native PS5/Edge targeting, explicit reset on disable/focus/shutdown; 200 software/transport checks | Experimental and default off. User owns 8BitDo; physical DualSense USB/Bluetooth resistance remains untested. See adaptive-triggers.md. |
 | FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
@@ -50,7 +51,7 @@ Don't publish original game data, personal logs or preview screenshots.
   That input path is preserved in this update.
 - User chose **white** for the QUIT GAME accent; the seventh tile uses an isolated
   white/gray texture view preserving native alpha, geometry and upper-cap
-  brightness layers. Upper-cap GPU visual test pending.
+  brightness layers. User accepted the final white cap.
 
 Screenshots and raw game banks stay out of Git. Read-only achievement progress,
 LAN/Radmin, original button artwork and the cancelled physics investigation's
@@ -68,8 +69,9 @@ revert are preserved.
 6. Native controls diagram and F1 / previous UI follow-up completed; native visual review pending.
 7. DualSense adaptive triggers and remaining white cap follow-up implemented;
    [source research, settings and hardware verification boundary](adaptive-triggers.md).
-8. Launcher Controls simplification: ask the user for details before designing.
-9. Final launcher redesign: ask the user for details before designing.
+8. Turkish written localization and Marketplace removal completed; native visual review pending. [Scope and validation](turkish-localization.md).
+9. Launcher Controls simplification: ask the user for details before designing.
+10. Final launcher redesign: ask the user for details before designing.
 
 The FPS/physics investigation was explicitly cancelled and reverted. Don't
 resume speculative simulation or handling changes. Frame generation is excluded

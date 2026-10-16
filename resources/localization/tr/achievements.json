@@ -1,0 +1,452 @@
+[
+  {
+    "description": "Win a race in any mode except Splitscreen.",
+    "en": "Victory",
+    "id": 1,
+    "locked": "Win a race in any mode except Splitscreen.",
+    "tr": "Zafer",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarış kazanın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarış kazanın."
+  },
+  {
+    "description": "Complete 100 races in any mode except Splitscreen.",
+    "en": "Centurion",
+    "id": 2,
+    "locked": "Complete 100 races in any mode except Splitscreen.",
+    "tr": "Yüz Yarış",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 100 yarış tamamlayın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 100 yarış tamamlayın."
+  },
+  {
+    "description": "Win a 125cc class season in Career mode.",
+    "en": "Rookie",
+    "id": 3,
+    "locked": "Win a 125cc class season in Career mode.",
+    "tr": "Çaylak",
+    "description_tr": "Kariyer Modu'nda bir 125cc sezonunu kazanın.",
+    "locked_tr": "Kariyer Modu'nda bir 125cc sezonunu kazanın."
+  },
+  {
+    "description": "Win a 250cc class season in Career mode.",
+    "en": "Pro",
+    "id": 4,
+    "locked": "Win a 250cc class season in Career mode.",
+    "tr": "Profesyonel",
+    "description_tr": "Kariyer Modu'nda bir 250cc sezonunu kazanın.",
+    "locked_tr": "Kariyer Modu'nda bir 250cc sezonunu kazanın."
+  },
+  {
+    "description": "Win a MotoGP class season in Career mode.",
+    "en": "Legend",
+    "id": 5,
+    "locked": "Win a MotoGP class season in Career mode.",
+    "tr": "Efsane",
+    "description_tr": "Kariyer Modu'nda bir MotoGP sezonunu kazanın.",
+    "locked_tr": "Kariyer Modu'nda bir MotoGP sezonunu kazanın."
+  },
+  {
+    "description": "Obtain an 'A' class rating in all three sessions of a race weekend in career mode.",
+    "en": "Top of the Class",
+    "id": 6,
+    "locked": "Obtain an 'A' class rating in all three sessions of a race weekend in career mode.",
+    "tr": "Sınıfın Birincisi",
+    "description_tr": "Kariyer Modu'nda bir yarış hafta sonunun üç seansında da A derecesi alın.",
+    "locked_tr": "Kariyer Modu'nda bir yarış hafta sonunun üç seansında da A derecesi alın."
+  },
+  {
+    "description": "Hire a full compliment of staff in career mode.",
+    "en": "Middle Management",
+    "id": 9,
+    "locked": "Hire a full compliment of staff in career mode.",
+    "tr": "Kadroyu Tamamla",
+    "description_tr": "Kariyer Modu'nda tüm personel yuvalarını doldurun.",
+    "locked_tr": "Kariyer Modu'nda tüm personel yuvalarını doldurun."
+  },
+  {
+    "description": "Obtain a reputation level of 1 in career mode.",
+    "en": "That's a rep!",
+    "id": 10,
+    "locked": "Obtain a reputation level of 1 in career mode.",
+    "tr": "İtibar Kazandın!",
+    "description_tr": "Kariyer Modu'nda 1. itibar seviyesine ulaşın.",
+    "locked_tr": "Kariyer Modu'nda 1. itibar seviyesine ulaşın."
+  },
+  {
+    "description": "Obtain a reputation level of 10 in career mode.",
+    "en": "Notorious",
+    "id": 11,
+    "locked": "Obtain a reputation level of 10 in career mode.",
+    "tr": "Nam Salmış",
+    "description_tr": "Kariyer Modu'nda 10. itibar seviyesine ulaşın.",
+    "locked_tr": "Kariyer Modu'nda 10. itibar seviyesine ulaşın."
+  },
+  {
+    "description": "Obtain a reputation level of 20 in career mode.",
+    "en": "Famed",
+    "id": 13,
+    "locked": "Obtain a reputation level of 20 in career mode.",
+    "tr": "Ünlü",
+    "description_tr": "Kariyer Modu'nda 20. itibar seviyesine ulaşın.",
+    "locked_tr": "Kariyer Modu'nda 20. itibar seviyesine ulaşın."
+  },
+  {
+    "description": "Obtain a reputation level of 30 in career mode to become the greatest of all time.",
+    "en": "The G.O.A.T.",
+    "id": 14,
+    "locked": "Obtain a reputation level of 30 in career mode to become the greatest of all time.",
+    "tr": "Tüm Zamanların En İyisi",
+    "description_tr": "Kariyer Modu'nda 30. itibar seviyesine ulaşıp tüm zamanların en iyisi olun.",
+    "locked_tr": "Kariyer Modu'nda 30. itibar seviyesine ulaşıp tüm zamanların en iyisi olun."
+  },
+  {
+    "description": "Choose your own team livery, helmet, leathers and paint them with your own team colours.",
+    "en": "Brand",
+    "id": 15,
+    "locked": "Choose your own team livery, helmet, leathers and paint them with your own team colours.",
+    "tr": "Kendi Markan",
+    "description_tr": "Takım kaplamanızı, kaskınızı ve tulumunuzu seçip kendi takım renklerinize boyayın.",
+    "locked_tr": "Takım kaplamanızı, kaskınızı ve tulumunuzu seçip kendi takım renklerinize boyayın."
+  },
+  {
+    "description": "Win on your home circuit in Career Mode.",
+    "en": "Boy Done Good",
+    "id": 16,
+    "locked": "Win on your home circuit in Career Mode.",
+    "tr": "Ev Sahibi Gururu",
+    "description_tr": "Kariyer Modu'nda kendi pistinizde kazanın.",
+    "locked_tr": "Kariyer Modu'nda kendi pistinizde kazanın."
+  },
+  {
+    "description": "Obtain a full complement of sponsors.",
+    "en": "Corporate Cartel",
+    "id": 17,
+    "locked": "Obtain a full complement of sponsors.",
+    "tr": "Sponsor Ağı",
+    "description_tr": "Tüm sponsor yuvalarını doldurun.",
+    "locked_tr": "Tüm sponsor yuvalarını doldurun."
+  },
+  {
+    "description": "Fully upgrade a MotoGP class machine in career mode.",
+    "en": "Egg-Head",
+    "id": 18,
+    "locked": "Fully upgrade a MotoGP class machine in career mode.",
+    "tr": "Teknoloji Ustası",
+    "description_tr": "Kariyer Modu'nda bir MotoGP motosikletini tamamen geliştirin.",
+    "locked_tr": "Kariyer Modu'nda bir MotoGP motosikletini tamamen geliştirin."
+  },
+  {
+    "description": "Successfully perform every type of dynamic objective.",
+    "en": "Jump through some hoops…",
+    "id": 19,
+    "locked": "Successfully perform every type of dynamic objective.",
+    "tr": "Her Engeli Aş",
+    "description_tr": "Her tür dinamik hedefi başarıyla tamamlayın.",
+    "locked_tr": "Her tür dinamik hedefi başarıyla tamamlayın."
+  },
+  {
+    "description": "Complete over 50 dynamic race objectives.",
+    "en": "Dynamic!",
+    "id": 20,
+    "locked": "Complete over 50 dynamic race objectives.",
+    "tr": "Dinamik!",
+    "description_tr": "50'den fazla dinamik yarış hedefi tamamlayın.",
+    "locked_tr": "50'den fazla dinamik yarış hedefi tamamlayın."
+  },
+  {
+    "description": "Complete a full season in championship mode.",
+    "en": "They Made Me Do It",
+    "id": 21,
+    "locked": "Complete a full season in championship mode.",
+    "tr": "Bana Bunu Yaptırdılar",
+    "description_tr": "Şampiyona Modu'nda tam bir sezon tamamlayın.",
+    "locked_tr": "Şampiyona Modu'nda tam bir sezon tamamlayın."
+  },
+  {
+    "description": "Unlock the MotoGP Class in any game mode.",
+    "en": "Unravel",
+    "id": 22,
+    "locked": "Unlock the MotoGP Class in any game mode.",
+    "tr": "Kilitleri Aç",
+    "description_tr": "Herhangi bir oyun modunda MotoGP sınıfını açın.",
+    "locked_tr": "Herhangi bir oyun modunda MotoGP sınıfını açın."
+  },
+  {
+    "description": "Complete a full Arcade Mode season without using a continue.",
+    "en": "1UP",
+    "id": 23,
+    "locked": "Complete a full Arcade Mode season without using a continue.",
+    "tr": "Ek Can",
+    "description_tr": "Arcade Modu'nda devam hakkı kullanmadan tam bir sezon tamamlayın.",
+    "locked_tr": "Arcade Modu'nda devam hakkı kullanmadan tam bir sezon tamamlayın."
+  },
+  {
+    "description": "Spend a total of 10 minutes slipstreaming in Arcade Mode.",
+    "en": "Draughter",
+    "id": 24,
+    "locked": "Spend a total of 10 minutes slipstreaming in Arcade Mode.",
+    "tr": "Hava Koridoru",
+    "description_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin hava koridorundan yararlanın.",
+    "locked_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin hava koridorundan yararlanın."
+  },
+  {
+    "description": "Get every type of time bonus within the same lap in Arcade Mode.",
+    "en": "Mirror, Signal, Maneuver",
+    "id": 25,
+    "locked": "Get every type of time bonus within the same lap in Arcade Mode.",
+    "tr": "Ayna, Sinyal, Manevra",
+    "description_tr": "Arcade Modu'nda aynı tur içinde her tür süre bonusunu kazanın.",
+    "locked_tr": "Arcade Modu'nda aynı tur içinde her tür süre bonusunu kazanın."
+  },
+  {
+    "description": "Use a continue and then finish first in Arcade Mode.",
+    "en": "Insert Coin",
+    "id": 26,
+    "locked": "Use a continue and then finish first in Arcade Mode.",
+    "tr": "Jeton At",
+    "description_tr": "Arcade Modu'nda devam hakkı kullanın ve ardından yarışı birinci bitirin.",
+    "locked_tr": "Arcade Modu'nda devam hakkı kullanın ve ardından yarışı birinci bitirin."
+  },
+  {
+    "description": "Finish a race with more time than you started with in Arcade Mode, without using any continues.",
+    "en": "Out Runned",
+    "id": 27,
+    "locked": "Finish a race with more time than you started with in Arcade Mode, without using any continues.",
+    "tr": "Zamanı Geride Bırak",
+    "description_tr": "Arcade Modu'nda devam hakkı kullanmadan bir yarışı başladığınızdan daha fazla süreyle bitirin.",
+    "locked_tr": "Arcade Modu'nda devam hakkı kullanmadan bir yarışı başladığınızdan daha fazla süreyle bitirin."
+  },
+  {
+    "description": "Earn more time between timing-out and using a continue in Arcade Mode.",
+    "en": "Power UP!",
+    "id": 29,
+    "locked": "Earn more time between timing-out and using a continue in Arcade Mode.",
+    "tr": "Güç Takviyesi!",
+    "description_tr": "Arcade Modu'nda süreniz bittikten sonra, devam hakkını kullanmadan önce ek süre kazanın.",
+    "locked_tr": "Arcade Modu'nda süreniz bittikten sonra, devam hakkını kullanmadan önce ek süre kazanın."
+  },
+  {
+    "description": "Download and race against an online ghost in Time Trial.",
+    "en": "Bustin' Makes Me Feel Good!",
+    "id": 30,
+    "locked": "Download and race against an online ghost in Time Trial.",
+    "tr": "Hayalet Avcısı!",
+    "description_tr": "Zamana Karşı modunda çevrim içi bir hayalet indirip ona karşı yarışın.",
+    "locked_tr": "Zamana Karşı modunda çevrim içi bir hayalet indirip ona karşı yarışın."
+  },
+  {
+    "description": "Create a personal racing-line in Time Trial and then use it in another game mode.",
+    "en": "Find Your Own Way",
+    "id": 31,
+    "locked": "Create a personal racing-line in Time Trial and then use it in another game mode.",
+    "tr": "Kendi Yolunu Bul",
+    "description_tr": "Zamana Karşı modunda kişisel bir ideal çizgi oluşturup başka bir oyun modunda kullanın.",
+    "locked_tr": "Zamana Karşı modunda kişisel bir ideal çizgi oluşturup başka bir oyun modunda kullanın."
+  },
+  {
+    "description": "Beat a time of 01:19.78 on Donington in Time-Trial Mode.",
+    "en": "Beat the 'Fun Vampire'",
+    "id": 32,
+    "locked": "Beat a time of 01:19.78 on Donington in Time-Trial Mode.",
+    "tr": "Eğlence Vampirini Yen",
+    "description_tr": "Zamana Karşı modunda Donington'da 01:19.78'den daha iyi bir zaman yapın.",
+    "locked_tr": "Zamana Karşı modunda Donington'da 01:19.78'den daha iyi bir zaman yapın."
+  },
+  {
+    "description": "Qualify for pole position.",
+    "en": "Pole Position",
+    "id": 33,
+    "locked": "Qualify for pole position.",
+    "tr": "Pol Pozisyonu",
+    "description_tr": "Sıralamayı birinci bitirip pol pozisyonunu alın.",
+    "locked_tr": "Sıralamayı birinci bitirip pol pozisyonunu alın."
+  },
+  {
+    "description": "Win a race with no penalties, in any mode except Splitscreen.",
+    "en": "Halcyon",
+    "id": 34,
+    "locked": "Win a race with no penalties, in any mode except Splitscreen.",
+    "tr": "Kusursuz Gün",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda ceza almadan bir yarış kazanın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda ceza almadan bir yarış kazanın."
+  },
+  {
+    "description": "Win a race at each track in any mode except Splitscreen.",
+    "en": "Panning For Gold",
+    "id": 35,
+    "locked": "Win a race at each track in any mode except Splitscreen.",
+    "tr": "Altın Peşinde",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda her pistte bir yarış kazanın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda her pistte bir yarış kazanın."
+  },
+  {
+    "description": "Start in last position on the grid, but finish in first.",
+    "en": "Glove Slap",
+    "id": 36,
+    "locked": "Start in last position on the grid, but finish in first.",
+    "tr": "Meydan Oku",
+    "description_tr": "Yarışa son sıradan başlayıp birinci bitirin.",
+    "locked_tr": "Yarışa son sıradan başlayıp birinci bitirin."
+  },
+  {
+    "description": "Cross the finish line separately from your bike in any mode except Splitscreen.",
+    "en": "Bohemian Unlike You",
+    "id": 37,
+    "locked": "Cross the finish line separately from your bike in any mode except Splitscreen.",
+    "tr": "Senden Farklıyım",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bitiş çizgisini motosikletinizden ayrı geçin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bitiş çizgisini motosikletinizden ayrı geçin."
+  },
+  {
+    "description": "Complete a lap of any track in the wrong direction, in any mode except Splitscreen.",
+    "en": "I Can't Stop",
+    "id": 38,
+    "locked": "Complete a lap of any track in the wrong direction, in any mode except Splitscreen.",
+    "tr": "Duramıyorum",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir pisti ters yönde bir tur tamamlayın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir pisti ters yönde bir tur tamamlayın."
+  },
+  {
+    "description": "Win a wet-weather race in any mode except Splitscreen.",
+    "en": "Water Sports",
+    "id": 39,
+    "locked": "Win a wet-weather race in any mode except Splitscreen.",
+    "tr": "Su Sporları",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda yağışlı havada bir yarış kazanın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda yağışlı havada bir yarış kazanın."
+  },
+  {
+    "description": "Lead an entire race and go on to win that race in any mode except Splitscreen.",
+    "en": "Road Thrash",
+    "id": 40,
+    "locked": "Lead an entire race and go on to win that race in any mode except Splitscreen.",
+    "tr": "Yolun Hâkimi",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bütün yarışı lider götürüp kazanın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bütün yarışı lider götürüp kazanın."
+  },
+  {
+    "description": "Finish a race with each rider in the game in any mode except Splitscreen.",
+    "en": "Doppelganger",
+    "id": 41,
+    "locked": "Finish a race with each rider in the game in any mode except Splitscreen.",
+    "tr": "İkiz Suret",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda oyundaki her sürücüyle bir yarış bitirin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda oyundaki her sürücüyle bir yarış bitirin."
+  },
+  {
+    "description": "Win 21 races online.",
+    "en": "Blackjack",
+    "id": 42,
+    "locked": "Win 21 races online.",
+    "tr": "Yirmi Bir",
+    "description_tr": "Çevrim içi 21 yarış kazanın.",
+    "locked_tr": "Çevrim içi 21 yarış kazanın."
+  },
+  {
+    "description": "Win 69 races online.",
+    "en": "Nicky Hayden",
+    "id": 43,
+    "locked": "Win 69 races online.",
+    "tr": "Nicky Hayden",
+    "description_tr": "Çevrim içi 69 yarış kazanın.",
+    "locked_tr": "Çevrim içi 69 yarış kazanın."
+  },
+  {
+    "description": "Host a multiplayer race.",
+    "en": "Back to my place…?",
+    "id": 44,
+    "locked": "Host a multiplayer race.",
+    "tr": "Bize Gelir misiniz?",
+    "description_tr": "Çok oyunculu bir yarışa ev sahipliği yapın.",
+    "locked_tr": "Çok oyunculu bir yarışa ev sahipliği yapın."
+  },
+  {
+    "description": "Use your own Career Mode motorbike and rider in a multiplayer race.",
+    "en": "Owned",
+    "id": 45,
+    "locked": "Use your own Career Mode motorbike and rider in a multiplayer race.",
+    "tr": "Kendi Emeğin",
+    "description_tr": "Çok oyunculu bir yarışta kendi Kariyer Modu motosikletinizi ve sürücünüzü kullanın.",
+    "locked_tr": "Çok oyunculu bir yarışta kendi Kariyer Modu motosikletinizi ve sürücünüzü kullanın."
+  },
+  {
+    "description": "Win a race against a full grid of human riders.",
+    "en": "Champagne!",
+    "id": 46,
+    "locked": "Win a race against a full grid of human riders.",
+    "tr": "Şampanya!",
+    "description_tr": "Başlangıç sıralarının tamamı insan oyuncularla dolu olan bir yarışı kazanın.",
+    "locked_tr": "Başlangıç sıralarının tamamı insan oyuncularla dolu olan bir yarışı kazanın."
+  },
+  {
+    "description": "Do a wheelie lasting at least 500 feet in any mode except Splitscreen.",
+    "en": "Niko Wheelie",
+    "id": 47,
+    "locked": "Do a wheelie lasting at least 500 feet in any mode except Splitscreen.",
+    "tr": "Tek Teker Ustası",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda ön tekerleği kaldırarak en az 500 fit ilerleyin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda ön tekerleği kaldırarak en az 500 fit ilerleyin."
+  },
+  {
+    "description": "Do an endo lasting at least 50 feet in any mode except Splitscreen.",
+    "en": "Endo-Rider",
+    "id": 48,
+    "locked": "Do an endo lasting at least 50 feet in any mode except Splitscreen.",
+    "tr": "Ön Teker Ustası",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda arka tekerleği kaldırarak en az 50 fit ilerleyin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda arka tekerleği kaldırarak en az 50 fit ilerleyin."
+  },
+  {
+    "description": "Find yourself over 100 yards away from your bike after a crash, in any mode except Splitscreen.",
+    "en": "Dude, Where's My Bike?",
+    "id": 49,
+    "locked": "Find yourself over 100 yards away from your bike after a crash, in any mode except Splitscreen.",
+    "tr": "Dostum, Motosikletim Nerede?",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir kazadan sonra motosikletinizden 100 yardadan fazla uzağa düşün.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir kazadan sonra motosikletinizden 100 yardadan fazla uzağa düşün."
+  },
+  {
+    "description": "Ride over 100 miles in any mode except Splitscreen.",
+    "en": "Bon Voyage",
+    "id": 51,
+    "locked": "Ride over 100 miles in any mode except Splitscreen.",
+    "tr": "İyi Yolculuklar",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 100 milden fazla yol alın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 100 milden fazla yol alın."
+  },
+  {
+    "description": "Go over 207mph in any mode except Splitscreen.",
+    "en": "Wind Tunnel",
+    "id": 52,
+    "locked": "Go over 207mph in any mode except Splitscreen.",
+    "tr": "Rüzgâr Tüneli",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 207 mil/sa hızını aşın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda 207 mil/sa hızını aşın."
+  },
+  {
+    "description": "Raise the crowd’s excitement level to max in any mode except Splitscreen.",
+    "en": "Cheers",
+    "id": 53,
+    "locked": "Raise the crowd’s excitement level to max in any mode except Splitscreen.",
+    "tr": "Şerefe",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda seyircilerin heyecanını en yüksek seviyeye çıkarın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda seyircilerin heyecanını en yüksek seviyeye çıkarın."
+  },
+  {
+    "description": "Finish a race within 0.1 seconds of another rider in any mode except Splitscreen.",
+    "en": "Photo Finish",
+    "id": 54,
+    "locked": "Finish a race within 0.1 seconds of another rider in any mode except Splitscreen.",
+    "tr": "Foto Finiş",
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücünün 0,1 saniye yakınında bitirin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücünün 0,1 saniye yakınında bitirin."
+  },
+  {
+    "description": "Finish 10th or better in every race of a full season.",
+    "en": "Mr. Consistent!",
+    "id": 55,
+    "locked": "Finish 10th or better in every race of a full season.",
+    "tr": "İstikrar Abidesi!",
+    "description_tr": "Tam bir sezonun her yarışını ilk 10 içinde bitirin.",
+    "locked_tr": "Tam bir sezonun her yarışını ilk 10 içinde bitirin."
+  }
+]

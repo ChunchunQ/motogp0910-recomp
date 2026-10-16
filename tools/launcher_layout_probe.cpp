@@ -236,12 +236,13 @@ int wmain(int argc,wchar_t** argv){
       app.turkish=!app.turkish;app.Localize();
       CheckUI(app.GetControls().prompt_style==style,"Language change preserves prompt style");
     }
-    for(auto [index,id]:{std::pair{0,1},std::pair{1,4},std::pair{2,3},std::pair{3,5},std::pair{4,6}}){
+    for(auto [index,id]:{std::pair{0,1},std::pair{1,4},std::pair{2,3},std::pair{3,5},std::pair{4,6},std::pair{5,1000}}){
       SendMessageW(app.game_language,CB_SETCURSEL,index,0);
       const auto chosen=app.GetControls();toml::table table;chosen.Store(table);
       CheckUI(Settings::Load(table).game_language==id,"Game language survives save/load");
+      CheckUI(Get(table,"game_text_language",std::string{})==(id==1000?"turkish":"original"),"Turkish text selection is separate from native voice enum");
       auto args=Arguments(game,chosen,table);
-      CheckUI(std::count(args.begin(),args.end(),L"--user_language="+std::to_wstring(id))==1,"Game language forwarded once");
+      CheckUI(std::count(args.begin(),args.end(),L"--user_language="+std::to_wstring(id==1000?1:id))==1,"Game language forwarded once");
       app.turkish=!app.turkish;app.Localize();
       CheckUI(app.GetControls().game_language==id,"Launcher language does not alter game language");
     }

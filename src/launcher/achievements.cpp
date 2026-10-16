@@ -1,5 +1,6 @@
 #include "core.h"
 #include "achievements.h"
+#include "../turkish_achievements.h"
 #include <rex/runtime.h>
 #include <rex/kernel/init.h>
 #include <rex/system/util/xdbf_utils.h>
@@ -36,12 +37,12 @@ Catalog LoadCatalog(const fs::path& game,const fs::path& metadata,int language) 
   if(Sha256(game/"default.xex")!=kXexHash)throw std::runtime_error("Unsupported default.xex; select the original MotoGP 09/10 game folder");
   // No user root: the SDK must not load, migrate or save the player's unlocks.
   rex::Runtime runtime(game,{},{},{},metadata);
-  rex::cvar::SetFlagByName("user_language",std::to_string(language));
+  rex::cvar::SetFlagByName("user_language",std::to_string(language==1000?1:language));
   if(XFAILED(runtime.Setup(rex::RuntimeConfig{.kernel_init=rex::kernel::InitializeKernel,.tool_mode=true})))throw std::runtime_error("Could not initialize the achievement reader");
   if(XFAILED(runtime.LoadXexImage("game:\\default.xex")))throw std::runtime_error("Could not read the game's achievement catalog");
   if(runtime.kernel_state()->title_id()!=0x434307F0)throw std::runtime_error("Unexpected game title ID");
   Catalog result;
-  for(auto& info:runtime.kernel_state()->loaded_achievements()){auto icon=Image(runtime,info);result.entries.push_back({std::move(info),std::move(icon)});}
+  for(auto& info:runtime.kernel_state()->loaded_achievements()){if(language==1000)motogp::localization::TranslateAchievement(info);auto icon=Image(runtime,info);result.entries.push_back({std::move(info),std::move(icon)});}
   if(result.entries.empty())throw std::runtime_error("The game has no available achievement catalog");
   return result;
 }

@@ -56,6 +56,8 @@ def main():
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller")
+    shutil.copytree(ROOT / "resources/localization/tr/overlay", STAGE / "resources/localization/tr/overlay")
+    shutil.copy2(ROOT / "resources/localization/tr/manifest.json", STAGE / "resources/localization/tr/manifest.json")
     (STAGE / "resources/ui").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "third_party/open-sans/OpenSans-Semibold.ttf", STAGE / "resources/ui/OpenSans-Semibold.ttf")
     shutil.copy2(ROOT / "docs/achievements.md", STAGE / "achievements-readme.txt")
@@ -63,6 +65,7 @@ def main():
     shutil.copy2(ROOT / "docs/quit-menu.md", STAGE / "quit-menu-readme.txt")
     shutil.copy2(ROOT / "docs/in-game-settings.md", STAGE / "in-game-settings-readme.txt")
     shutil.copy2(ROOT / "docs/adaptive-triggers.md", STAGE / "adaptive-triggers-readme.txt")
+    shutil.copy2(ROOT / "docs/turkish-localization.md", STAGE / "turkish-localization-readme.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
@@ -89,6 +92,9 @@ def main():
         shutil.copy2(ROOT / "docs/lan-one-pc-test.md", STAGE / "lan-one-pc-readme.txt")
     one_pc_notes = "ONE-PC LAN TEST: Run test-lan-one-pc.ps1; see lan-one-pc-readme.txt.\n" if args.include_one_pc_test else ""
     (STAGE / "readme.txt").write_text(
+        "TURKISH GAME TEXT: General > Game language > Turkce. Voices stay original.\n"
+        "Keep resources/localization. Xbox LIVE Marketplace is removed from Options.\n"
+        "See turkish-localization-readme.txt for scope and verification limits.\n\n"
         f"MotoGP 09/10 - Windows x64 {milestone} - ReXGlue {sdk['version']}\n\n" + preview_notes +
         "DUALSENSE (EXPERIMENTAL): Controls > DualSense adaptive triggers...\n"
         "Separate L2/R2 resistance modes and positions/strength; default off.\n"

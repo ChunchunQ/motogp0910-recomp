@@ -263,7 +263,7 @@ struct App {
       gpu_index=static_cast<int>(std::distance(adapters.begin(),gpu))+1;}
     SendMessageW(adapter,CB_SETCURSEL,gpu_index,0);
     SendMessageW(backend,CB_SETCURSEL,s.backend=="xinput"?1:0,0);
-    SendMessageW(game_language,CB_SETCURSEL,s.game_language==4?1:s.game_language==3?2:s.game_language==5?3:s.game_language==6?4:0,0);
+    SendMessageW(game_language,CB_SETCURSEL,s.game_language==4?1:s.game_language==3?2:s.game_language==5?3:s.game_language==6?4:s.game_language==1000?5:0,0);
     SendMessageW(prompt_style,CB_SETCURSEL,s.prompt_style=="playstation"?1:s.prompt_style=="xbox"?2:s.prompt_style=="keyboard"?3:0,0);
     auto preset=MatchingRenderPreset(s);FillRenderPresets(preset<0?static_cast<int>(kRenderPresets.size()):preset);
     SendMessageW(effect,CB_SETCURSEL,s.effect=="fsr"?1:s.effect=="cas"?2:s.effect=="fsr2"?3:s.effect=="fsr3"?4:0,0);
@@ -309,7 +309,7 @@ struct App {
     s.letterbox=Checked(letterbox);s.dither=Checked(dither);s.msaa=Checked(msaa);s.shader_cache=Checked(shader_cache);
     auto aa=SendMessageW(post_effect,CB_GETCURSEL,0,0);s.post_effect=aa==1?"fxaa":aa==2?"fxaa_extreme":"none";
     const auto language_index=SendMessageW(game_language,CB_GETCURSEL,0,0);
-    constexpr std::array<int,5> language_ids{1,4,3,5,6};
+    constexpr std::array<int,6> language_ids{1,4,3,5,6,1000};
     if(language_index<0 || language_index>=static_cast<LRESULT>(language_ids.size()))throw std::runtime_error("Invalid game language selection");
     s.game_language=language_ids[language_index];
     const auto glyph_mode=SendMessageW(prompt_style,CB_GETCURSEL,0,0);
@@ -359,7 +359,7 @@ struct App {
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
     LabelControl(3,L"Game language",L"Oyun dili",260,376,374);
     game_language=combo(3,260,402,374,kGameLanguage);
-    FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano"});
+    FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
     LabelControl(3,L"Button prompts",L"Tuş simgeleri",260,462,374);prompt_style=combo(3,260,488,374,kPromptStyle);
     LabelControl(3,L"Automatic follows the active input device.\nManual selection changes the symbols, not your controls.",L"Otomatik seçim, etkin giriş cihazını takip eder.\nElle seçim tuş simgelerini değiştirir, kontrollerini değiştirmez.",260,543,374,92);
     lan_enabled=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,696,245,374,28,kLanEnabled);

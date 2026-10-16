@@ -29,6 +29,7 @@
 #include "crash_report.h"
 #include "achievement_ui.h"
 #include "quit_menu.h"
+#include "localization.h"
 #include "in_game_settings.h"
 #include "frame_pacing.h"
 #include <rex/input/input_system.h>
@@ -117,6 +118,7 @@ class Motogp0910App : public rex::ReXApp {
   }
   void OnPreSetup(rex::RuntimeConfig& config) override {
     motogp::crash::Install();
+    motogp::localization::ApplyStartupLanguage();
     motogp::ApplyDisplayStartupFlags();
     ApplyMotogpInputDefaults();
     ApplyMotogpAudioSettings();
@@ -130,6 +132,7 @@ class Motogp0910App : public rex::ReXApp {
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
     motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
+    motogp::localization::Install(runtime(),rex::filesystem::GetExecutableFolder()/"resources/localization/tr/overlay");
     try {
       motogp::lan::Start(runtime()->kernel_state());
     } catch(const std::exception& error) {
@@ -143,6 +146,7 @@ class Motogp0910App : public rex::ReXApp {
     motogp::wide::Start(window());
     motogp::livery::Initialize();
     achievement_preferences_->Load(user_data_root(), rex::filesystem::GetExecutableFolder());
+    if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::Initialize(runtime());
     settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
     settings_gate_->SetFocused(window()->HasFocus());
@@ -161,6 +165,7 @@ class Motogp0910App : public rex::ReXApp {
   void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
     achievement_preferences_->Load(user_data_root(),rex::filesystem::GetExecutableFolder());
+    if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::SetFocused(window()->HasFocus());
     quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
       app_context().CallInUIThreadDeferred([this] {
