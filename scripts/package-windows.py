@@ -84,8 +84,8 @@ def main():
         milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
         preview_notes=(
             "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
-            "General > Multiplayer Settings > Connection mode > LAN / Radmin; automatic rooms, optional host IPv4 fallback.\n"
-            "Use the same package on both PCs and unranked Player Match on LAN / Radmin.\n"
+            "General > Multiplayer Settings > Connection mode > LAN; automatic rooms, optional host IPv4 fallback.\n"
+            "Use the same package on both PCs and unranked Player Match on a local or virtual LAN.\n"
             "No Xbox Live login or dedicated server. Offline remains the default.\n"
             "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
             "Empty Auto-IP command-line values no longer swallow the next option.\n"
@@ -101,7 +101,7 @@ def main():
             preview_notes=(
                 "COMMUNITY ONLINE: General > Multiplayer Settings > Connection mode > Online. Enter the community HTTPS server.\n"
                 "The VDS provides room discovery, authenticated UDP relay and persistent native leaderboards.\n"
-                "No Radmin or player router forwarding is required for Online. LAN / Radmin remains separate.\n"
+                "No virtual LAN or player router forwarding is required for Online. LAN remains separate.\n"
                 "The race simulation stays on a player's PC. Use Player Match; official Xbox Live ranked/friends/voice are not restored.\n"
                 "There is no default public server yet. Deploy the separate Linux/Windows community server package first.\n"
                 "SECURITY UPDATE: Online MGO2 / v2; update the game and server together. Old Online builds are rejected.\n"

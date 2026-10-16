@@ -24,8 +24,8 @@
     achievement_popup=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,0,58,kColumnWidth,26,kAchievementPopup);
     achievement_sound=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,kColumnX,58,kColumnWidth,26,kAchievementSound);
     SetCheck(achievement_popup,true);SetCheck(achievement_sound,true);
-    achievement_search_label=add(L"STATIC",0,0,92,40,22,0);
-    achievement_search=add(L"EDIT",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,46,88,kFormWidth-250,28,kAchievementSearch);SendMessageW(achievement_search,EM_SETLIMITTEXT,160,0);
+    achievement_search_label=add(L"STATIC",SS_CENTERIMAGE,0,88,54,28,0);
+    achievement_search=add(L"EDIT",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,64,88,kFormWidth-266,28,kAchievementSearch);SendMessageW(achievement_search,EM_SETLIMITTEXT,160,0);
     achievement_filter=add(L"COMBOBOX",WS_TABSTOP|CBS_DROPDOWNLIST,kFormWidth-190,88,190,180,kAchievementFilter);
     WNDCLASSW list_class{};list_class.lpfnWndProc=DefWindowProcW;list_class.hInstance=GetModuleHandleW(nullptr);list_class.lpszClassName=L"MotoGPAchievementList";list_class.hCursor=LoadCursorW(nullptr,IDC_ARROW);
     if(!GetClassInfoW(list_class.hInstance,list_class.lpszClassName,&list_class)&&!RegisterClassW(&list_class))throw std::runtime_error("Cannot register achievement list window");
@@ -66,7 +66,7 @@
       }catch(const std::exception&){unlocks_stale=true;}
       try {achievement_options=motogp::achievements::ReadOptions(root/"achievement-ui.toml");SetCheck(achievement_popup,achievement_options.popup);SetCheck(achievement_sound,achievement_options.sound);EnableWindow(achievement_popup,TRUE);EnableWindow(achievement_sound,TRUE);}
       catch(const std::exception&){EnableWindow(achievement_popup,FALSE);EnableWindow(achievement_sound,FALSE);}
-      const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7.");
+      const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):L"";
       if(Text(achievement_note)!=note)SetWindowTextW(achievement_note,note);
       if(before_catalog!=catalog_key||before_error!=catalog_error||before_unlocks!=unlocks||before_known!=unlocks_known||before_stale!=unlocks_stale){
       RECT summary{0,0,S(kFormWidth),S(60)};InvalidateRect(page_content,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}

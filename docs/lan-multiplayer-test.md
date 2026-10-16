@@ -43,7 +43,7 @@ For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md)
    ayarlarını ve kayıtlarını koru. Eski EXE ile yeni DLL/EXE'leri karıştırma.
 2. Radmin VPN'de aynı ağa katıl. İki PC de Radmin'de çevrimiçi görünmeli.
    Aynı ev ağı kullanılıyorsa Radmin zorunlu değil.
-3. Her iki bilgisayarda launcher **General > Multiplayer Settings > Connection mode > LAN / Radmin**
+3. Her iki bilgisayarda launcher **General > Multiplayer Settings > Connection mode > LAN**
    seçeneğini seç. Farklı oyuncu adları yaz. Basit ASCII ad kullanabilirsin;
    oyuncu adı en fazla 15, oda adı 31 UTF-8 bayt. `Player` varsayılanına
    süreç başına farklı bir dört haneli ek gelir.

@@ -1,6 +1,7 @@
 #pragma once
 #include "core.h"
 #include "modal_style.h"
+#include "tooltips.h"
 #include <commctrl.h>
 #include <dwmapi.h>
 namespace launcher {
@@ -15,7 +16,7 @@ class AdaptiveDialog {
   HWND Create(){
     WNDCLASSW cls{};cls.lpfnWndProc=Proc;cls.hInstance=GetModuleHandleW(nullptr);cls.lpszClassName=L"MotoGPAdaptiveTriggers";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);
     RegisterClassW(&cls);
-    RECT rect{0,0,S(680),S(470)};AdjustWindowRectEx(&rect,WS_CAPTION|WS_SYSMENU,0,WS_EX_DLGMODALFRAME);
+    RECT rect{0,0,S(680),S(418)};AdjustWindowRectEx(&rect,WS_CAPTION|WS_SYSMENU,0,WS_EX_DLGMODALFRAME);
     RECT parent{};GetWindowRect(owner_,&parent);const auto w=rect.right-rect.left,h=rect.bottom-rect.top;
     window=CreateWindowExW(WS_EX_DLGMODALFRAME,cls.lpszClassName,T(L"DualSense adaptive triggers (Experimental)",L"DualSense adaptif tetikler (Deneysel)"),WS_CAPTION|WS_SYSMENU|WS_CLIPCHILDREN,
       parent.left+(parent.right-parent.left-w)/2,parent.top+(parent.bottom-parent.top-h)/2,w,h,owner_,nullptr,cls.hInstance,this);
@@ -39,7 +40,7 @@ class AdaptiveDialog {
     if(!next.Valid())return false;profile_=std::move(next);return true;
   }
  private:
-  HWND owner_{};HFONT font_{};bool tr_=false;double scale_=1;motogp::adaptive::Profile& profile_;ModalStyle style_;
+  HWND owner_{};HFONT font_{};bool tr_=false;double scale_=1;motogp::adaptive::Profile& profile_;ModalStyle style_;Tooltips help_;
   int S(int n)const{return static_cast<int>(n*scale_+.5);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return tr_?tr:en;}
   HWND Add(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
@@ -55,26 +56,31 @@ class AdaptiveDialog {
     }
   }
   void Build(){
+    help_.Create(window,scale_);
     auto enabled=Add(L"BUTTON",T(L"Enable DualSense adaptive triggers",L"DualSense adaptif tetikleri etkinleştir"),WS_TABSTOP|BS_AUTOCHECKBOX,24,20,632,30,100);
     SendMessageW(enabled,BM_SETCHECK,profile_.enabled?BST_CHECKED:BST_UNCHECKED,0);
-    Add(L"STATIC",T(L"DualSense / Edge + SDL required. USB or Bluetooth.\nFixed resistance for acceleration / braking; no speed or RPM response.",L"DualSense / Edge + SDL gerekir. USB veya Bluetooth.\nGaz / fren için sabit direnç; hıza veya motor devrine göre değişmez."),0,24,62,632,55);
+    const auto requirement=Add(L"STATIC",T(L"Requires DualSense / Edge and SDL",L"DualSense / Edge ve SDL gerekir"),0,24,62,632,24);
+    const auto hardware_tip=T(L"USB or Bluetooth. Fixed resistance for acceleration / braking; it does not respond to speed or RPM. Other controllers keep normal triggers.",L"USB veya Bluetooth. Gaz / fren için sabit dirençtir; hıza veya motor devrine göre değişmez. Diğer kontrolcülerin tetikleri normal çalışır.");
+    help_.Set(enabled,hardware_tip);help_.Set(requirement,hardware_tip);
     for(int side=0;side<2;++side){const auto& p=side?profile_.left:profile_.right;int x=24+side*332,id=110+side*10;
-      Add(L"STATIC",side?T(L"LEFT TRIGGER · L2",L"SOL TETİK · L2"):T(L"RIGHT TRIGGER · R2",L"SAĞ TETİK · R2"),0,x,134,300,26);
-      auto mode=Add(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,x,168,300,180,id);
+      Add(L"STATIC",side?T(L"LEFT TRIGGER · L2",L"SOL TETİK · L2"):T(L"RIGHT TRIGGER · R2",L"SAĞ TETİK · R2"),0,x,110,300,26);
+      auto mode=Add(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,x,144,300,180,id);
       for(auto text:{T(L"Off",L"Kapalı"),T(L"Constant resistance",L"Sabit direnç"),T(L"Resistance zone",L"Direnç aralığı")})SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text));
       SendMessageW(mode,CB_SETITEMHEIGHT,static_cast<WPARAM>(-1),S(23));SendMessageW(mode,CB_SETITEMHEIGHT,0,S(23));
+      help_.Set(mode,T(L"Constant resistance holds a single resistance level. Resistance zone limits it to the selected start and end positions.",L"Sabit direnç, tek bir direnç düzeyi uygular. Direnç aralığı, başlangıç ve bitiş konumları arasına sınırlar."));
       SendMessageW(mode,CB_SETCURSEL,p.mode=="weapon"?2:p.mode=="feedback"?1:0,0);
       const int values[]{p.start,p.end,p.strength};
-      for(int row=0;row<3;++row){const int y=214+row*48;
-        Add(L"STATIC",row==0?T(L"Start position",L"Başlangıç konumu"):row==1?T(L"End (zone only)",L"Bitiş (direnç aralığı)"):T(L"Strength · 0 = off",L"Güç · 0 = kapalı"),0,x,y,250,21);
+      for(int row=0;row<3;++row){const int y=190+row*48;
+        const auto label=Add(L"STATIC",row==0?T(L"Start position",L"Başlangıç konumu"):row==1?T(L"End (zone only)",L"Bitiş (direnç aralığı)"):T(L"Strength · 0 = off",L"Güç · 0 = kapalı"),0,x,y,250,21);
         auto bar=Add(TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,x-5,y+20,260,26,id+row+1);
+        const auto tip=row==2?T(L"Zero strength releases resistance. Supported strength: 0–8.",L"Sıfır güç direnci kaldırır. Desteklenen güç: 0–8."):T(L"Positions 0–9 run from released to fully pressed. Resistance-zone end must be greater than start.",L"Konum 0–9, serbestten tam basılıya uzanır. Direnç aralığının bitişi başlangıçtan büyük olmalı.");
+        help_.Set(bar,tip);help_.Set(label,tip);
         SendMessageW(bar,TBM_SETRANGE,TRUE,MAKELPARAM(0,row==2?8:9));SendMessageW(bar,TBM_SETPOS,TRUE,values[row]);
         Add(L"STATIC",std::to_wstring(values[row]).c_str(),SS_RIGHT,x+265,y+21,35,24,id+row+4);
       }
     }
-    Add(L"STATIC",T(L"Resistance zone: end must exceed start. Positions 0–9: released to fully pressed. Zero strength releases resistance.",L"Direnç aralığı: bitiş başlangıçtan büyük olmalı. Konum 0–9: serbestten tam basılıya. Sıfır güç direnci kaldırır."),0,24,374,632,40);
-    Add(L"BUTTON",T(L"Apply",L"Uygula"),WS_TABSTOP|BS_OWNERDRAW,410,426,114,30,IDOK);
-    Add(L"BUTTON",T(L"Cancel",L"İptal"),WS_TABSTOP|BS_OWNERDRAW,538,426,114,30,IDCANCEL);UpdateAvailability();
+    Add(L"BUTTON",T(L"Apply",L"Uygula"),WS_TABSTOP|BS_OWNERDRAW,410,374,114,30,IDOK);
+    Add(L"BUTTON",T(L"Cancel",L"İptal"),WS_TABSTOP|BS_OWNERDRAW,538,374,114,30,IDCANCEL);UpdateAvailability();
   }
   static LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
     auto* self=reinterpret_cast<AdaptiveDialog*>(GetWindowLongPtrW(hwnd,GWLP_USERDATA));

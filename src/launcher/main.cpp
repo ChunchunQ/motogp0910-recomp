@@ -4,6 +4,7 @@
 #include "scroll_rail.h"
 #include "adaptive_triggers_dialog.h"
 #include "network_dialog.h"
+#include "tooltips.h"
 #include "hardware.h"
 #include "achievements.h"
 #include "../achievement_preferences.h"
@@ -46,7 +47,9 @@ struct App {
   HWND window{},path{},size{},backend{},language{},status{},title{},subtitle{},folder_label{},
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
-       anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
+       anisotropic{},letterbox{},dither{},volume{},volume_value{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},aspect{};
+  Tooltips help;
+  std::map<HWND,HWND> help_labels;
   std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
   HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{};
@@ -69,7 +72,7 @@ struct App {
   HWND pointer_focus{};
   unsigned localization_generation=0;
   bool filling_binding=false,capturing=false;
-  HFONT font{},heading{},small_font{},bold{},logo{};
+  HFONT font{},heading{},small_font{},bold{},logo{},play_font{};
   std::array<HANDLE,3> private_fonts{};
   HBRUSH background=CreateSolidBrush(kBackground),card=CreateSolidBrush(kCard),field=CreateSolidBrush(kField);
   HANDLE process{};
@@ -81,7 +84,7 @@ struct App {
   ~App(){verify_cancel=true;if(verify_future.valid())verify_future.wait();if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();DeleteObject(paint_background_bitmap);for(auto handle:private_fonts)if(handle)RemoveFontMemResourceEx(handle);DeleteObject(background);DeleteObject(card);DeleteObject(field);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return turkish?tr:en;}
   int S(int value)const{return static_cast<int>(value*scale+0.5);}
-  void DeleteFonts(){for(auto f:{font,heading,small_font,bold,logo})if(f)DeleteObject(f);}
+  void DeleteFonts(){for(auto f:{font,heading,small_font,bold,logo,play_font})if(f)DeleteObject(f);}
   void CreateFonts(){
     // Process-private fonts make Win10/11 and the test fixture use the same
     // metrics. Register once, rather than leaking registrations on DPI changes.
@@ -92,7 +95,7 @@ struct App {
     }
     auto make=[&](int size,int weight,const wchar_t* face=L"Open Sans"){return CreateFontW(-S(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
         OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
-    font=make(14,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(14,FW_SEMIBOLD,L"Open Sans SemiBold");logo=make(36,FW_BOLD);
+    font=make(14,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(14,FW_SEMIBOLD,L"Open Sans SemiBold");logo=make(36,FW_BOLD);play_font=make(20,FW_SEMIBOLD,L"Open Sans SemiBold");
   }
   HWND Control(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0,HWND parent=nullptr){
     bool button=std::wstring_view(cls)==L"BUTTON";
@@ -163,7 +166,7 @@ struct App {
   }
   void ShowPage(int page){
     if(page<0||page>=6||switching_page||(pages_ready&&current_page==page))return;
-    switching_page=true;CancelCapture();
+    help.Pop();switching_page=true;CancelCapture();
     // Move focus out of the outgoing page before hiding it. Focus-driven
     // scrolling cannot re-enter the transition or reveal an old field.
     if(IsChild(page_content,GetFocus()))SetFocus(navigation[page]);
@@ -182,9 +185,9 @@ struct App {
     const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
     const bool temporal=selected==3 || selected==4;
     if(fsr_quality)EnableWindow(fsr_quality,temporal && !process);
-    if(fsr_notice)SetWindowTextW(fsr_notice,temporal?T(L"Experimental: neutral motion/depth inputs.\nMay fall back to FSR 1; no frame generation.",L"Deneysel: nötr hareket/derinlik verileri.\nFSR 1’e dönebilir; kare üretimi yok."):selected==0?T(L"Choose AMD FSR or CAS above to adjust sharpness.",L"Keskinliği ayarlamak için yukarıdan AMD FSR veya CAS seç."):T(L"Sharpness applies to the selected upscaler / sharpener.",L"Keskinlik, seçili ölçekleyici / keskinleştiriciye uygulanır."));
     EnableWindow(sharpness,!process && SendMessageW(effect,CB_GETCURSEL,0,0)!=0);
     SetWindowTextW(sharp_value,(std::to_wstring(SendMessageW(sharpness,TBM_GETPOS,0,0))+L"%").c_str());
+    LocalizeUpscalerHelp();
   }
   void RefreshRates(int preferred=-1){
     if(!refresh_rate || !size)return;
@@ -225,6 +228,7 @@ struct App {
     for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
     SetWindowTextW(multiplayer_settings,T(L"Multiplayer Settings",L"Çok Oyunculu Ayarları"));
     LayoutNavigation();
+    LocalizeHelp();
     LocalizeAchievements();
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Letterbox",L"Siyah kenarlar"));
@@ -373,6 +377,7 @@ struct App {
   void ReadyStatus(){try{Validate(exe,GameRoot());Status(L"Ready to play · Title update 0.0.1.1",L"Başlatmaya hazır · Title update 0.0.1.1",true);}
     catch(const Error& e){Status(e.english,e.turkish);}catch(const std::exception& e){Status(L"Check game folder: "+ErrorDetails(e),L"Oyun klasörünü kontrol et: "+ErrorDetails(e));}}
   #include "compact_layout.inc"
+  #include "launcher_help.inc"
   COLORREF BackgroundFor(HWND)const{return kBackground;}
   void Rounded(HDC dc,RECT r,COLORREF fill,COLORREF border,int radius=8){
     auto brush=CreateSolidBrush(fill);auto pen=CreatePen(PS_SOLID,S(1),border);
@@ -383,7 +388,7 @@ struct App {
     const auto c=item.hwndItem;RECT r=item.rcItem;
     bool disabled=(item.itemState&ODS_DISABLED)!=0,pressed=(item.itemState&ODS_SELECTED)!=0;
     bool is_check=checks.contains(c),primary=c==play,nav=std::find(navigation.begin(),navigation.end(),c)!=navigation.end();
-    auto hdc=item.hDC;SetBkMode(hdc,TRANSPARENT);SelectObject(hdc,bold);
+    auto hdc=item.hDC;SetBkMode(hdc,TRANSPARENT);SelectObject(hdc,primary?play_font:bold);
     if(is_check){
       DrawSurface(hdc,c);
       RECT box{r.left+S(1),r.top+S(6),r.left+S(17),r.top+S(22)};
@@ -442,7 +447,7 @@ struct App {
     DrawCaption(dc);BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){
-    DeleteFonts();scale=value;CreateFonts();
+    help.Pop();DeleteFonts();scale=value;CreateFonts();help.SetScale(scale);
     for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y+(GetParent(p.control)==window?kCaptionHeight:0)),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
       wchar_t cls[32];GetClassNameW(p.control,cls,32);if(std::wstring_view(cls)==L"COMBOBOX"){SendMessageW(p.control,CB_SETITEMHEIGHT,0,S(24));SendMessageW(p.control,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}}
     ScrollPage(page_scroll[current_page],true);

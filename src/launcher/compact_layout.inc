@@ -3,7 +3,8 @@
   HWND page_view{},page_content{},verify_files{};
   std::array<int,6> page_scroll{},page_extent{};
   static constexpr int kPageX=28,kPageY=136,kPageWidth=610,kPageHeight=480;
-  static constexpr int kFormWidth=kPageWidth-26,kColumnWidth=(kFormWidth-22)/2,kColumnX=kColumnWidth+22,kStatusY=kPageY+kPageHeight+8;
+  static constexpr int kFormWidth=kPageWidth-26,kColumnWidth=(kFormWidth-22)/2,kColumnX=kColumnWidth+22;
+  static constexpr int kActionsY=kPageY+kPageHeight+8,kStatusY=kHeight-40;
   std::unique_ptr<Gdiplus::Bitmap> cover,paint_background;
   HBITMAP paint_background_bitmap{};
   std::future<GameVerification> verify_future;
@@ -20,6 +21,7 @@
   void ScrollPage(int requested,bool force=false){
     const int next=std::clamp(requested,0,PageMaximum());
     if(!force&&page_scroll[current_page]==next)return;
+    help.Pop();
     page_scroll[current_page]=next;
     // Move one clipped surface. Repositioning every native combo / trackbar
     // on each wheel tick lets their synchronous Windows paints expose partial
@@ -149,7 +151,8 @@
       SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(control,WM_GETFONT,0,0)));
       SetTextColor(dc,control==app.title?kText:control==app.status&&app.status_positive?RGB(107,205,132):kMuted);
       RECT r;GetClientRect(control,&r);const auto text=app.Text(control);const bool right=(GetWindowLongPtrW(control,GWL_STYLE)&SS_TYPEMASK)==SS_RIGHT;
-      DrawTextW(dc,text.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);
+      const bool centered=(GetWindowLongPtrW(control,GWL_STYLE)&SS_CENTERIMAGE)!=0;
+      DrawTextW(dc,text.c_str(),-1,&r,(centered?DT_SINGLELINE|DT_VCENTER:DT_WORDBREAK)|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);
       if(message==WM_PAINT)EndPaint(control,&ps);return 0;
     }
     return DefSubclassProc(control,message,wparam,lparam);
@@ -167,7 +170,7 @@
     for(int i:order){SetWindowPos(navigation[i],nullptr,x,S(94+kCaptionHeight),widths[i],S(32),SWP_NOZORDER|SWP_NOACTIVATE);x+=widths[i]+gap;}
   }
   void BuildControls(){
-    CreateFonts();LoadCover();
+    CreateFonts();LoadCover();help.Create(window,scale);
     title=Control(L"STATIC",L"",0,28,68,1,1);subtitle=Control(L"STATIC",L"",0,30,70,1,1);
     ShowWindow(title,SW_HIDE);ShowWindow(subtitle,SW_HIDE);
     // Creation order matches visual and keyboard tab order.
@@ -181,19 +184,17 @@
     auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,220,id);};
     auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,30,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
     auto check=[&](int page,int x,int y,int w,int id){return PageControl(page,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,x,y,w,28,id);};
-    auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){LabelControl(page,en,tr,x,y,kColumnWidth,24);return combo(page,x,y+26,kColumnWidth,id);};
-    folder_label=PageControl(3,L"STATIC",L"",0,0,0,kFormWidth,20);
-    path=edit(3,0,24,kFormWidth-106,kPath,32760);SetWindowTextW(path,ResolveGameRoot(exe,config.table).c_str());
-    browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kFormWidth-94,24,94,30,kBrowse);
-    verify_files=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,64,164,30,kVerifyFiles);
-    LabelControl(3,L"Checks original files. No changes are made.",L"Özgün dosyaları kontrol eder. Değişiklik yapmaz.",176,66,kFormWidth-176,32);
+    auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){auto label=LabelControl(page,en,tr,x,y,kColumnWidth,24);auto control=combo(page,x,y+26,kColumnWidth,id);help_labels[control]=label;return control;};
+    folder_label=PageControl(3,L"STATIC",L"",0,0,8,kFormWidth,20);
+    path=edit(3,0,32,kFormWidth-106,kPath,32760);SetWindowTextW(path,ResolveGameRoot(exe,config.table).c_str());
+    browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kFormWidth-94,32,94,30,kBrowse);
+    verify_files=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,74,184,32,kVerifyFiles);
     language=field(3,L"Launcher language",L"Launcher dili",0,128,kLanguage);
     SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));
     game_language=field(3,L"Game language",L"Oyun dili",kColumnX,128,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
     prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,210,kPromptStyle);
     multiplayer_settings=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kColumnX,234,kColumnWidth,34,kNavMultiplayer);
     crash_diagnostics=check(3,0,300,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
-    LabelControl(3,L"Save or press PLAY to apply launcher settings. During play, F1 opens settings that can change immediately.",L"Launcher ayarlarını uygulamak için kaydet veya oyunu başlat. Oyun sırasında anında değişen ayarlar için F1'e bas.",0,352,kFormWidth,54);
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
     render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",kColumnX,0,kRenderResolution);
     size=field(0,L"Output window size",L"Çıkış pencere boyutu",0,68,kSize);
@@ -206,33 +207,28 @@
     fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",kColumnX,288,kFsrQuality);
     LabelControl(0,L"Upscaler sharpness",L"Ölçekleyici keskinliği",0,356,kFormWidth-90);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,kFormWidth-70,356,70,22);
     sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,382,kFormWidth,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
-    fsr_notice=PageControl(0,L"STATIC",L"",0,0,422,kFormWidth,44);
-    vsync=check(0,0,486,kColumnWidth,kVsync);msaa=check(0,kColumnX,486,kColumnWidth,kMsaa);
-    letterbox=check(0,0,528,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,528,kColumnWidth,kAspect);
-    dither=check(0,0,570,kColumnWidth,kDither);shader_cache=check(0,kColumnX,570,kColumnWidth,kShaderCache);
-    LabelControl(0,L"Borderless and windowed use desktop Hz. FPS cap does not unlock the game’s own limit.",L"Kenarlıksız ve pencereli mod masaüstü Hz hızını kullanır. FPS sınırı, oyunun kendi sınırını kaldırmaz.",0,626,kFormWidth,48);
+    vsync=check(0,0,438,kColumnWidth,kVsync);msaa=check(0,kColumnX,438,kColumnWidth,kMsaa);
+    letterbox=check(0,0,480,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,480,kColumnWidth,kAspect);
+    dither=check(0,0,522,kColumnWidth,kDither);shader_cache=check(0,kColumnX,522,kColumnWidth,kShaderCache);
     for(size_t i=0;i<engine_choices.size();++i)engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(i%2)*kColumnX,(i/2)*82,kEngineBase+i);
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",kColumnX,82,kShadowDistance);
-    LabelControl(4,L"Game default preserves the original effects and track settings.\nOff disables the selected effect. Higher distance can increase GPU work.",L"Oyunun ayarı, özgün efektleri ve pist ayarlarını korur.\nKapalı seçimi ilgili efekti kapatır. Yüksek mesafe GPU yükünü artırabilir.",0,190,kFormWidth,70);
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",0,0,kFormWidth-104);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,kFormWidth-80,0,80,22);
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,kFormWidth,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     mute=check(1,0,100,kFormWidth,kMute);
-    LabelControl(1,L"One level for music, engines and menu sounds. Use the in-game options for separate music and effects levels.\nLauncher changes apply on the next game launch.",L"Müzik, motor ve menü sesleri için toplam ses düzeyi. Ayrı ses düzeyleri için oyun içi seçenekleri kullan.\nLauncher değişiklikleri sonraki açılışta uygulanır.",0,160,kFormWidth,86);
     backend=field(2,L"Controller",L"Kontrolcü",0,0,kBackend);keyboard=check(2,kColumnX,26,kColumnWidth,kKeyboard);
     adaptive_triggers=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,76,kFormWidth,32,kAdaptiveTriggers);
-    LabelControl(2,L"Type a key or use … to capture. Right-click to unbind or reset. Esc cancels capture.",L"Tuşu yaz veya … ile yakala. Sağ tık: tuşu kaldır / sıfırla. Esc: iptal.",0,120,kFormWidth,38);
-    for(size_t i=0;i<kBindings.size();++i){const int y=170+static_cast<int>(i)*34;
+    for(size_t i=0;i<kBindings.size();++i){const int y=124+static_cast<int>(i)*34;
       LabelControl(2,kBindings[i].english,kBindings[i].turkish,0,y+3,kColumnWidth-4,26);
       binding_fields[i]=edit(2,kColumnX-14,y,kColumnWidth-27,kBindingBase+i,512);SetWindowSubclass(binding_fields[i],BindingProc,1,reinterpret_cast<DWORD_PTR>(this));
       binding_buttons[i]=PageControl(2,L"BUTTON",L"…",WS_TABSTOP|BS_PUSHBUTTON,kFormWidth-28,y,28,28,kCaptureBase+i);
     }
     BuildAchievements();
     status=Control(L"STATIC",L"",0,44,kStatusY,kPageWidth-16,30);SendMessageW(status,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
-    save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,kHeight-40,116,32,kSave);
-    defaults=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,154,kHeight-40,116,32,kDefaults);
-    logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,280,kHeight-40,82,32,kLogs);
-    report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,372,kHeight-40,90,32,kReport);
-    play=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,472,kHeight-46,166,40,kPlay);
+    save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,kActionsY,116,32,kSave);
+    defaults=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,154,kActionsY,116,32,kDefaults);
+    logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,280,kActionsY,82,32,kLogs);
+    report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,372,kActionsY,90,32,kReport);
+    play=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kWidth-248,kActionsY,220,64,kPlay);
     Localize();SetControls(settings);for(auto& page:pages)for(auto c:page)ShowWindow(c,SW_HIDE);ShowPage(3);ReadyStatus();
   }
   void StartVerification(){

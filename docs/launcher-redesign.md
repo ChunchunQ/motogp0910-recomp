@@ -252,7 +252,7 @@ keyboard order, scrolling, selector input and preserved multiplayer validation.
 production EXE passed open, tab/control actions, language changes, save and close;
 an unknown config key was preserved and no game save was created.
 
-Current package: `downloads/MotoGP0910-Windows-x64-launcher-composition.zip`.
+Previous package: `downloads/MotoGP0910-Windows-x64-launcher-composition.zip`.
 SHA-256: `42c50b5f494a1b92499908918af0deed54e50388518d03e3065c538426b5860b`.
 ZIP CRC and membership checks passed. Against the previous expanded package,
 only `motogp0910-launcher.exe` changed; the game EXE/map, pinned DLLs and external
@@ -260,3 +260,75 @@ resources are byte-identical. No README, SHA256SUMS or license sidecar is shippe
 Required notices remain embedded in launcher resource 104. Screenshots above
 were refreshed from this compiled build. Native Windows user validation remains
 pending.
+
+
+## Footer, contextual help and mode-specific multiplayer fields
+
+The outer window and artwork composition remain unchanged. PLAY is now a
+**220 × 64** primary action at the lower right, with a larger 20-pixel font.
+Save / Defaults / Logs / Report occupy the former status row; status and the
+indicator dot are underneath those actions. Both rows stay outside scrolling.
+General's folder controls move down by eight logical pixels; Verify game files
+uses a balanced 184 × 32 button, with its explanation moved to hover help.
+The achievement Search label has 54 pixels of width, centered vertically beside
+a separately spaced edit field. A real font-extent check now covers this label,
+including Turkish and all existing scaling cases.
+
+The Audio paragraph is removed. Routine General, Graphics, Advanced and Controls
+instructions, plus the normal achievement footer note, no longer consume page
+space. Required help is attached to relevant controls using a shared native
+`tooltips_class32` helper (`src/launcher/tooltips.h`), with localized main-window
+text in `src/launcher/launcher_help.inc`. Tooltips use the Windows theme, appear
+after 550 ms, wrap to a DPI-scaled width, and dismiss on page/scroll changes.
+Text is owned for the lifetime of each registered tool and updated in place
+on language changes. Relevant labels also carry help so disabled selectors can
+explain themselves. Experimental FSR limitations, key capture, read-only file
+verification and the F1/F7 shortcuts remain discoverable on hover. Actual save
+errors and achievement retry warnings stay visible. DualSense retains its short
+hardware requirement; detailed resistance guidance moves to tooltips without
+changing the controller protocol or profile format.
+
+The multiplayer editor displays only relevant fields and resizes to remove
+unused rows: **640 × 158** client pixels for Offline, **640 × 316** for LAN or
+Online at 100%. Player / room fields appear in both connected modes. LAN shows
+only optional local / host IPv4 inputs; Online shows only the HTTPS server.
+All fields and their values remain alive while hidden, and keyboard navigation
+skips hidden disabled controls. Apply / Cancel, connection validation and settings
+serialization retain their existing behavior. A mode change completes its
+repaint before returning. Labels say **LAN**, with application-neutral local /
+virtual network help; no specific virtual LAN product is named in the UI.
+
+Current screenshots: [General](screenshots/launcher-racing-lines-general.png),
+[achievements](screenshots/launcher-racing-lines-achievements.png),
+[Audio](screenshots/launcher-racing-lines-audio.png),
+[native hover help](screenshots/launcher-racing-lines-tooltip.png),
+[Offline](screenshots/launcher-racing-lines-multiplayer-offline.png),
+[LAN](screenshots/launcher-racing-lines-multiplayer.png) and
+[Online](screenshots/launcher-racing-lines-multiplayer-online.png).
+
+
+Validation: the final rebuilt Windows PE passed **86,327** actual UI assertions
+under Wine/Xvfb. These include native mouse-hover appearance, correct tooltip
+ownership, English/Turkish tooltip text, in-place localization, experimental
+FSR help, larger right-aligned PLAY, status/action order, complete Search text,
+all six pages and 75/100/125/150% scaling. The existing real data verifier,
+achievement saves and original icons, partial-selector mouse regression,
+scrolling and setting round trips remain covered. Multiplayer tests check
+visibility, compact mode heights, visible-control bounds, mode-specific
+validation and serialization, Apply / Cancel and the real General button.
+120 painted tab changes took 2,632 ms total (72 ms slowest) without rebuilding
+selectors or changing pending settings. Current screenshots were refreshed from
+this exact probe; native popup capture includes the separate tooltip window.
+
+Current package: `downloads/MotoGP0910-Windows-x64-launcher-refined.zip`.
+SHA-256: `92e21e3463b1e0734cd75df18024268dcd8978c3a140561d504ac149fb5b526e`.
+ZIP integrity and membership checks passed. Only the launcher EXE differs from
+the previous composition package: game EXE/map, runtime DLLs and external
+resources are byte-identical. The archive contains no README, SHA256SUMS,
+license sidecars, original game data, saves, logs or personal configuration.
+Required notices remain embedded. Native Windows user review remains pending.
+
+The exact packaged production EXE also passed the separate open, nested control
+actions, English/Turkish switching, save and close checks. An unrelated TOML key
+was retained and no game save was created. Both test fixtures were byte-compared
+against their final build outputs.

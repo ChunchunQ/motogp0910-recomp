@@ -8,17 +8,18 @@
 namespace {
 int ui_checks=0;
 void CheckUI(bool ok,const char* message){if(!ok)throw std::runtime_error(message);++ui_checks;}
-void Screenshot(HWND window,const fs::path& file,bool whole=false){
-  RECT r;if(whole){GetWindowRect(window,&r);r.right-=r.left;r.bottom-=r.top;r.left=r.top=0;}else GetClientRect(window,&r);auto dc=whole?GetWindowDC(window):GetDC(window),copy=CreateCompatibleDC(dc);
+void Screenshot(HWND window,const fs::path& file,bool whole=false,bool include_popups=false){
+  RECT r;POINT origin{};if(whole){GetWindowRect(window,&r);origin={r.left,r.top};r.right-=r.left;r.bottom-=r.top;r.left=r.top=0;}else{GetClientRect(window,&r);if(include_popups)ClientToScreen(window,&origin);}
+  auto dc=include_popups?GetDC(nullptr):whole?GetWindowDC(window):GetDC(window),copy=CreateCompatibleDC(dc);
   BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=r.right;
   info.bmiHeader.biHeight=-r.bottom;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
   void* data=nullptr;auto bitmap=CreateDIBSection(dc,&info,DIB_RGB_COLORS,&data,nullptr,0);auto old=SelectObject(copy,bitmap);
-  CheckUI(bitmap && BitBlt(copy,0,0,r.right,r.bottom,dc,0,0,SRCCOPY),"Capture actual launcher window");
+  CheckUI(bitmap && BitBlt(copy,0,0,r.right,r.bottom,dc,include_popups?origin.x:0,include_popups?origin.y:0,SRCCOPY|CAPTUREBLT),"Capture actual launcher window");
   const DWORD bytes=r.right*r.bottom*4;BITMAPFILEHEADER header{};header.bfType=0x4D42;
   header.bfOffBits=sizeof(header)+sizeof(info.bmiHeader);header.bfSize=header.bfOffBits+bytes;
   std::ofstream output(file,std::ios::binary);output.write(reinterpret_cast<const char*>(&header),sizeof(header));
   output.write(reinterpret_cast<const char*>(&info.bmiHeader),sizeof(info.bmiHeader));output.write(static_cast<const char*>(data),bytes);
-  CheckUI(bool(output),"Screenshot saved");SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(window,dc);
+  CheckUI(bool(output),"Screenshot saved");SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(include_popups?nullptr:window,dc);
 }
 void PumpUI(){MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}}
 void ClickControl(HWND control,int y){
@@ -36,6 +37,30 @@ void CheckSurface(App& app,HWND control,int x,int y){
   POINT root{x,y};MapWindowPoints(control,app.window,&root,1);
   CheckUI(GetPixel(paint,x,y)==GetPixel(expected,root.x,root.y),"Child and themed-parent backgrounds align exactly with the full-window artwork");
   SelectObject(paint,previous);SelectObject(expected,previous_expected);DeleteObject(bitmap);DeleteDC(paint);DeleteDC(expected);ReleaseDC(app.window,target);
+}
+std::wstring TooltipText(HWND tooltip,HWND control){
+  wchar_t text[2048]{};TOOLINFOW tool{sizeof(tool)};tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=text;
+  SendMessageW(tooltip,TTM_GETTEXTW,std::size(text),reinterpret_cast<LPARAM>(&tool));return text;
+}
+void CheckHelp(App& app,const fs::path& pictures){
+  app.ShowPage(3);app.ScrollPage(0);app.turkish=false;app.Localize();
+  wchar_t cls[80]{};GetClassNameW(app.help.window,cls,80);CheckUI(std::wstring_view(cls)==TOOLTIPS_CLASSW,"Help uses the real Windows tooltip control");
+  const auto count=SendMessageW(app.help.window,TTM_GETTOOLCOUNT,0,0);
+  CheckUI(TooltipText(app.help.window,app.verify_files).find(L"No files are changed")!=std::wstring::npos,"File verification help is available on hover instead of a static paragraph");
+  app.turkish=true;app.Localize();CheckUI(TooltipText(app.help.window,app.verify_files).find(L"Dosyalar değiştirilmez")!=std::wstring::npos,"Tooltip text changes with launcher language");
+  app.turkish=false;app.Localize();CheckUI(SendMessageW(app.help.window,TTM_GETTOOLCOUNT,0,0)==count,"Localization updates existing tooltip tools without duplicating them");
+  const auto selection=SendMessageW(app.effect,CB_GETCURSEL,0,0);SendMessageW(app.effect,CB_SETCURSEL,3,0);app.UpdateSharpness();
+  CheckUI(TooltipText(app.help.window,app.effect).find(L"No frame generation")!=std::wstring::npos,"Experimental upscaling caveats remain available in the relevant tooltip");
+  SendMessageW(app.effect,CB_SETCURSEL,selection,0);app.UpdateSharpness();
+  SetForegroundWindow(app.window);SetCursorPos(1700,1000);PumpUI();
+  RECT control;GetClientRect(app.verify_files,&control);POINT p{control.right/2,control.bottom/2};ClientToScreen(app.verify_files,&p);SetCursorPos(p.x,p.y);
+  const auto deadline=GetTickCount64()+4000;
+  while(!IsWindowVisible(app.help.window)&&GetTickCount64()<deadline){PumpUI();Sleep(10);}
+  CheckUI(IsWindowVisible(app.help.window),"A native tooltip appears after actual mouse hover");
+  TOOLINFOW active{sizeof(active)};SendMessageW(app.help.window,TTM_GETCURRENTTOOLW,0,reinterpret_cast<LPARAM>(&active));
+  CheckUI(active.uId==reinterpret_cast<UINT_PTR>(app.verify_files),"Mouse hover displays help for the intended nested control");
+  UpdateWindow(app.help.window);PumpUI();Screenshot(app.window,pictures/L"launcher-tooltip-english.bmp",false,true);
+  app.ShowPage(0);CheckUI(!IsWindowVisible(app.help.window),"Changing pages dismisses the outgoing tooltip");SetCursorPos(1700,1000);PumpUI();
 }
 void LayoutCheck(App& app){
   RECT client;GetClientRect(app.window,&client);std::vector<std::pair<RECT,HWND>> visible;
@@ -83,6 +108,13 @@ void CheckPolish(App& app){
   const std::array<int,6> order{3,0,4,1,2,5};
   for(size_t i=0;i+1<order.size();++i)CheckUI(GetNextDlgTabItem(app.window,app.navigation[order[i]],FALSE)==app.navigation[order[i+1]],"Keyboard tab order follows the visible navigation order");
   SelectObject(dc,old);
+
+  RECT play,save,status;GetWindowRect(app.play,&play);GetWindowRect(app.save,&save);GetWindowRect(app.status,&status);
+  MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&play),2);
+  CheckUI(std::abs(play.right-app.S(kWidth-28))<=1&&play.right-play.left>=app.S(220)&&play.bottom-play.top>=app.S(64),"PLAY is large and anchored to the right edge");
+  CheckUI(save.bottom<=status.top,"Auxiliary actions appear above the status line");
+  const auto search_dc=GetDC(app.achievement_search_label);const auto search_font=SelectObject(search_dc,app.font);SIZE text_size{};const auto search=app.Text(app.achievement_search_label);GetTextExtentPoint32W(search_dc,search.c_str(),static_cast<int>(search.size()),&text_size);
+  RECT search_bounds;GetClientRect(app.achievement_search_label,&search_bounds);CheckUI(text_size.cx<=search_bounds.right&&text_size.cy<=search_bounds.bottom,"Search label fits its complete localized text without clipping");SelectObject(search_dc,search_font);ReleaseDC(app.achievement_search_label,search_dc);
 
   const auto a=app.CaptionBounds();const auto baseline=CreateCompatibleDC(dc),paint=CreateCompatibleDC(dc);
   const auto back_bitmap=CreateCompatibleBitmap(dc,a.width,a.height),paint_bitmap=CreateCompatibleBitmap(dc,a.width,a.height);
@@ -156,6 +188,7 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    CheckHelp(app,pictures);app.ShowPage(3);
     {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kBackground,"Caption blends into the artwork instead of a sidebar strip");ReleaseDC(window,dc);}
     {const auto dc=GetDC(window);const auto memory=CreateCompatibleDC(dc);const auto bitmap=CreateCompatibleBitmap(dc,app.S(kWidth),app.S(kHeight+kCaptionHeight));const auto old=SelectObject(memory,bitmap);
       app.DrawBackground(memory);
@@ -318,12 +351,12 @@ int wmain(int argc,wchar_t** argv){
           CheckUI(pixel!=CLR_INVALID&&!(GetRValue(pixel)>225&&GetGValue(pixel)>225&&GetBValue(pixel)>225),"Visible fields stay dark after repeated scroll frames");
         }
       }
-      app.ScrollPage(76);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+      app.ScrollPage(24);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
       ClickControl(app.aspect,app.S(10));
-      CheckUI(app.page_scroll[0]==76,"Clicking a low visible selector does not jump the page");
+      CheckUI(app.page_scroll[0]==24,"Clicking a low visible selector does not jump the page");
       CheckUI(SendMessageW(app.aspect,CB_GETDROPPEDSTATE,0,0),"The partially visible bottom selector opens on the first real mouse click");
       SendMessageW(app.aspect,CB_SHOWDROPDOWN,FALSE,0);SetFocus(app.navigation[0]);SetFocus(app.aspect);
-      CheckUI(app.page_scroll[0]>76,"Keyboard focus still reveals the complete selector");
+      CheckUI(app.page_scroll[0]>24,"Keyboard focus still reveals the complete selector");
       app.ShowPage(3);app.ScrollPage(0);const auto generation=app.localization_generation;toml::table before;app.GetControls().Store(before);
       SendMessageW(app.language,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);PumpUI();
       CheckUI(!app.turkish&&app.localization_generation==generation,"An open language popup is not rebuilt inside its native selection transaction");
@@ -391,16 +424,19 @@ int wmain(int argc,wchar_t** argv){
         NetworkDialog dialog(window,dialog_font,tr,scale,app.settings);const auto modal=dialog.Create();ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);
         CheckUI(modal&&GetWindow(modal,GW_OWNER)==window,"Multiplayer creates an owned separate window");
         RECT client;GetClientRect(modal,&client);
-        for(int id:std::array<int,10>{kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer,170,IDOK,IDCANCEL}){RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Multiplayer fields fit the modal at each DPI");}
+        for(int id:std::array<int,8>{kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer,IDOK,IDCANCEL}){if(!IsWindowVisible(GetDlgItem(modal,id)))continue;RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Multiplayer fields fit the modal at each DPI");}
         for(int mode=0;mode<3;++mode){
           SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,mode,0);dialog.UpdateMode();SetDlgItemTextW(modal,kOnlineServer,L"https://play.example.com");
           const auto selector=GetDlgItem(modal,kLanEnabled);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed multiplayer selector ignores the mouse wheel");
           CheckUI(bool(IsWindowEnabled(GetDlgItem(modal,kOnlineServer)))==(mode==2)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanAdapter)))==(mode==1)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanHost)))==(mode==1),"Each connection mode enables only its relevant fields");
+          for(int id:{kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer})CheckUI(bool(IsWindowVisible(GetDlgItem(modal,id)))==(id==kOnlineServer?mode==2:(id==kLanAdapter||id==kLanHost)?mode==1:mode>0),"Only fields relevant to the selected connection mode are visible");
+          GetClientRect(modal,&client);CheckUI(client.bottom==static_cast<int>((mode?316:158)*scale+.5),"Offline has a compact dialog without empty parameter rows");
+          for(auto child=GetWindow(modal,GW_CHILD);child;child=GetWindow(child,GW_HWNDNEXT)){if(!IsWindowVisible(child))continue;RECT r;GetWindowRect(child,&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Visible modal labels and controls fit each mode at each DPI");}
           CheckUI(dialog.Commit()&&app.GetControls().network_mode==std::array{"offline","lan","online"}[mode],"Multiplayer Apply preserves all three real connection modes");
           const auto current=app.GetControls();toml::table saved;current.Store(saved);const auto loaded=Settings::Load(saved);
           CheckUI(loaded.network_mode==current.network_mode&&loaded.online_server==current.online_server,"Applied multiplayer values survive normal launcher serialization");
           const auto arguments=Arguments(game,current,saved);CheckUI(std::count(arguments.begin(),arguments.end(),L"--network_mode="+Wide(current.network_mode))==1,"Applied multiplayer mode is forwarded to the game once");
-          if(scale==1.&&mode==1)Screenshot(modal,pictures/(tr?L"multiplayer-turkish.bmp":L"multiplayer-english.bmp"));
+          if(scale==1.){const auto prefix=mode==0?L"multiplayer-offline":mode==1?L"multiplayer":L"multiplayer-online";Screenshot(modal,pictures/(std::wstring(prefix)+(tr?L"-turkish.bmp":L"-english.bmp")));}
         }
         SetDlgItemTextW(modal,kOnlineServer,L"invalid server");const auto before=app.GetControls().online_server;CheckUI(!dialog.Commit()&&app.GetControls().online_server==before,"Invalid server cannot partially replace accepted network settings");
         SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,1,0);SetDlgItemTextW(modal,kLanHost,L"999.1.1.1");CheckUI(!dialog.Commit(),"Invalid LAN IPv4 is rejected by existing validation");

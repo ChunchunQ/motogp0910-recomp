@@ -2,6 +2,8 @@
 
 Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
 The current [Racing Lines redesign](launcher-redesign.md) uses a compact horizontal-tab layout, charcoal fields, amber/red cover-inspired art and a scrollable settings area. Minimize/close sit directly over the art. General includes cancellable, read-only game-file verification.
+PLAY is anchored at the lower right; Save / Defaults / Logs / Report sit above the status line. Context help uses standard Windows hover tooltips instead of permanent explanation paragraphs.
+**General → Multiplayer Settings** opens a separate editor: Offline hides all parameters, LAN shows only local/virtual-network fields, and Online shows the community server fields. Switching modes preserves the entered values.
 The launcher opens on **General** every time. The default language is English; **General → Launcher language → Türkçe** switches the whole
 interface immediately and retains the choice in `motogp0910-launcher.toml`.
 File names stay English. No CMD file is required.
