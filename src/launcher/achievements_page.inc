@@ -68,7 +68,7 @@
       const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7.");
       if(Text(achievement_note)!=note)SetWindowTextW(achievement_note,note);
       if(before_catalog!=catalog_key||before_error!=catalog_error||before_unlocks!=unlocks||before_known!=unlocks_known||before_stale!=unlocks_stale){
-      RECT summary{0,0,S(494),S(60)};InvalidateRect(page_view,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}
+      RECT summary{0,0,S(494),S(60)};InvalidateRect(page_content,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}
     }catch(const std::exception& e){catalog_error=ErrorDetails(e);if(before_error!=catalog_error)InvalidateRect(achievement_list,nullptr,FALSE);}
   }
   void SaveAchievementOption(int id){

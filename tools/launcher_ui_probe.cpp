@@ -31,6 +31,8 @@ int main(int argc,char** argv) {
  } else if(mode=="language-en" || mode=="language-tr") {
   SendMessageW(child(kLanguage),CB_SETCURSEL,mode=="language-tr"?1:0,0);
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kLanguage,CBN_SELCHANGE),reinterpret_cast<LPARAM>(child(kLanguage)));
+  // Language changes are queued until the native dropdown input has finished.
+  for(int i=0;i<100&&Text(child(kPlay))!=(mode=="language-tr"?L"OYUNU BAŞLAT":L"PLAY");++i)Sleep(10);
   if(Text(child(kPlay))!=(mode=="language-tr"?L"OYUNU BAŞLAT":L"PLAY")) return 1;
  } else if(mode=="defaults") {
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(110,BN_CLICKED),0);

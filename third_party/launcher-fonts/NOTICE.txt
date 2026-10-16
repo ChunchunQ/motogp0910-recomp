@@ -1,0 +1,11 @@
+Open Sans 3.003 (Regular, SemiBold, Bold)
+Copyright 2020 The Open Sans Project Authors (https://github.com/googlefonts/opensans)
+Licensed under the SIL Open Font License, Version 1.1 (OFL.txt).
+Unmodified static TrueType fonts from googlefonts/opensans commit
+bd7e37632246368c60fdcbd374dbf9bad11969b6, fonts/ttf/.
+Embedded in the launcher; registered privately for this process only.
+
+SHA-256:
+c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59  OpenSans-Regular.ttf
+4a413711684a9dd564ef0f1c10cb62b5d9f7eb6df2cff962f5341a6ecd5f64ae  OpenSans-SemiBold.ttf
+27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6  OpenSans-Bold.ttf

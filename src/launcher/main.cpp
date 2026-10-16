@@ -23,6 +23,7 @@
 using namespace launcher;
 namespace {
 constexpr int kWidth=940,kHeight=550,kCaptionHeight=28;
+constexpr UINT kApplyLauncherLanguage=WM_APP+23;
 constexpr COLORREF kBackground=RGB(13,15,20),kSidebar=RGB(19,21,27),kCard=RGB(23,26,33),
     kField=RGB(32,36,45),kText=RGB(242,244,247),kMuted=RGB(157,165,178),
     kAccent=RGB(255,170,48),kRed=RGB(239,66,47),kBorder=RGB(48,53,64);
@@ -63,9 +64,12 @@ struct App {
   std::vector<int> refresh_rates{0},fps_limits{0,30,60,90,120,144,165,180,240};
   int current_page=3,binding_index=0;
   bool pages_ready=false,switching_page=false;
+  bool language_pending=false;
+  HWND pointer_focus{};
   unsigned localization_generation=0;
   bool filling_binding=false,capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{};
+  std::array<HANDLE,3> private_fonts{};
   HBRUSH background=CreateSolidBrush(kBackground),card=CreateSolidBrush(kCard),field=CreateSolidBrush(kField);
   HANDLE process{};
   double scale=1;
@@ -73,14 +77,21 @@ struct App {
   bool status_positive=false;
   #include "caption.inc"
   #include "achievements_page.inc"
-  ~App(){verify_cancel=true;if(verify_future.valid())verify_future.wait();if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();DeleteObject(background);DeleteObject(card);DeleteObject(field);}
+  ~App(){verify_cancel=true;if(verify_future.valid())verify_future.wait();if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();for(auto handle:private_fonts)if(handle)RemoveFontMemResourceEx(handle);DeleteObject(background);DeleteObject(card);DeleteObject(field);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return turkish?tr:en;}
   int S(int value)const{return static_cast<int>(value*scale+0.5);}
   void DeleteFonts(){for(auto f:{font,heading,small_font,bold,logo})if(f)DeleteObject(f);}
   void CreateFonts(){
-    auto make=[&](int size,int weight){return CreateFontW(-S(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");};
-    font=make(14,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(14,FW_SEMIBOLD);logo=make(36,FW_BOLD);
+    // Process-private fonts make Win10/11 and the test fixture use the same
+    // metrics. Register once, rather than leaking registrations on DPI changes.
+    for(size_t i=0;i<private_fonts.size();++i)if(!private_fonts[i]){
+      const auto bytes=EmbeddedBytes(105+static_cast<int>(i));DWORD count=0;
+      private_fonts[i]=AddFontMemResourceEx(const_cast<char*>(bytes.data()),static_cast<DWORD>(bytes.size()),nullptr,&count);
+      if(!private_fonts[i]||!count)throw std::runtime_error("Cannot load embedded launcher font");
+    }
+    auto make=[&](int size,int weight,const wchar_t* face=L"Open Sans"){return CreateFontW(-S(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
+        OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
+    font=make(14,FW_NORMAL);heading=make(28,FW_BOLD);small_font=make(12,FW_NORMAL);bold=make(14,FW_SEMIBOLD,L"Open Sans SemiBold");logo=make(36,FW_BOLD);
   }
   HWND Control(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0,HWND parent=nullptr){
     bool button=std::wstring_view(cls)==L"BUTTON";
@@ -88,7 +99,7 @@ struct App {
     bool checkbox=button && (style&BS_TYPEMASK)==BS_AUTOCHECKBOX;
     if(button)style=(style&~BS_TYPEMASK)|BS_OWNERDRAW;
     if(std::wstring_view(cls)==L"COMBOBOX")style|=CBS_OWNERDRAWFIXED|CBS_HASSTRINGS;
-    auto c=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y+(parent?0:kCaptionHeight)),S(w),S(h),parent?parent:window,
+    auto c=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|WS_CLIPSIBLINGS|style,S(x),S(y+(parent?0:kCaptionHeight)),S(w),S(h),parent?parent:window,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     if(!c)throw std::runtime_error("Cannot create launcher control");
     placements.push_back({c,x,y,w,h});
@@ -111,7 +122,7 @@ struct App {
     return DefSubclassProc(control,message,wparam,lparam);
   }
   HWND PageControl(int page,const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
-    auto c=Control(cls,text,style,x,y,w,h,id,page_view);pages[page].push_back(c);
+    auto c=Control(cls,text,style,x,y,w,h,id,page_content);pages[page].push_back(c);
     page_extent[page]=std::max(page_extent[page],y+(std::wstring_view(cls)==L"COMBOBOX"?32:h)+8);
     SetWindowSubclass(c,PageChildProc,7,reinterpret_cast<DWORD_PTR>(this));return c;
   }
@@ -159,7 +170,7 @@ struct App {
     switching_page=true;CancelCapture();
     // Move focus out of the outgoing page before hiding it. Focus-driven
     // scrolling cannot re-enter the transition or reveal an old field.
-    if(GetParent(GetFocus())==page_view)SetFocus(navigation[page]);
+    if(IsChild(page_content,GetFocus()))SetFocus(navigation[page]);
     SendMessageW(page_view,WM_SETREDRAW,FALSE,0);
     for(auto c:pages[current_page])ShowWindow(c,SW_HIDE);
     current_page=page;
@@ -216,6 +227,7 @@ struct App {
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
     for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
+    LayoutNavigation();
     LocalizeAchievements();
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
     SetWindowTextW(letterbox,T(L"Letterbox",L"Siyah kenarlar"));
@@ -257,6 +269,22 @@ struct App {
     SendMessageW(size,CB_SETCURSEL,selected<0?0:selected,0);
     SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();RefreshRates();
     NetworkControls();RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+  }
+  void ApplyLanguage(){
+    language_pending=false;
+    // Native combo notifications run inside its own input transaction. Do not
+    // reset lists / move controls until that transaction and its popup finish.
+    if(SendMessageW(language,CB_GETDROPPEDSTATE,0,0))return;
+    const auto selected=SendMessageW(language,CB_GETCURSEL,0,0);if(selected<0||selected>1)return;
+    const bool next=selected==1;
+    if(next==turkish)return;
+    const bool changing=switching_page;switching_page=true;
+    SendMessageW(window,WM_SETREDRAW,FALSE,0);
+    try{turkish=next;Localize();}
+    catch(...){switching_page=changing;SendMessageW(window,WM_SETREDRAW,TRUE,0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);throw;}
+    switching_page=changing;SendMessageW(window,WM_SETREDRAW,TRUE,0);
+    RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
+    Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
   }
   bool CaptureKey(const MSG& message){
     if(!capturing || (message.message!=WM_KEYDOWN && message.message!=WM_SYSKEYDOWN))return false;
@@ -426,9 +454,10 @@ struct App {
   }
   void Rescale(double value){
     DeleteFonts();scale=value;CreateFonts();
-    for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y+(GetParent(p.control)==page_view?0:kCaptionHeight)),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
+    for(auto& p:placements){MoveWindow(p.control,S(p.x),S(p.y+(GetParent(p.control)==window?kCaptionHeight:0)),S(p.w),S(p.h),TRUE);SendMessageW(p.control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
       wchar_t cls[32];GetClassNameW(p.control,cls,32);if(std::wstring_view(cls)==L"COMBOBOX"){SendMessageW(p.control,CB_SETITEMHEIGHT,0,S(24));SendMessageW(p.control,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}}
     ScrollPage(page_scroll[current_page],true);
+    LayoutNavigation();
     SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
     for(auto c:{folder_label,status})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
@@ -528,8 +557,8 @@ struct App {
       }else if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
       }else if(id==kLanEnabled && event==CBN_SELCHANGE){NetworkControls();
-      }else if(id==kLanguage && event==CBN_SELCHANGE){
-        turkish=SendMessageW(language,CB_GETCURSEL,0,0)==1;Localize();Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
+      }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
+        if(!language_pending){language_pending=true;PostMessageW(window,kApplyLauncherLanguage,0,0);}
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
       }else if(id==kEffect && event==CBN_SELCHANGE){auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);
         SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==2?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
@@ -583,6 +612,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_SYSCOMMAND:if((wparam&0xFFF0)==SC_MAXIMIZE)return 0;
       if((wparam&0xFFF0)==kNoticesCommand){try{NoticesDialog(window,app->font,app->scale,app->turkish,Wide(EmbeddedBytes(104))).Show();}catch(const std::exception& e){app->ErrorBox(e);}return 0;}break;
     case WM_COMMAND:app->Command(LOWORD(wparam),HIWORD(wparam));return 0;
+    case kApplyLauncherLanguage:try{app->ApplyLanguage();}catch(const std::exception& e){app->ErrorBox(e);}return 0;
     case WM_CONTEXTMENU:app->BindingMenu(reinterpret_cast<HWND>(wparam),{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});return 0;
     case WM_TIMER:if(wparam==2)app->PollAchievements();else if(wparam==3)app->PollVerification();else app->Poll();return 0;
     case WM_DRAWITEM:{auto& draw=*reinterpret_cast<DRAWITEMSTRUCT*>(lparam);if(draw.CtlType==ODT_BUTTON)app->DrawButton(draw);else if(draw.CtlType==ODT_COMBOBOX)app->DrawCombo(draw);return TRUE;}

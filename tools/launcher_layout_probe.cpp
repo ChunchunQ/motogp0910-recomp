@@ -20,12 +20,19 @@ void Screenshot(HWND window,const fs::path& file,bool whole=false){
   output.write(reinterpret_cast<const char*>(&info.bmiHeader),sizeof(info.bmiHeader));output.write(static_cast<const char*>(data),bytes);
   CheckUI(bool(output),"Screenshot saved");SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(window,dc);
 }
+void PumpUI(){MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}}
+void ClickControl(HWND control,int y){
+  RECT r;GetClientRect(control,&r);POINT p{r.right/2,y};ClientToScreen(control,&p);
+  std::atomic<bool> done=false,ok=true;
+  std::thread mouse([&]{SetCursorPos(p.x,p.y);Sleep(25);for(DWORD flags:{MOUSEEVENTF_LEFTDOWN,MOUSEEVENTF_LEFTUP}){INPUT input{};input.type=INPUT_MOUSE;input.mi.dwFlags=flags;if(SendInput(1,&input,sizeof(input))!=1)ok=false;Sleep(25);}done=true;});
+  while(!done){PumpUI();Sleep(2);}mouse.join();PumpUI();CheckUI(ok,"Actual mouse input delivered to the native control");
+}
 void LayoutCheck(App& app){
   RECT client;GetClientRect(app.window,&client);std::vector<std::pair<RECT,HWND>> visible;
-  for(auto& item:app.placements){if(!IsWindowVisible(item.control) || item.control==app.page_view)continue;RECT r;GetWindowRect(item.control,&r);
+  for(auto& item:app.placements){if(!IsWindowVisible(item.control) || item.control==app.page_view || item.control==app.page_content)continue;RECT r;GetWindowRect(item.control,&r);
     MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
     const auto uncut=r;
-    if(GetParent(item.control)==app.page_view){RECT panel;GetClientRect(app.page_view,&panel);MapWindowPoints(app.page_view,app.window,reinterpret_cast<POINT*>(&panel),2);
+    if(GetParent(item.control)==app.page_content){RECT panel;GetClientRect(app.page_view,&panel);MapWindowPoints(app.page_view,app.window,reinterpret_cast<POINT*>(&panel),2);
       RECT clipped;if(!IntersectRect(&clipped,&r,&panel))continue;r=clipped;
       CheckUI(uncut.left>=panel.left && uncut.right<=panel.right,"Page controls fit the actual scroll viewport width");}
     CheckUI(r.left>=0 && r.top>=0 && r.right<=client.right && r.bottom<=client.bottom,"Visible control fits client area");
@@ -43,6 +50,59 @@ void LayoutCheck(App& app){
       SelectObject(dc,previous);ReleaseDC(item.control,dc);
     }
   }
+}
+void CheckPolish(App& app){
+  const auto dc=GetDC(app.window);auto old=SelectObject(dc,app.font);
+  wchar_t face[80]{};GetTextFaceW(dc,80,face);
+  CheckUI(std::wstring_view(face)==L"Open Sans","Embedded body font is selected instead of a system fallback");
+  constexpr wchar_t turkish[]=L"ĞğİıŞşÇçÖöÜü";WORD glyphs[std::size(turkish)-1]{};
+  CheckUI(GetGlyphIndicesW(dc,turkish,std::size(turkish)-1,glyphs,GGI_MARK_NONEXISTING_GLYPHS)!=GDI_ERROR,"Embedded font can be queried for Turkish coverage");
+  for(auto glyph:glyphs)CheckUI(glyph!=0xFFFF,"All Turkish letters have real glyphs in the launcher font");
+  SelectObject(dc,app.bold);int previous_end=-1,first_gap=-1;RECT first{},last{};
+  for(int i:{3,0,4,1,2,5}){
+    RECT r;GetWindowRect(app.navigation[i],&r);MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
+    SIZE extent{};const auto text=app.Text(app.navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);
+    CheckUI(extent.cx+app.S(8)<=r.right-r.left,"Every tab fits its real font without truncation");
+    const int text_start=r.left+(r.right-r.left-extent.cx)/2;
+    if(previous_end>=0){const int gap=text_start-previous_end;if(first_gap<0)first_gap=gap;CheckUI(std::abs(gap-first_gap)<=1,"Visible tab text has equal spacing, including Controls / Achievements");}
+    else first=r;
+    previous_end=text_start+extent.cx;last=r;
+  }
+  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The six tabs stay within their content column");
+  CheckUI(std::abs(first.left+last.right-app.S(App::kPageX)*2-app.S(App::kPageWidth))<=1,"Navigation is centered as one group");
+  SelectObject(dc,old);
+
+  const auto a=app.CaptionBounds();const auto baseline=CreateCompatibleDC(dc),paint=CreateCompatibleDC(dc);
+  const auto back_bitmap=CreateCompatibleBitmap(dc,a.width,a.height),paint_bitmap=CreateCompatibleBitmap(dc,a.width,a.height);
+  const auto old_back=SelectObject(baseline,back_bitmap),old_paint=SelectObject(paint,paint_bitmap);
+  app.DrawBackground(baseline);const auto* cached=app.paint_background.get();const int hover=app.caption_hover,pressed=app.caption_pressed;
+  app.caption_hover=app.caption_pressed=0;app.DrawCaption(paint);
+  int minimize_width=0;
+  for(int hit:{HTMINBUTTON,HTCLOSE}){
+    const int right=a.width-(hit==HTMINBUTTON?app.S(46):0),cx=right-app.S(46)/2,cy=a.height/2;
+    int left=a.width,top=a.height,bottom=0,end=0;
+    for(int y=cy-app.S(8);y<=cy+app.S(8);++y)for(int x=cx-app.S(8);x<=cx+app.S(8);++x)if(GetPixel(paint,x,y)!=GetPixel(baseline,x,y)){
+      left=std::min(left,x);end=std::max(end,x);top=std::min(top,y);bottom=std::max(bottom,y);
+    }
+    const int width=end-left+1,height=bottom-top+1;
+    CheckUI(width>=app.S(9)&&width<=app.S(13),"Caption symbols have a normal consistent width");
+    if(hit==HTMINBUTTON)minimize_width=width;
+    // A diagonal antialiased stroke can cover one extra pixel on each side.
+    else CheckUI(std::abs(width-minimize_width)<=2&&height>=app.S(9),"Close X has the same nominal size as minimize and is not a tiny text glyph");
+  }
+  for(int hit:{HTMINBUTTON,HTCLOSE}){
+    const int right=a.width-(hit==HTMINBUTTON?app.S(46):0),x=right-app.S(6),other_x=a.width-(hit==HTCLOSE?app.S(52):app.S(6)),y=app.S(5);
+    app.caption_hover=hit;app.caption_pressed=0;app.DrawCaption(paint);
+    const auto background=GetPixel(baseline,x,y),hovered=GetPixel(paint,x,y);
+    CheckUI(hovered!=background,"Hover draws a visible translucent background on either caption button");
+    CheckUI(hovered!=(hit==HTCLOSE?RGB(232,45,39):RGB(255,255,255)),"Hover preserves artwork through its tint");
+    CheckUI(GetPixel(paint,other_x,y)==GetPixel(baseline,other_x,y),"Hover does not tint the other caption button");
+    app.caption_pressed=hit;app.DrawCaption(paint);CheckUI(GetPixel(paint,x,y)!=hovered,"Pressed button gives distinct feedback");
+    app.caption_hover=app.caption_pressed=0;app.DrawCaption(paint);CheckUI(GetPixel(paint,x,y)==background,"Leaving restores the artwork exactly with no backing tile");
+  }
+  CheckUI(app.paint_background.get()==cached,"Caption interaction reuses the cached background");
+  app.caption_hover=hover;app.caption_pressed=pressed;
+  SelectObject(baseline,old_back);SelectObject(paint,old_paint);DeleteObject(back_bitmap);DeleteObject(paint_bitmap);DeleteDC(baseline);DeleteDC(paint);ReleaseDC(app.window,dc);
 }
 }
 void CheckEmbeddedNotices(){
@@ -194,13 +254,14 @@ int wmain(int argc,wchar_t** argv){
       app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};AdjustWindowRectEx(&size,style,FALSE,0);
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
-        app.turkish=tr;app.Localize();
+        app.turkish=tr;app.Localize();CheckPolish(app);
         for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
           app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
           if(scale==1. || (scale==.75 && tr && page==2)){
             const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);if(scale==1.&&page==5&&!tr)Screenshot(window,pictures/L"launcher-achievements-full-window.bmp",true);
+            if(scale==1.&&page==3&&!tr){app.caption_hover=HTCLOSE;app.PaintCaption();Screenshot(window,pictures/L"launcher-caption-hover.bmp");app.caption_hover=0;app.PaintCaption();}
           }
         }
       }
@@ -226,6 +287,33 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!(GetWindowLongPtrW(app.page_view,GWL_STYLE)&WS_VSCROLL),"The page has no native scrollbar that could repaint white");
       const auto rail=app.Rail(app.page_view,app.page_extent[3],App::kPageHeight,0);
       for(int i=0;i<12;++i){SendMessageW(app.page_view,WM_NCPAINT,1,0);InvalidateRect(window,nullptr,FALSE);UpdateWindow(window);UpdateWindow(app.page_view);const auto dc=GetDC(app.page_view);CheckUI(GetPixel(dc,rail.track.left,rail.track.bottom-1)==kBackground,"Parent/nonclient repaint never turns the scroll rail white");ReleaseDC(app.page_view,dc);}
+    }
+    { // Regressions from the user's native Windows video.
+      app.Rescale(1);SetWindowPos(window,nullptr,20,20,kWidth,kHeight+kCaptionHeight,SWP_NOZORDER);app.turkish=false;app.Localize();app.ShowPage(0);app.ScrollPage(0);
+      CheckUI(GetWindowLongPtrW(app.page_view,GWL_EXSTYLE)&WS_EX_COMPOSITED,"The viewport composes its native children into a complete frame");
+      std::map<HWND,RECT> fixed;
+      for(auto c:app.pages[0]){RECT r;GetWindowRect(c,&r);MapWindowPoints(nullptr,app.page_content,reinterpret_cast<POINT*>(&r),2);fixed.emplace(c,r);}
+      for(int i=0;i<48;++i){
+        app.ScrollPage(i%2?app.PageMaximum():0);PumpUI();
+        for(const auto& [c,before]:fixed){RECT now;GetWindowRect(c,&now);MapWindowPoints(nullptr,app.page_content,reinterpret_cast<POINT*>(&now),2);CheckUI(EqualRect(&before,&now),"Scrolling never repositions or resizes a native field within its content surface");}
+        RECT panel;GetWindowRect(app.page_content,&panel);MapWindowPoints(nullptr,app.page_view,reinterpret_cast<POINT*>(&panel),2);CheckUI(panel.top==-app.S(app.page_scroll[0]),"Only the clipped content surface moves during scrolling");
+        for(auto c:{app.effect,app.aspect,app.fullscreen,app.sharpness}){RECT r,view;GetWindowRect(c,&r);GetWindowRect(app.page_view,&view);POINT p{(r.left+r.right)/2,r.top+app.S(3)};if(!PtInRect(&view,p))continue;
+          const auto dc=GetDC(window);ScreenToClient(window,&p);const auto pixel=GetPixel(dc,p.x,p.y);ReleaseDC(window,dc);
+          CheckUI(pixel!=CLR_INVALID&&!(GetRValue(pixel)>225&&GetGValue(pixel)>225&&GetBValue(pixel)>225),"Visible fields stay dark after repeated scroll frames");
+        }
+      }
+      app.ScrollPage(0);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+      ClickControl(app.effect,app.S(10));
+      CheckUI(app.page_scroll[0]==0,"Clicking a low visible selector does not jump the page");
+      CheckUI(SendMessageW(app.effect,CB_GETDROPPEDSTATE,0,0),"The partially visible bottom selector opens on the first real mouse click");
+      SendMessageW(app.effect,CB_SHOWDROPDOWN,FALSE,0);SetFocus(app.navigation[0]);SetFocus(app.effect);
+      CheckUI(app.page_scroll[0]>0,"Keyboard focus still reveals the complete selector");
+      app.ShowPage(3);app.ScrollPage(0);const auto generation=app.localization_generation;toml::table before;app.GetControls().Store(before);
+      SendMessageW(app.language,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);PumpUI();
+      CheckUI(!app.turkish&&app.localization_generation==generation,"An open language popup is not rebuilt inside its native selection transaction");
+      SendMessageW(app.language,CB_SHOWDROPDOWN,FALSE,0);PumpUI();
+      CheckUI(app.turkish&&app.localization_generation==generation+1&&app.page_scroll[3]==0,"Closing the popup applies the language once without shifting the page");
+      toml::table after;app.GetControls().Store(after);std::ostringstream a,b;a<<toml::toml_formatter{before};b<<toml::toml_formatter{after};CheckUI(a.str()==b.str(),"Deferred launcher localization preserves every pending game setting");
     }
     app.ShowPage(2);app.ScrollPage(0);app.Command(kCaptureBase+static_cast<int>(kBindings.size())-1,BN_CLICKED);
     CheckUI(app.capturing&&app.page_scroll[2]>0&&GetFocus()==app.binding_buttons.back(),"Focusing the final keyboard binding automatically reveals it in the compact viewport");
@@ -368,6 +456,7 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(s.volume==31 && !s.vsync && s.msaa && s.bindings[0].empty(),"Actual UI values saved correctly");
     CheckUI(Get(saved.table,"custom_note",std::string{})=="keep me","Unrelated settings preserved");
     SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);
+    PumpUI();
     Config preferences(app.preferences.path);CheckUI(Get(preferences.table,"language",std::string{})=="tr","UI language selection saved");
     {
       // Simulate a real child process saving live values while launcher fields

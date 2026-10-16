@@ -1,6 +1,6 @@
   // Fixed outer window, scrollable child content. Settings and native keyboard
   // traversal stay accessible without shrinking text to fit every page at once.
-  HWND page_view{},verify_files{};
+  HWND page_view{},page_content{},verify_files{};
   std::array<int,6> page_scroll{},page_extent{};
   static constexpr int kPageX=28,kPageY=136,kPageWidth=520,kPageHeight=328;
   std::unique_ptr<Gdiplus::Bitmap> cover,paint_background;
@@ -19,13 +19,11 @@
     const int next=std::clamp(requested,0,PageMaximum());
     if(!force&&page_scroll[current_page]==next)return;
     page_scroll[current_page]=next;
-    auto batch=BeginDeferWindowPos(static_cast<int>(pages[current_page].size()));
-    for(const auto& p:placements)if(GetParent(p.control)==page_view&&std::find(pages[current_page].begin(),pages[current_page].end(),p.control)!=pages[current_page].end()){
-      if(batch)batch=DeferWindowPos(batch,p.control,nullptr,S(p.x),S(p.y-next),S(p.w),S(p.h),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
-      else SetWindowPos(p.control,nullptr,S(p.x),S(p.y-next),S(p.w),S(p.h),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOREDRAW);
-    }
-    if(batch)EndDeferWindowPos(batch);
-    if(!switching_page)RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    // Move one clipped surface. Repositioning every native combo / trackbar
+    // on each wheel tick lets their synchronous Windows paints expose partial
+    // frames, even with SWP_NOREDRAW. Child coordinates now stay unchanged.
+    SetWindowPos(page_content,nullptr,0,-S(next),S(kPageWidth-22),S(std::max(kPageHeight,page_extent[current_page])),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOCOPYBITS);
+    if(!switching_page)RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
   }
   void Reveal(HWND control){
     for(const auto& p:placements)if(p.control==control){
@@ -39,7 +37,13 @@
   }
   static LRESULT CALLBACK PageChildProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
-    if(message==WM_SETFOCUS&&!app.switching_page)app.Reveal(control);
+    if(message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK){
+      const auto previous=app.pointer_focus;app.pointer_focus=control;
+      const auto result=DefSubclassProc(control,message,wparam,lparam);app.pointer_focus=previous;return result;
+    }
+    // Revealing keyboard focus is helpful, but moving a partly visible field
+    // during its mouse-down invalidates the native hit test and loses clicks.
+    if(message==WM_SETFOCUS&&!app.switching_page&&!app.pointer_focus)app.Reveal(control);
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,PageChildProc,id);
     return DefSubclassProc(control,message,wparam,lparam);
   }
@@ -51,7 +55,7 @@
     }
     switch(message){
       case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);
-        if(app.current_page==5)app.PaintAchievementSummary(dc);app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);EndPaint(control,&ps);return 0;}
+        app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);EndPaint(control,&ps);return 0;}
       case WM_ERASEBKGND:return 1;
       case WM_VSCROLL:{int next=app.page_scroll[app.current_page];
         switch(LOWORD(wparam)){case SB_LINEUP:next-=28;break;case SB_LINEDOWN:next+=28;break;
@@ -66,6 +70,19 @@
       case WM_HSCROLL:case WM_CTLCOLORSTATIC:case WM_CTLCOLORBTN:case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:
         return SendMessageW(app.window,message,wparam,lparam);
       case WM_NCDESTROY:RemoveWindowSubclass(control,PageProc,id);break;
+    }
+    return DefSubclassProc(control,message,wparam,lparam);
+  }
+  static LRESULT CALLBACK ContentProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
+    auto& app=*reinterpret_cast<App*>(data);
+    switch(message){
+      case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);if(app.current_page==5)app.PaintAchievementSummary(dc);EndPaint(control,&ps);return 0;}
+      case WM_ERASEBKGND:return 1;
+      case WM_MOUSEWHEEL:return SendMessageW(app.page_view,message,wparam,lparam);
+      case WM_COMMAND:case WM_NOTIFY:case WM_DRAWITEM:case WM_MEASUREITEM:case WM_CONTEXTMENU:
+      case WM_HSCROLL:case WM_CTLCOLORSTATIC:case WM_CTLCOLORBTN:case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:
+        return SendMessageW(app.window,message,wparam,lparam);
+      case WM_NCDESTROY:RemoveWindowSubclass(control,ContentProc,id);break;
     }
     return DefSubclassProc(control,message,wparam,lparam);
   }
@@ -88,13 +105,27 @@
       g.DrawImage(cover.get(),Gdiplus::Rect(0,0,r.right,r.bottom));
       // An opaque form surface blends into the art; caption buttons keep the
       // real picture behind them. Cache by size rather than resampling on hover.
-      const int fade=S(650);
+      const int fade=S(760);
       Gdiplus::LinearGradientBrush shade(Gdiplus::Point(0,0),Gdiplus::Point(fade,0),Gdiplus::Color(255,13,15,20),Gdiplus::Color(0,13,15,20));
-      Gdiplus::Color colors[]{Gdiplus::Color(255,13,15,20),Gdiplus::Color(255,13,15,20),Gdiplus::Color(0,13,15,20)};
-      Gdiplus::REAL positions[]{0.f,.85f,1.f};shade.SetInterpolationColors(colors,positions,3);
+      // A broad eased blend starts beyond the opaque settings viewport. No
+      // child-window edge or sudden linear fade is exposed beside the form.
+      Gdiplus::Color colors[]{Gdiplus::Color(255,13,15,20),Gdiplus::Color(255,13,15,20),Gdiplus::Color(244,13,15,20),Gdiplus::Color(211,13,15,20),Gdiplus::Color(143,13,15,20),Gdiplus::Color(51,13,15,20),Gdiplus::Color(0,13,15,20)};
+      Gdiplus::REAL positions[]{0.f,550.f/760,580.f/760,610.f/760,650.f/760,700.f/760,1.f};shade.SetInterpolationColors(colors,positions,7);
       g.FillRectangle(&shade,0,0,fade,r.bottom);
     }
     Gdiplus::Graphics target(dc);target.DrawImage(paint_background.get(),0,0,r.right,r.bottom);
+  }
+  void LayoutNavigation(){
+    const auto dc=GetDC(window);const auto previous=SelectObject(dc,bold);
+    constexpr std::array<int,6> order{3,0,4,1,2,5};
+    std::array<int,6> widths{};int total=0;
+    for(int i:order){SIZE extent{};const auto text=Text(navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);widths[i]=extent.cx+S(8);total+=widths[i];}
+    SelectObject(dc,previous);ReleaseDC(window,dc);
+    const int available=S(kPageWidth),gap=std::clamp((available-total)/5,0,S(12));
+    int x=S(kPageX)+(available-total-5*gap)/2;
+    // Position in device pixels so fractional DPI rounding cannot accumulate
+    // into different gaps. Keep logical placements only for generic rescaling.
+    for(int i:order){SetWindowPos(navigation[i],nullptr,x,S(94+kCaptionHeight),widths[i],S(32),SWP_NOZORDER|SWP_NOACTIVATE);x+=widths[i]+gap;}
   }
   void BuildControls(){
     CreateFonts();LoadCover();
@@ -102,11 +133,13 @@
     // the active tab instead of duplicating a large page heading.
     title=Control(L"STATIC",L"",0,28,68,1,1);subtitle=Control(L"STATIC",L"",0,30,70,1,1);
     ShowWindow(title,SW_HIDE);ShowWindow(subtitle,SW_HIDE);
-    const std::array<int,6> nav_x{104,278,336,28,186,420},nav_w{76,52,78,70,86,128};
-    for(int i=0;i<6;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,nav_x[i],94,nav_w[i],32,kNavGraphics+i);
+    for(int i=0;i<6;++i)navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
     page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN,kPageX,kPageY,kPageWidth,kPageHeight);
-    SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
+    SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT|WS_EX_COMPOSITED);
     SetWindowSubclass(page_view,PageProc,1,reinterpret_cast<DWORD_PTR>(this));
+    page_content=Control(L"STATIC",L"",WS_CLIPCHILDREN,0,0,kPageWidth-22,kPageHeight,0,page_view);
+    SetWindowLongPtrW(page_content,GWL_EXSTYLE,GetWindowLongPtrW(page_content,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
+    SetWindowSubclass(page_content,ContentProc,1,reinterpret_cast<DWORD_PTR>(this));
     auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,220,id);};
     auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,30,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
     auto check=[&](int page,int x,int y,int w,int id){return PageControl(page,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,x,y,w,28,id);};

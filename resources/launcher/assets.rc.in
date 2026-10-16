@@ -1,3 +1,6 @@
 102 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/launcher/background.png"
 103 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/verification/game-files.sha256"
 104 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/launcher/third-party-notices.txt"
+105 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/third_party/launcher-fonts/OpenSans-Regular.ttf"
+106 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/third_party/launcher-fonts/OpenSans-SemiBold.ttf"
+107 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/third_party/launcher-fonts/OpenSans-Bold.ttf"

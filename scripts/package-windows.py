@@ -56,6 +56,8 @@ def main():
     shutil.copy2(ROOT / "third_party/stb/LICENSE.txt", STAGE / "licenses/stb-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/open-sans/LICENSE.txt", STAGE / "licenses/OpenSans-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/open-sans/NOTICE.txt", STAGE / "licenses/OpenSans-NOTICE.txt")
+    shutil.copy2(ROOT / "third_party/launcher-fonts/OFL.txt", STAGE / "licenses/LauncherFonts-OFL.txt")
+    shutil.copy2(ROOT / "third_party/launcher-fonts/NOTICE.txt", STAGE / "licenses/LauncherFonts-NOTICE.txt")
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller",

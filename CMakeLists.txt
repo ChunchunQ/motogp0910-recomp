@@ -135,7 +135,10 @@ if(WIN32)
     set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc" APPEND PROPERTY OBJECT_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/launcher/background.png"
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/verification/game-files.sha256"
-        "${CMAKE_CURRENT_SOURCE_DIR}/resources/launcher/third-party-notices.txt")
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/launcher/third-party-notices.txt"
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/launcher-fonts/OpenSans-Regular.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/launcher-fonts/OpenSans-SemiBold.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/launcher-fonts/OpenSans-Bold.ttf")
     foreach(launcher_asset_target motogp0910-launcher launcher_layout_probe)
         target_sources(${launcher_asset_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc")
     endforeach()
