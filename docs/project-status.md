@@ -25,6 +25,7 @@ Don't publish original game data, personal logs or preview screenshots.
 | Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
 | LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
 | Community Online / VDS | Separate Offline/LAN/Online launcher modes; Linux/Windows Python service, HTTPS identities, authenticated UDP relay and native 378-view persistent leaderboards | Local Windows PEs exercised with Linux and Windows Python backends under Wine; public VDS/TLS/firewall and Internet race pending. Use Player Match; no official Xbox Live ranked/friends/voice. See community-online.md. |
+| Community service security | MGO2 UDP endpoint proof, strict room transitions, pre-TLS admission, authenticated Caddy proxy, bounded SQLite/HTTP/UDP work; 46 server tests and 12 real HTTPS checks per Linux/Windows backend | Windows Python/clients exercised under Wine; deployed VDS OS/firewall/provider DDoS controls and Internet race remain unverified. See community-security.md. |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
 | Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 345 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
 | Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
@@ -86,6 +87,7 @@ limitations; don't present compatibility dispatch as full temporal support.
 - [Roadmap](roadmap.md), [launcher requests](launcher-next-steps.md).
 - [LAN findings](lan-lobby-stability.md), [crash reporting](crash-reports.md).
 - [Community server, modes, deployment and original statistics ABI](community-online.md).
+- [Community service security review, fixed vulnerabilities and limits](community-security.md).
 - [Runtime safety / validation limits](stability-quality-control.md).
 - [Experimental rendering](experimental-rendering.md).
 - [Career readback](career-textures.md), [collision repair](collision-data.md).

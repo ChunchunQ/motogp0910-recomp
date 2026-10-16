@@ -266,6 +266,15 @@ struct Node::Impl {
       if(source!=options.relay->endpoint)continue;
       const auto envelope=online::Open(*options.relay,data,true);
       if(!envelope || envelope->destination!=identity || !relay_received.Accept(envelope->sequence))continue;
+      // A 16-byte server-authenticated challenge proves return routability.
+      // Sequence allocation shares the same mutex as normal online sends.
+      if(envelope->packet.size()==16){
+       std::lock_guard lock(mutex);
+       const auto reply=online::Seal(*options.relay,++relay_sequence,0,envelope->packet);
+       const auto native=Native(options.relay->endpoint);
+       sendto(socket.value,reinterpret_cast<const char*>(reply.data()),static_cast<int>(reply.size()),0,reinterpret_cast<const sockaddr*>(&native),sizeof(native));
+       continue;
+      }
       if(auto packet=Decode(envelope->packet)){
        try{Process(*packet,online::VirtualEndpoint(packet->peer));}catch(const std::exception&){}
       }

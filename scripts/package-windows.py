@@ -68,7 +68,9 @@ def main():
     shutil.copy2(ROOT / "docs/in-game-settings.md", STAGE / "in-game-settings-readme.txt")
     shutil.copy2(ROOT / "docs/adaptive-triggers.md", STAGE / "adaptive-triggers-readme.txt")
     shutil.copy2(ROOT / "docs/turkish-localization.md", STAGE / "turkish-localization-readme.txt")
-    if args.online_preview:shutil.copy2(ROOT / "docs/community-online.md", STAGE / "online-readme.txt")
+    if args.online_preview:
+        shutil.copy2(ROOT / "docs/community-online.md", STAGE / "online-readme.txt")
+        shutil.copy2(ROOT / "docs/community-security.md", STAGE / "online-security.txt")
     milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
     preview_notes=(
         "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
@@ -92,6 +94,9 @@ def main():
             "No Radmin or player router forwarding is required for Online. LAN / Radmin remains separate.\n"
             "The race simulation stays on a player's PC. Use Player Match; official Xbox Live ranked/friends/voice are not restored.\n"
             "There is no default public server yet. Deploy the separate Linux/Windows community server package first.\n"
+            "SECURITY UPDATE: Online MGO2 / v2; update the game and server together. Old Online builds are rejected.\n"
+            "UDP endpoint proof, strict room admission, HTTP/TLS/storage quotas and authenticated Caddy proxy are included.\n"
+            "See online-security.txt. Keep existing profiles/database; LAN02 and Offline are preserved.\n"
             "Local Windows/Wine protocol and original stats-wrapper checks passed; public internet racing still needs testing.\n"
             "Offline is the default. See online-readme.txt for deployment, scope and remaining validation.\n\n"
         )+preview_notes

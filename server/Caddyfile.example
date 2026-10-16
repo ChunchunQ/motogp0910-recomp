@@ -1,8 +1,40 @@
-# Replace play.example.com with your own DNS name pointing to the VDS IPv4.
-# HTTPS certificates are automatic; allow inbound TCP 80 and 443.
+# Replace the domain. Start with: python3 proxy_config.py run
+# The helper supplies the private MOTOGP_PROXY_SECRET; never put it in Git.
+{
+	admin off
+	persist_config off
+	servers {
+		max_header_size 8KB
+		timeouts {
+			read_header 5s
+			read_body 5s
+			write 10s
+			idle 15s
+		}
+	}
+}
 play.example.com {
-    reverse_proxy 127.0.0.1:30820
-    request_body {
-        max_size 64KB
-    }
+	@api path /health /v2/connect /v2/disconnect /v2/stats/read /v2/stats/write
+	handle @api {
+		request_body {
+			max_size 2KB
+		}
+		reverse_proxy 127.0.0.1:30820 {
+			# Overwrite client-supplied values. The Python API trusts these only
+			# on loopback and when the private proxy key matches.
+			header_up X-MotoGP-Proxy-Key "{$MOTOGP_PROXY_SECRET}"
+			header_up X-MotoGP-Client-IP {remote_host}
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 6s
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
 }

@@ -32,7 +32,7 @@ lan::Endpoint VirtualEndpoint(uint64_t peer){
 uint64_t VirtualPeer(lan::Endpoint ep){return (ep.ip&0xFF000000)==0x0A000000 && (ep.ip&0xFFFFFF) && ep.port==lan::kFirstPort?0x0009000000000000ull|(ep.ip&0xFFFFFF):0;}
 std::vector<uint8_t> Seal(const Ticket& ticket,uint64_t sequence,uint64_t destination,std::span<const uint8_t> packet,bool server){
   if(!sequence || packet.size()>lan::kMaxPacket)throw std::runtime_error("Invalid relay envelope");
-  lan::Writer w;w.U32(0x4D474F31);w.Raw(ticket.id);w.U64(sequence);w.U64(destination);w.Raw(packet);
+  lan::Writer w;w.U32(0x4D474F32);w.Raw(ticket.id);w.U64(sequence);w.U64(destination);w.Raw(packet);
   const auto mac=Mac(ticket,w.bytes,server);w.Raw(mac);return w.bytes;
 }
 std::optional<Envelope> Open(const Ticket& ticket,std::span<const uint8_t> bytes,bool server){
@@ -40,7 +40,7 @@ std::optional<Envelope> Open(const Ticket& ticket,std::span<const uint8_t> bytes
   const auto body=bytes.first(bytes.size()-32);const auto expected=Mac(ticket,body,server);
   uint8_t difference=0;for(size_t i=0;i<32;++i)difference|=expected[i]^bytes[body.size()+i];
   if(difference)return {};
-  try{lan::Reader r(body);if(r.U32()!=0x4D474F31)return {};const auto id=r.Raw(16);if(!std::equal(id.begin(),id.end(),ticket.id.begin()))return {};
+  try{lan::Reader r(body);if(r.U32()!=0x4D474F32)return {};const auto id=r.Raw(16);if(!std::equal(id.begin(),id.end(),ticket.id.begin()))return {};
     Envelope result;result.sequence=r.U64();result.destination=r.U64();if(!result.sequence)return {};const auto packet=r.Raw(body.size()-36);result.packet.assign(packet.begin(),packet.end());return result;
   }catch(const std::exception&){return {};}
 }

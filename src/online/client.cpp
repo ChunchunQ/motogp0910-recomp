@@ -34,9 +34,11 @@ struct Url {
 };
 std::vector<uint8_t> ReadProfile(const std::filesystem::path& path){
  std::ifstream f(path,std::ios::binary);if(!f)throw std::runtime_error("Cannot read the online profile");
- std::vector<uint8_t> encrypted((std::istreambuf_iterator<char>(f)),{});
- if(encrypted.empty() || encrypted.size()>4096)throw std::runtime_error("Invalid online profile; restore its backup rather than changing identity");
- DATA_BLOB input{static_cast<DWORD>(encrypted.size()),encrypted.data()},output{};
+ // Bound the read itself: a file-size check alone races local file changes.
+ std::array<uint8_t,4097> encrypted{};f.read(reinterpret_cast<char*>(encrypted.data()),static_cast<std::streamsize>(encrypted.size()));
+ const auto size=f.gcount();
+ if(size<=0 || size>4096 || f.bad())throw std::runtime_error("Invalid online profile; restore its backup rather than changing identity");
+ DATA_BLOB input{static_cast<DWORD>(size),encrypted.data()},output{};
  if(!CryptUnprotectData(&input,nullptr,nullptr,nullptr,nullptr,CRYPTPROTECT_UI_FORBIDDEN,&output))throw std::runtime_error("Cannot unlock online profile for this Windows user");
  std::vector<uint8_t> result(output.pbData,output.pbData+output.cbData);SecureZeroMemory(output.pbData,output.cbData);LocalFree(output.pbData);
  if(result.size()!=32)throw std::runtime_error("Invalid online profile credential");return result;
@@ -68,17 +70,19 @@ std::vector<uint8_t> Client::Request(const std::string& path,std::span<const uin
  // Local development traffic stays on this machine; external HTTPS continues
  // to use the Windows system proxy and its normal certificate verification.
  const bool loopback=url.host==L"127.0.0.1" || url.host==L"localhost";
- Handle session{WinHttpOpen(L"MotoGP0910-Community/1",loopback?WINHTTP_ACCESS_TYPE_NO_PROXY:WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,0)};
+ Handle session{WinHttpOpen(L"MotoGP0910-Community/2",loopback?WINHTTP_ACCESS_TYPE_NO_PROXY:WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,0)};
  if(!session.value || !WinHttpSetTimeouts(session,3000,3000,3000,5000))throw std::runtime_error("Cannot initialize online HTTPS connection");
  Handle connection{WinHttpConnect(session,url.host.c_str(),url.port,0)};
  Handle request{connection.value?WinHttpOpenRequest(connection,L"POST",Wide(path).c_str(),nullptr,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,url.secure?WINHTTP_FLAG_SECURE:0):nullptr};
  if(!request.value)throw std::runtime_error("Cannot open community server request");
- DWORD redirect=WINHTTP_OPTION_REDIRECT_POLICY_NEVER;WinHttpSetOption(request,WINHTTP_OPTION_REDIRECT_POLICY,&redirect,sizeof(redirect));
+ DWORD redirect=WINHTTP_OPTION_REDIRECT_POLICY_NEVER;if(!WinHttpSetOption(request,WINHTTP_OPTION_REDIRECT_POLICY,&redirect,sizeof(redirect)))throw std::runtime_error("Cannot disable online credential redirects");
  const auto headers=L"Authorization: Bearer "+Wide(credential_)+L"\r\nContent-Type: application/octet-stream\r\n";
  if(body.size()>65536 || !WinHttpSendRequest(request,headers.c_str(),static_cast<DWORD>(headers.size()),body.empty()?WINHTTP_NO_REQUEST_DATA:const_cast<uint8_t*>(body.data()),static_cast<DWORD>(body.size()),static_cast<DWORD>(body.size()),0) || !WinHttpReceiveResponse(request,nullptr))throw std::runtime_error("Community server is unreachable or HTTPS verification failed (Windows error "+std::to_string(GetLastError())+")");
  DWORD status=0,length=sizeof(status);if(!WinHttpQueryHeaders(request,WINHTTP_QUERY_STATUS_CODE|WINHTTP_QUERY_FLAG_NUMBER,nullptr,&status,&length,nullptr))throw std::runtime_error("Invalid community server HTTP response");
+ const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
  std::vector<uint8_t> result;std::array<uint8_t,4096> chunk{};DWORD count=0;
  while(WinHttpReadData(request,chunk.data(),static_cast<DWORD>(chunk.size()),&count)){
+  if(std::chrono::steady_clock::now()>deadline)throw std::runtime_error("Community server response timed out");
   if(!count){if(status!=200){std::string detail(result.begin(),result.end());if(detail.size()>256)detail.resize(256);throw std::runtime_error("Community server rejected request ("+std::to_string(status)+"): "+detail);}return result;}
   if(result.size()+count>65536)throw std::runtime_error("Community server response too large");result.insert(result.end(),chunk.begin(),chunk.begin()+count);
  }
@@ -91,7 +95,7 @@ Client::Client(std::string url,std::string name,const std::filesystem::path& pro
 #ifdef _WIN32
  while(url_.ends_with('/'))url_.pop_back();const Url parsed(url_);
  auto secret=Credential(profile,url_);credential_=Hex(secret);SecureZeroMemory(secret.data(),secret.size());
- lan::Writer w;w.U64(lan::kCompatibility);w.Text(name);const auto reply=Request("/v1/connect",w.bytes);lan::Reader r(reply);
+ lan::Writer w;w.U64(lan::kCompatibility);w.Text(name);const auto reply=Request("/v2/connect",w.bytes);lan::Reader r(reply);
  ticket_.peer=r.U64();auto id=r.Raw(16);std::copy(id.begin(),id.end(),ticket_.id.begin());auto key=r.Raw(32);std::copy(key.begin(),key.end(),ticket_.key.begin());ticket_.endpoint.port=r.U16();
  if(!r.End() || !ticket_.endpoint.port)throw std::runtime_error("Invalid community server handshake");VirtualEndpoint(ticket_.peer);
  WSADATA data{};if(WSAStartup(MAKEWORD(2,2),&data))throw std::runtime_error("Online DNS initialization failed");
@@ -106,17 +110,17 @@ Client::Client(std::string url,std::string name,const std::filesystem::path& pro
 void Client::Write(const std::vector<View>& views,const std::string& nonce)const{
  lan::Writer w;w.Text(nonce);w.U32(static_cast<uint32_t>(views.size()));
  for(const auto& view:views){w.U32(view.id);w.U32(static_cast<uint32_t>(view.columns.size()));for(auto c:view.columns){w.U16(c.id);w.U8(c.type);w.U64(c.bits);}}
- const auto result=Request("/v1/stats/write",w.bytes);if(!result.empty())throw std::runtime_error("Invalid statistics write response");
+ const auto result=Request("/v2/stats/write",w.bytes);if(!result.empty())throw std::runtime_error("Invalid statistics write response");
 }
 Client::~Client(){
- if(ticket_.peer){try{Request("/v1/disconnect",ticket_.id);}catch(const std::exception&){} }
+ if(ticket_.peer){try{Request("/v2/disconnect",ticket_.id);}catch(const std::exception&){} }
 }
 void Client::BeginWrite()const{std::lock_guard lock(writes_mutex_);++pending_writes_;}
 void Client::EndWrite()const{std::lock_guard lock(writes_mutex_);if(pending_writes_)--pending_writes_;writes_changed_.notify_all();}
 void Client::Flush()const{std::unique_lock lock(writes_mutex_);if(!writes_changed_.wait_for(lock,std::chrono::seconds(30),[&]{return !pending_writes_;}))throw std::runtime_error("Online statistics flush timed out");}
 Page Client::Read(uint32_t view,uint32_t start,uint32_t count,std::span<const uint64_t> users,uint64_t around)const{
  if(!count || count>100 || users.size()>100)throw std::runtime_error("Invalid leaderboard query");lan::Writer w;w.U32(view);w.U32(start);w.U32(count);w.U64(around);w.U32(static_cast<uint32_t>(users.size()));for(auto id:users)w.U64(id);
- const auto response=Request("/v1/stats/read",w.bytes);lan::Reader r(response);Page page;page.total=r.U32();const auto amount=r.U32();if(amount>count || amount>page.total)throw std::runtime_error("Invalid leaderboard response");auto& rows=page.rows;
+ const auto response=Request("/v2/stats/read",w.bytes);lan::Reader r(response);Page page;page.total=r.U32();const auto amount=r.U32();if(amount>count || amount>page.total)throw std::runtime_error("Invalid leaderboard response");auto& rows=page.rows;
  for(unsigned i=0;i<amount;++i){Row row;row.peer=r.U64();row.rank=r.U32();row.name=r.Text(15);const auto columns=r.U32();if(!row.peer || !row.rank || columns>64)throw std::runtime_error("Invalid leaderboard row");for(unsigned j=0;j<columns;++j){Column c;c.id=r.U16();c.type=r.U8();c.bits=r.U64();if(c.type!=1 && c.type!=2 && c.type!=3 && c.type!=5)throw std::runtime_error("Invalid leaderboard column");row.columns.push_back(c);}rows.push_back(std::move(row));}
  if(!r.End())throw std::runtime_error("Invalid leaderboard response length");return page;
 }

@@ -52,9 +52,18 @@ class RelayTests(unittest.TestCase):
         for n,key in enumerate(self.credentials):
             body=self.service.connect(key,f'Player{n}');peer,ticket,secret,port=struct.unpack('>Q16s32sH',body);self.clients.append(self.service.clients[peer])
         self.seq=defaultdict(int)
+        self.addCleanup(self.service.store.db.close)
+        for client in self.clients:
+            self.send(client,HEARTBEAT)
+            challenge=self.transport.sent[-1][0][36:-32]
+            self.seq[client.peer]+=1
+            data=ENVELOPE.pack(ONLINE_MAGIC,client.ticket,self.seq[client.peer],0)+challenge
+            data+=hmac.digest(client.key,b'C'+data,'sha256')
+            self.service.datagram_received(data,('127.0.0.1',31000+(client.peer&0xFFFFFF)))
+        self.transport.sent.clear()
     def send(self,client,kind,target=0,request=1,session=0,body=b'',peer=None):
         self.seq[client.peer]+=1
-        data=ENVELOPE.pack(b'MGO1',client.ticket,self.seq[client.peer],target)+packet(kind,request,peer or client.peer,session,body)
+        data=ENVELOPE.pack(ONLINE_MAGIC,client.ticket,self.seq[client.peer],target)+packet(kind,request,peer or client.peer,session,body)
         data+=hmac.digest(client.key,b'C'+data,'sha256')
         self.service.datagram_received(data,('127.0.0.1',31000+(client.peer&0xFFFFFF)));return data
     def test_integrity_replay_and_spoofing(self):
@@ -72,17 +81,17 @@ class RelayTests(unittest.TestCase):
     def test_admission_cross_room_routing_and_close(self):
         a,b,c=self.clients
         self.send(a,ADVERT,session=42,body=advert(a.peer));self.send(b,HEARTBEAT)
-        self.send(c,DATA,target=a.peer,session=42,body=b'abcd');self.assertEqual(len(self.transport.sent),0)
+        self.send(c,DATA,target=a.peer,session=42,body=struct.pack('>HHH',1000,1001,4)+b'abcd');self.assertEqual(len(self.transport.sent),0)
         self.send(b,JOIN,target=a.peer,session=42,body=b'K'*16);self.assertEqual(len(self.transport.sent),1)
         self.send(a,JOINED,target=b.peer,session=42,body=advert(a.peer)+b'\0');self.assertEqual(b.room,a.peer)
-        self.send(b,DATA,target=a.peer,session=42,body=b'abcd');self.assertEqual(len(self.transport.sent),3)
+        self.send(b,DATA,target=a.peer,session=42,body=struct.pack('>HHH',1000,1001,4)+b'abcd');self.assertEqual(len(self.transport.sent),3)
         self.send(c,JOIN,target=a.peer,session=42,body=b'K'*16);self.assertEqual(decode(self.transport.sent[-1][0][36:-32])[0],REJECT)
         self.send(a,LEFT,session=42);self.assertFalse(self.service.rooms);self.assertEqual(b.room,0)
     def test_expiry_disconnect_and_ticket_ownership(self):
         a,b,c=self.clients
         self.send(a,ADVERT,session=42,body=advert(a.peer));self.service.rooms[a.peer].seen-=16;self.service.expire();self.assertFalse(self.service.rooms)
-        self.service.handle('/v1/disconnect',self.credentials[0],b.ticket);self.assertIn(a.peer,self.service.clients)
-        self.service.handle('/v1/disconnect',self.credentials[0],a.ticket);self.assertNotIn(a.peer,self.service.clients)
+        self.service.handle('/v2/disconnect',self.credentials[0],b.ticket);self.assertIn(a.peer,self.service.clients)
+        self.service.handle('/v2/disconnect',self.credentials[0],a.ticket);self.assertNotIn(a.peer,self.service.clients)
         again=self.service.connect(self.credentials[0],'NewName');self.assertEqual(struct.unpack_from('>Q',again)[0],a.peer)
     def test_leave_and_authoritative_roster_release_stale_members(self):
         a,b,c=self.clients
@@ -103,12 +112,13 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         self.service=Service(Store(':memory:',SCHEMAS),30821);self.service.transport=Capture()
         self.server=await asyncio.start_server(self.service.http,'127.0.0.1',0,limit=8192)
         self.port=self.server.sockets[0].getsockname()[1]
+        self.addCleanup(self.service.store.db.close)
     async def asyncTearDown(self):self.server.close();await self.server.wait_closed()
     async def request(self,data):
         r,w=await asyncio.open_connection('127.0.0.1',self.port);w.write(data);await w.drain();answer=await r.read();w.close();await w.wait_closed();return answer
     async def test_actual_http_handshake_and_validation(self):
         key=secrets.token_bytes(32);body=struct.pack('>Q',COMPAT)+text('Test')
-        request=b'POST /v1/connect HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer '+key.hex().encode()+b'\r\nContent-Length: '+str(len(body)).encode()+b'\r\n\r\n'+body
+        request=b'POST /v2/connect HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer '+key.hex().encode()+b'\r\nContent-Length: '+str(len(body)).encode()+b'\r\n\r\n'+body
         answer=await self.request(request);self.assertTrue(answer.startswith(b'HTTP/1.1 200'));self.assertEqual(len(answer.split(b'\r\n\r\n',1)[1]),58)
         self.assertTrue((await self.request(b'GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n')).startswith(b'HTTP/1.1 200'))
         self.assertTrue((await self.request(request.replace(b'Content-Length:',b'Transfer-Encoding: chunked\r\nContent-Length:'))).startswith(b'HTTP/1.1 400'))

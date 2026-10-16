@@ -12,3 +12,6 @@ __pycache__/
 /server/*.pem
 /server/Caddyfile
 *.profile
+
+/server/*.key
+/server/*.sqlite3*

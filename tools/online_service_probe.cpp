@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <thread>
 using namespace motogp;
@@ -18,6 +19,11 @@ online::View Score(int64_t rating,uint32_t time){return {1,{{3,2,static_cast<uin
 int main(int argc,char** argv){try{
  if(argc!=3)throw std::runtime_error("Usage: online_service_probe SERVER_URL PROFILE_DIRECTORY");
  const auto profile=std::filesystem::path(argv[2]);std::filesystem::create_directories(profile);
+ const auto oversized=profile/"oversized.profile";
+ {std::ofstream output(oversized,std::ios::binary);output<<std::string(8192,'X');}
+ bool rejected=false;try{online::Client invalid(argv[1],"Invalid",oversized);}catch(const std::exception&){rejected=true;}
+ Check(rejected,"Oversized credential file is rejected by a bounded read");
+ Check(std::filesystem::file_size(oversized)==8192,"Invalid profile rejection preserves identity file rather than replacing it");
  uint64_t saved=0;
  {online::Client first(argv[1],"First",profile/"host.profile");saved=first.Connection().peer;}
  online::Client api_host(argv[1],"Host",profile/"host.profile"),api_client(argv[1],"Client",profile/"client.profile"),api_third(argv[1],"Third",profile/"third.profile");
