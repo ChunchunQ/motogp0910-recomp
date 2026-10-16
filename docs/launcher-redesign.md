@@ -6,12 +6,12 @@ The original compact layout used a **940 × 578 logical-pixel** window. The
 current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
 
 - General, Graphics, Advanced, Audio, Controls and Achievements are regular pages.
-  Multiplayer is a seventh tab that opens a separate owned dialog. General
-  remains the startup page.
+  General includes a Multiplayer Settings button opening a separate owned
+  dialog. General remains the startup page.
 - The supplied cover inspired a separate Racing Lines background embedded in the
   launcher, rather than an external image that can disappear from the package.
-  The left surface stays opaque for legibility; artwork continues behind both
-  title buttons. Hover adds a translucent tint; the idle buttons have no
+  The left edge stays opaque for legibility and blends into artwork inside
+  the content column; artwork continues behind both title buttons. Hover adds a translucent tint; the idle buttons have no
   backing tile. Maximize remains absent.
 - Scrollable child content preserves every existing setting, all 25 keyboard
   bindings, connection modes and the independent achievement scrollbar.
@@ -217,8 +217,46 @@ The actual runtime's **200 adaptive trigger software/transport checks** and
 encoding and physical parameters are unchanged. Physical DualSense feel and
 native Windows desktop/compositor behavior remain outside this cloud test.
 
-Current package: `downloads/MotoGP0910-Windows-x64-launcher-expanded.zip`.
+Previous package: `downloads/MotoGP0910-Windows-x64-launcher-expanded.zip`.
 SHA-256: `dbf44a117a39f827f72fa34d1f6f985ee1d4bb03ed3857ff4c5cac6534881f59`.
 The package omits README, SHA256SUMS and sidecar licenses. Archive checks confirm
 that only the launcher, game EXE and matching crash map differ from the previous
 package. Pinned runtime DLLs and all external game/UI resources remain identical.
+
+
+## General Multiplayer Settings button and artwork composition
+
+The Multiplayer navigation tab was removed at the user's request. **General →
+Multiplayer Settings** now opens the same owned editor. The button appears only
+on General, next to Button prompts, and stays disabled while the game runs.
+The old General network explanation was removed; connection-mode context and
+mode-specific LAN / Online instructions live in the owned window.
+
+The reference sketch indicated a direction, not an exact boundary. The picture
+now fits the full window width without zooming to fill the taller window. A
+soft lower fade removes its unused bottom edge, while an eased horizontal blend
+starts inside the content column. The text fields and achievement cards keep
+solid readable faces. Backgrounds around them, including labels, navigation,
+checkboxes, sliders, viewport and scroll gutters, share a cached full-window
+bitmap. This prevents an opaque child panel from cutting off the artwork or
+producing mismatched rectangular patches. Scrolled child source rectangles are
+clamped to the cached image, and WM_PRINTCLIENT uses the same composition for
+themed parent-background requests. The size cache and clipped single-surface
+scrolling remain in use.
+
+Validation: the rebuilt Windows launcher passed 87,293 real UI assertions under
+Wine/Xvfb, including matching child/WM_PRINTCLIENT background pixels across
+DPI scales and both languages, actual General-button modal opening, six-tab
+keyboard order, scrolling, selector input and preserved multiplayer validation.
+120 painted page switches took 2,499 ms total (48 ms slowest). The separate
+production EXE passed open, tab/control actions, language changes, save and close;
+an unknown config key was preserved and no game save was created.
+
+Current package: `downloads/MotoGP0910-Windows-x64-launcher-composition.zip`.
+SHA-256: `42c50b5f494a1b92499908918af0deed54e50388518d03e3065c538426b5860b`.
+ZIP CRC and membership checks passed. Against the previous expanded package,
+only `motogp0910-launcher.exe` changed; the game EXE/map, pinned DLLs and external
+resources are byte-identical. No README, SHA256SUMS or license sidecar is shipped.
+Required notices remain embedded in launcher resource 104. Screenshots above
+were refreshed from this compiled build. Native Windows user validation remains
+pending.

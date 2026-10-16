@@ -23,7 +23,7 @@ anti-cheat: a modified client can submit fabricated records for its own identity
 
 ## Player setup
 
-In **Multiplayer → Connection mode** choose:
+In **General → Multiplayer Settings → Connection mode** choose:
 
 | Mode | Behavior |
 |---|---|

@@ -47,9 +47,9 @@ struct App {
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
-  std::array<HWND,7> navigation{};
+  std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -78,7 +78,7 @@ struct App {
   bool status_positive=false;
   #include "caption.inc"
   #include "achievements_page.inc"
-  ~App(){verify_cancel=true;if(verify_future.valid())verify_future.wait();if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();for(auto handle:private_fonts)if(handle)RemoveFontMemResourceEx(handle);DeleteObject(background);DeleteObject(card);DeleteObject(field);}
+  ~App(){verify_cancel=true;if(verify_future.valid())verify_future.wait();if(catalog_future.valid())catalog_future.wait();if(process)CloseHandle(process);DeleteFonts();DeleteObject(paint_background_bitmap);for(auto handle:private_fonts)if(handle)RemoveFontMemResourceEx(handle);DeleteObject(background);DeleteObject(card);DeleteObject(field);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return turkish?tr:en;}
   int S(int value)const{return static_cast<int>(value*scale+0.5);}
   void DeleteFonts(){for(auto f:{font,heading,small_font,bold,logo})if(f)DeleteObject(f);}
@@ -104,6 +104,7 @@ struct App {
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     if(!c)throw std::runtime_error("Cannot create launcher control");
     placements.push_back({c,x,y,w,h});
+    if(std::wstring_view(cls)==L"STATIC")SetWindowSubclass(c,LabelProc,20,reinterpret_cast<DWORD_PTR>(this));
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
     SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
     if(std::wstring_view(cls)==L"EDIT")SetWindowTheme(c,L"",L"");
@@ -221,7 +222,8 @@ struct App {
         current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):current_page==4?T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."):T(L"Your milestones. Every race counts.",L"Her yarış, yeni bir hedef."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<7;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):i==5?T(L"Achievements",L"Başarımlar"):T(L"Multiplayer",L"Çok oyunculu"));
+    for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
+    SetWindowTextW(multiplayer_settings,T(L"Multiplayer Settings",L"Çok Oyunculu Ayarları"));
     LayoutNavigation();
     LocalizeAchievements();
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
@@ -383,7 +385,7 @@ struct App {
     bool is_check=checks.contains(c),primary=c==play,nav=std::find(navigation.begin(),navigation.end(),c)!=navigation.end();
     auto hdc=item.hDC;SetBkMode(hdc,TRANSPARENT);SelectObject(hdc,bold);
     if(is_check){
-      auto brush=CreateSolidBrush(BackgroundFor(c));FillRect(hdc,&r,brush);DeleteObject(brush);
+      DrawSurface(hdc,c);
       RECT box{r.left+S(1),r.top+S(6),r.left+S(17),r.top+S(22)};
       Rounded(hdc,box,Checked(c)?kAccent:kField,(item.itemState&ODS_FOCUS)?kAccent:kBorder,4);
       if(Checked(c)){auto pen=CreatePen(PS_SOLID,S(2),kBackground);auto old=SelectObject(hdc,pen);
@@ -392,14 +394,14 @@ struct App {
     }
     bool active=nav && c==navigation[current_page];
     if(nav){
-      FillRect(hdc,&r,background);SetTextColor(hdc,active?kText:kMuted);auto text=Text(c);
+      DrawSurface(hdc,c);SetTextColor(hdc,active?kText:kMuted);auto text=Text(c);
       DrawTextW(hdc,text.c_str(),-1,&r,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
       if(active){RECT line{r.left+S(4),r.bottom-S(2),r.right-S(4),r.bottom};auto b=CreateSolidBrush(kAccent);FillRect(hdc,&line,b);DeleteObject(b);}
       if(item.itemState&ODS_FOCUS){InflateRect(&r,-S(3),-S(3));DrawFocusRect(hdc,&r);}return;
     }
     auto fill=primary?(pressed?RGB(227,139,29):kAccent):active?RGB(44,36,30):pressed?RGB(51,55,65):nav?kSidebar:kField;
     if(disabled)fill=RGB(40,43,50);
-    auto clear=CreateSolidBrush(nav?kSidebar:BackgroundFor(c));FillRect(hdc,&r,clear);DeleteObject(clear);
+    DrawSurface(hdc,c);
     Rounded(hdc,r,fill,(item.itemState&ODS_FOCUS)?kAccent:primary?fill:nav?fill:kBorder,10);
     if(active){RECT line{r.left,r.top+S(9),r.left+S(3),r.bottom-S(9)};auto b=CreateSolidBrush(kRed);FillRect(hdc,&line,b);DeleteObject(b);}
     SetTextColor(hdc,disabled?kMuted:primary?kBackground:active?kAccent:kText);
@@ -415,7 +417,7 @@ struct App {
   }
   LRESULT DrawSlider(NMCUSTOMDRAW& draw){
     if(draw.dwDrawStage!=CDDS_PREPAINT)return CDRF_DODEFAULT;
-    auto c=draw.hdr.hwndFrom;RECT r;GetClientRect(c,&r);auto b=CreateSolidBrush(kBackground);FillRect(draw.hdc,&r,b);DeleteObject(b);
+    auto c=draw.hdr.hwndFrom;RECT r;GetClientRect(c,&r);DrawSurface(draw.hdc,c);
     RECT channel{},thumb{};SendMessageW(c,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));SendMessageW(c,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
     const int cy=(r.top+r.bottom)/2,cx=(thumb.left+thumb.right)/2;
     RECT track{channel.left,cy-S(2),channel.right,cy+S(2)};Rounded(draw.hdc,track,kBorder,kBorder,4);
@@ -535,7 +537,7 @@ struct App {
     CancelCapture();
     for(auto control:{path,browse,save,defaults,play}) EnableWindow(control,!value);
     for(size_t i=0;i<pages.size();++i) for(auto control:pages[i]) EnableWindow(control,i==5||!value);
-    EnableWindow(navigation[6],!value);Localize();
+    EnableWindow(multiplayer_settings,!value);Localize();
   }
   void Command(int id,int event){
     try{

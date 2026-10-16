@@ -21,7 +21,7 @@ class NetworkDialog {
     RECT r{0,0,S(640),S(548)};constexpr DWORD flags=WS_CAPTION|WS_SYSMENU|WS_CLIPCHILDREN;
     AdjustWindowRectEx(&r,flags,FALSE,WS_EX_DLGMODALFRAME);RECT owner;GetWindowRect(owner_,&owner);
     const int width=r.right-r.left,height=r.bottom-r.top;
-    window=CreateWindowExW(WS_EX_DLGMODALFRAME,cls.lpszClassName,T(L"Multiplayer",L"Çok oyunculu"),flags,owner.left+(owner.right-owner.left-width)/2,owner.top+(owner.bottom-owner.top-height)/2,width,height,owner_,nullptr,cls.hInstance,this);
+    window=CreateWindowExW(WS_EX_DLGMODALFRAME,cls.lpszClassName,T(L"Multiplayer Settings",L"Çok Oyunculu Ayarları"),flags,owner.left+(owner.right-owner.left-width)/2,owner.top+(owner.bottom-owner.top-height)/2,width,height,owner_,nullptr,cls.hInstance,this);
     if(!window)throw std::runtime_error("Cannot open multiplayer settings");BOOL dark=TRUE;DwmSetWindowAttribute(window,20,&dark,sizeof(dark));return window;
   }
   void Show(){
@@ -58,7 +58,7 @@ class NetworkDialog {
     if(std::wstring_view(cls)==L"EDIT")SetWindowTheme(child,L"",L"");return child;
   }
   void Build(){
-    Add(L"STATIC",T(L"Connection mode",L"Bağlantı modu"),0,24,20,592,22);
+    Add(L"STATIC",T(L"Connection mode · Offline / LAN / community Online",L"Bağlantı modu · Çevrimdışı / LAN / topluluk sunucusu"),0,24,20,592,22);
     const auto mode=Add(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS,24,48,592,180,kLanEnabled);style_.AttachCombo(mode);
     for(auto label:{T(L"Offline",L"Çevrimdışı"),L"LAN / Radmin",T(L"Online (Experimental)",L"Çevrimiçi (Deneysel)")})SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label));
     SendMessageW(mode,CB_SETITEMHEIGHT,WPARAM(-1),S(24));SendMessageW(mode,CB_SETITEMHEIGHT,0,S(24));SendMessageW(mode,CB_SETCURSEL,pending_.network_mode=="online"?2:pending_.network_mode=="lan"?1:0,0);

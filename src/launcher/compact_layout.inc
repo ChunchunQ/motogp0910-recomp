@@ -5,6 +5,7 @@
   static constexpr int kPageX=28,kPageY=136,kPageWidth=610,kPageHeight=480;
   static constexpr int kFormWidth=kPageWidth-26,kColumnWidth=(kFormWidth-22)/2,kColumnX=kColumnWidth+22,kStatusY=kPageY+kPageHeight+8;
   std::unique_ptr<Gdiplus::Bitmap> cover,paint_background;
+  HBITMAP paint_background_bitmap{};
   std::future<GameVerification> verify_future;
   std::atomic<bool> verify_cancel{false};
   std::atomic<size_t> verify_progress{0};
@@ -55,7 +56,8 @@
       app.ScrollPage(requested);return 0;
     }
     switch(message){
-      case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);
+      case WM_PRINTCLIENT:{const auto dc=reinterpret_cast<HDC>(wparam);app.DrawSurface(dc,control);app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);return 0;}
+      case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);
         app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);EndPaint(control,&ps);return 0;}
       case WM_ERASEBKGND:return 1;
       case WM_VSCROLL:{int next=app.page_scroll[app.current_page];
@@ -77,7 +79,8 @@
   static LRESULT CALLBACK ContentProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
     switch(message){
-      case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);if(app.current_page==5)app.PaintAchievementSummary(dc);EndPaint(control,&ps);return 0;}
+      case WM_PRINTCLIENT:{app.DrawSurface(reinterpret_cast<HDC>(wparam),control);if(app.current_page==5)app.PaintAchievementSummary(reinterpret_cast<HDC>(wparam));return 0;}
+      case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);if(app.current_page==5)app.PaintAchievementSummary(dc);EndPaint(control,&ps);return 0;}
       case WM_ERASEBKGND:return 1;
       case WM_MOUSEWHEEL:return SendMessageW(app.page_view,message,wparam,lparam);
       case WM_COMMAND:case WM_NOTIFY:case WM_DRAWITEM:case WM_MEASUREITEM:case WM_CONTEXTMENU:
@@ -97,36 +100,68 @@
     source.reset();stream->Release();
     if(!cover || cover->GetLastStatus()!=Gdiplus::Ok)throw std::runtime_error("Cannot decode launcher artwork");
   }
-  void DrawBackground(HDC dc){
-    RECT r;GetClientRect(window,&r);FillRect(dc,&r,background);
-    if(!cover)return;
+  void EnsureBackground(){
+    RECT r;GetClientRect(window,&r);if(!cover)return;
     if(!paint_background || paint_background->GetWidth()!=static_cast<UINT>(r.right) || paint_background->GetHeight()!=static_cast<UINT>(r.bottom)){
       paint_background=std::make_unique<Gdiplus::Bitmap>(std::max<LONG>(1,r.right),std::max<LONG>(1,r.bottom),PixelFormat32bppARGB);
-      Gdiplus::Graphics g(paint_background.get());g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
-      const auto art_width=std::max<float>(float(r.right),r.bottom*float(cover->GetWidth())/cover->GetHeight());
-      const auto art_height=art_width*cover->GetHeight()/cover->GetWidth();
-      g.DrawImage(cover.get(),Gdiplus::RectF(r.right-art_width,0.f,art_width,art_height));
-      // An opaque form surface blends into the art; caption buttons keep the
-      // real picture behind them. Cache by size rather than resampling on hover.
-      const int fade=S(kPageX+kPageWidth+212);
-      Gdiplus::LinearGradientBrush shade(Gdiplus::Point(0,0),Gdiplus::Point(fade,0),Gdiplus::Color(255,13,15,20),Gdiplus::Color(0,13,15,20));
-      // A broad eased blend starts beyond the opaque settings viewport. No
-      // child-window edge or sudden linear fade is exposed beside the form.
-      Gdiplus::Color colors[]{Gdiplus::Color(255,13,15,20),Gdiplus::Color(255,13,15,20),Gdiplus::Color(244,13,15,20),Gdiplus::Color(211,13,15,20),Gdiplus::Color(143,13,15,20),Gdiplus::Color(51,13,15,20),Gdiplus::Color(0,13,15,20)};
-      const float start=float(kPageX+kPageWidth+2),end=float(kPageX+kPageWidth+212);
-      Gdiplus::REAL positions[]{0.f,start/end,(start+30)/end,(start+60)/end,(start+100)/end,(start+150)/end,1.f};shade.SetInterpolationColors(colors,positions,7);
-      g.FillRectangle(&shade,0,0,fade,r.bottom);
+      {
+        Gdiplus::Graphics g(paint_background.get());g.Clear(Gdiplus::Color(255,13,15,20));g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        // Show the full horizontal composition instead of zooming to fill the
+        // taller launcher. Fade its lower edge into the footer background.
+        const float art_width=float(r.right),art_height=art_width*cover->GetHeight()/cover->GetWidth();
+        g.DrawImage(cover.get(),Gdiplus::RectF(0.f,0.f,art_width,art_height));
+        const float lower=std::max(0.f,art_height-float(S(85)));
+        Gdiplus::LinearGradientBrush floor(Gdiplus::PointF(0.f,lower),Gdiplus::PointF(0.f,art_height),Gdiplus::Color(0,13,15,20),Gdiplus::Color(255,13,15,20));
+        g.FillRectangle(&floor,Gdiplus::RectF(0.f,lower,art_width,art_height-lower));
+        // Start revealing the picture inside the content column. Its cached
+        // pixels are also used by child surfaces, so no opaque panel cuts it off.
+        const int fade=S(810);
+        Gdiplus::LinearGradientBrush shade(Gdiplus::Point(0,0),Gdiplus::Point(fade,0),Gdiplus::Color(255,13,15,20),Gdiplus::Color(0,13,15,20));
+        Gdiplus::Color colors[]{Gdiplus::Color(255,13,15,20),Gdiplus::Color(255,13,15,20),Gdiplus::Color(242,13,15,20),Gdiplus::Color(210,13,15,20),Gdiplus::Color(150,13,15,20),Gdiplus::Color(65,13,15,20),Gdiplus::Color(0,13,15,20)};
+        Gdiplus::REAL positions[]{0.f,430.f/810,490.f/810,550.f/810,630.f/810,720.f/810,1.f};shade.SetInterpolationColors(colors,positions,7);
+        g.FillRectangle(&shade,0,0,fade,r.bottom);
+      }
+      HBITMAP bitmap{};if(paint_background->GetHBITMAP(Gdiplus::Color(255,13,15,20),&bitmap)!=Gdiplus::Ok)throw std::runtime_error("Cannot cache launcher background");
+      DeleteObject(paint_background_bitmap);paint_background_bitmap=bitmap;
     }
-    Gdiplus::Graphics target(dc);target.DrawImage(paint_background.get(),0,0,r.right,r.bottom);
+  }
+  void DrawSurface(HDC dc,HWND control){
+    EnsureBackground();RECT r;GetClientRect(control,&r);FillRect(dc,&r,background);
+    if(!paint_background_bitmap)return;
+    POINT origin{0,0};MapWindowPoints(control,window,&origin,1);
+    // A scrolled content window extends beyond the root bitmap. Restrict both
+    // source and destination instead of reading outside the cached image.
+    const int left=std::max<LONG>(0,-origin.x),top=std::max<LONG>(0,-origin.y);
+    const int right=std::min<int>(r.right,static_cast<int>(paint_background->GetWidth())-origin.x),bottom=std::min<int>(r.bottom,static_cast<int>(paint_background->GetHeight())-origin.y);
+    if(right<=left||bottom<=top)return;
+    const auto source=CreateCompatibleDC(dc);const auto old=SelectObject(source,paint_background_bitmap);
+    BitBlt(dc,left,top,right-left,bottom-top,source,origin.x+left,origin.y+top,SRCCOPY);SelectObject(source,old);DeleteDC(source);
+  }
+  void DrawBackground(HDC dc){DrawSurface(dc,window);}
+  static LRESULT CALLBACK LabelProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
+    auto& app=*reinterpret_cast<App*>(data);
+    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,LabelProc,id);
+    if(control==app.page_view||control==app.page_content)return DefSubclassProc(control,message,wparam,lparam);
+    if(message==WM_ERASEBKGND)return 1;
+    if(message==WM_PAINT||message==WM_PRINTCLIENT){
+      PAINTSTRUCT ps{};const auto dc=message==WM_PAINT?BeginPaint(control,&ps):reinterpret_cast<HDC>(wparam);const int saved=SaveDC(dc);
+      app.DrawSurface(dc,control);SetBkMode(dc,TRANSPARENT);
+      SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(control,WM_GETFONT,0,0)));
+      SetTextColor(dc,control==app.title?kText:control==app.status&&app.status_positive?RGB(107,205,132):kMuted);
+      RECT r;GetClientRect(control,&r);const auto text=app.Text(control);const bool right=(GetWindowLongPtrW(control,GWL_STYLE)&SS_TYPEMASK)==SS_RIGHT;
+      DrawTextW(dc,text.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);
+      if(message==WM_PAINT)EndPaint(control,&ps);return 0;
+    }
+    return DefSubclassProc(control,message,wparam,lparam);
   }
   void LayoutNavigation(){
     const auto dc=GetDC(window);const auto previous=SelectObject(dc,bold);
-    constexpr std::array<int,7> order{3,0,4,1,2,5,6};
-    std::array<int,7> widths{};int total=0;
+    constexpr std::array<int,6> order{3,0,4,1,2,5};
+    std::array<int,6> widths{};int total=0;
     for(int i:order){SIZE extent{};const auto text=Text(navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);widths[i]=extent.cx+S(8);total+=widths[i];}
     SelectObject(dc,previous);ReleaseDC(window,dc);
-    const int available=S(kPageWidth),gap=std::clamp((available-total)/6,0,S(12));
-    int x=S(kPageX)+(available-total-6*gap)/2;
+    const int available=S(kPageWidth),gap=std::clamp((available-total)/5,0,S(12));
+    int x=S(kPageX)+(available-total-5*gap)/2;
     // Position in device pixels so fractional DPI rounding cannot accumulate
     // into different gaps. Keep logical placements only for generic rescaling.
     for(int i:order){SetWindowPos(navigation[i],nullptr,x,S(94+kCaptionHeight),widths[i],S(32),SWP_NOZORDER|SWP_NOACTIVATE);x+=widths[i]+gap;}
@@ -135,9 +170,8 @@
     CreateFonts();LoadCover();
     title=Control(L"STATIC",L"",0,28,68,1,1);subtitle=Control(L"STATIC",L"",0,30,70,1,1);
     ShowWindow(title,SW_HIDE);ShowWindow(subtitle,SW_HIDE);
-    // Creation order matches visual and keyboard tab order. Multiplayer opens
-    // an owned dialog; the six regular pages keep their existing identifiers.
-    for(int i:{3,0,4,1,2,5,6})navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
+    // Creation order matches visual and keyboard tab order.
+    for(int i:{3,0,4,1,2,5})navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
     page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN,kPageX,kPageY,kPageWidth,kPageHeight);
     SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT|WS_EX_COMPOSITED);
     SetWindowSubclass(page_view,PageProc,1,reinterpret_cast<DWORD_PTR>(this));
@@ -157,9 +191,9 @@
     SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));
     game_language=field(3,L"Game language",L"Oyun dili",kColumnX,128,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
     prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,210,kPromptStyle);
+    multiplayer_settings=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kColumnX,234,kColumnWidth,34,kNavMultiplayer);
     crash_diagnostics=check(3,0,300,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
-    LabelControl(3,L"Offline, LAN / Radmin and community Online settings are in the Multiplayer tab.",L"Çevrimdışı, LAN / Radmin ve topluluk sunucusu ayarları Çok oyunculu sekmesinde.",0,352,kFormWidth,48);
-    LabelControl(3,L"Save or press PLAY to apply launcher settings. During play, F1 opens settings that can change immediately.",L"Launcher ayarlarını uygulamak için kaydet veya oyunu başlat. Oyun sırasında anında değişen ayarlar için F1'e bas.",0,414,kFormWidth,54);
+    LabelControl(3,L"Save or press PLAY to apply launcher settings. During play, F1 opens settings that can change immediately.",L"Launcher ayarlarını uygulamak için kaydet veya oyunu başlat. Oyun sırasında anında değişen ayarlar için F1'e bas.",0,352,kFormWidth,54);
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
     render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",kColumnX,0,kRenderResolution);
     size=field(0,L"Output window size",L"Çıkış pencere boyutu",0,68,kSize);
@@ -257,7 +291,7 @@
     }
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT){
-      PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);FillRect(dc,&r,app.background);
+      PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);
       app.Rounded(dc,r,kField,GetFocus()==control?kAccent:kBorder,6);
       DRAWITEMSTRUCT item{};item.CtlType=ODT_COMBOBOX;item.hwndItem=control;item.hDC=dc;item.rcItem=r;item.rcItem.left+=app.S(1);item.rcItem.top+=app.S(1);item.rcItem.right-=app.S(27);item.rcItem.bottom-=app.S(1);
       item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));if(!IsWindowEnabled(control))item.itemState=ODS_DISABLED;
@@ -282,7 +316,7 @@
     r.thumb={r.track.left+S(4),y,r.track.right-S(3),y+thumb};return r;
   }
   void PaintRail(HDC dc,HWND control,int total,int view,int offset){
-    RECT client;GetClientRect(control,&client);RECT clear{client.right-S(20),0,client.right,client.bottom};FillRect(dc,&clear,background);
+    RECT client;GetClientRect(control,&client);RECT clear{client.right-S(20),0,client.right,client.bottom};const int saved=SaveDC(dc);IntersectClipRect(dc,clear.left,clear.top,clear.right,clear.bottom);DrawSurface(dc,control);RestoreDC(dc,saved);
     const auto r=Rail(control,total,view,offset);
     if(r.maximum)Rounded(dc,r.thumb,RGB(85,93,107),RGB(85,93,107),6);
   }

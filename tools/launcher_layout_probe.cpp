@@ -27,6 +27,16 @@ void ClickControl(HWND control,int y){
   std::thread mouse([&]{SetCursorPos(p.x,p.y);Sleep(25);for(DWORD flags:{MOUSEEVENTF_LEFTDOWN,MOUSEEVENTF_LEFTUP}){INPUT input{};input.type=INPUT_MOUSE;input.mi.dwFlags=flags;if(SendInput(1,&input,sizeof(input))!=1)ok=false;Sleep(25);}done=true;});
   while(!done){PumpUI();Sleep(2);}mouse.join();PumpUI();CheckUI(ok,"Actual mouse input delivered to the native control");
 }
+void CheckSurface(App& app,HWND control,int x,int y){
+  RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),paint=CreateCompatibleDC(target),expected=CreateCompatibleDC(target);
+  const auto bitmap=CreateCompatibleBitmap(target,r.right,r.bottom);const auto previous=SelectObject(paint,bitmap);
+  SetDCBrushColor(paint,RGB(255,255,255));FillRect(paint,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+  SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(paint),PRF_CLIENT);
+  const auto previous_expected=SelectObject(expected,app.paint_background_bitmap);
+  POINT root{x,y};MapWindowPoints(control,app.window,&root,1);
+  CheckUI(GetPixel(paint,x,y)==GetPixel(expected,root.x,root.y),"Child and themed-parent backgrounds align exactly with the full-window artwork");
+  SelectObject(paint,previous);SelectObject(expected,previous_expected);DeleteObject(bitmap);DeleteDC(paint);DeleteDC(expected);ReleaseDC(app.window,target);
+}
 void LayoutCheck(App& app){
   RECT client;GetClientRect(app.window,&client);std::vector<std::pair<RECT,HWND>> visible;
   for(auto& item:app.placements){if(!IsWindowVisible(item.control) || item.control==app.page_view || item.control==app.page_content)continue;RECT r;GetWindowRect(item.control,&r);
@@ -59,7 +69,7 @@ void CheckPolish(App& app){
   CheckUI(GetGlyphIndicesW(dc,turkish,std::size(turkish)-1,glyphs,GGI_MARK_NONEXISTING_GLYPHS)!=GDI_ERROR,"Embedded font can be queried for Turkish coverage");
   for(auto glyph:glyphs)CheckUI(glyph!=0xFFFF,"All Turkish letters have real glyphs in the launcher font");
   SelectObject(dc,app.bold);int previous_end=-1,first_gap=-1;RECT first{},last{};
-  for(int i:{3,0,4,1,2,5,6}){
+  for(int i:{3,0,4,1,2,5}){
     RECT r;GetWindowRect(app.navigation[i],&r);MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
     SIZE extent{};const auto text=app.Text(app.navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);
     CheckUI(extent.cx+app.S(8)<=r.right-r.left,"Every tab fits its real font without truncation");
@@ -68,9 +78,9 @@ void CheckPolish(App& app){
     else first=r;
     previous_end=text_start+extent.cx;last=r;
   }
-  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The seven tabs stay within their content column");
+  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The six tabs stay within their content column");
   CheckUI(std::abs(first.left+last.right-app.S(App::kPageX)*2-app.S(App::kPageWidth))<=1,"Navigation is centered as one group");
-  const std::array<int,7> order{3,0,4,1,2,5,6};
+  const std::array<int,6> order{3,0,4,1,2,5};
   for(size_t i=0;i+1<order.size();++i)CheckUI(GetNextDlgTabItem(app.window,app.navigation[order[i]],FALSE)==app.navigation[order[i+1]],"Keyboard tab order follows the visible navigation order");
   SelectObject(dc,old);
 
@@ -257,9 +267,12 @@ int wmain(int argc,wchar_t** argv){
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;app.Localize();CheckPolish(app);
-        for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+        for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.multiplayer_settings))==(page==3),"Multiplayer Settings button appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
           app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+          CheckSurface(app,app.page_view,app.S(App::kPageWidth)-1,app.S(App::kPageHeight)-1);
+          CheckSurface(app,app.page_content,app.S(App::kFormWidth)-2,app.S(280));
+          if(page==0)CheckSurface(app,app.sharp_value,app.S(35),app.S(22)-1);
           if(page==5){RECT list;GetClientRect(app.achievement_list,&list);CheckUI(list.bottom>=4*app.S(76)+3*app.S(6),"Achievement viewport fits at least four complete compact cards");}
           if(scale==1. || (scale==.75 && tr && page==2)){
             const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
@@ -289,7 +302,7 @@ int wmain(int argc,wchar_t** argv){
       app.ShowPage(0);app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
       CheckUI(!(GetWindowLongPtrW(app.page_view,GWL_STYLE)&WS_VSCROLL),"The page has no native scrollbar that could repaint white");
       const auto rail=app.Rail(app.page_view,app.page_extent[0],App::kPageHeight,0);
-      for(int i=0;i<12;++i){SendMessageW(app.page_view,WM_NCPAINT,1,0);InvalidateRect(window,nullptr,FALSE);UpdateWindow(window);UpdateWindow(app.page_view);const auto dc=GetDC(app.page_view);CheckUI(GetPixel(dc,rail.track.left,rail.track.bottom-1)==kBackground,"Parent/nonclient repaint never turns the scroll rail white");ReleaseDC(app.page_view,dc);}
+      for(int i=0;i<12;++i){SendMessageW(app.page_view,WM_NCPAINT,1,0);InvalidateRect(window,nullptr,FALSE);UpdateWindow(window);UpdateWindow(app.page_view);const auto dc=GetDC(app.page_view);const auto expected=CreateCompatibleDC(dc);const auto old=SelectObject(expected,app.paint_background_bitmap);POINT p{rail.track.left,rail.track.bottom-1};MapWindowPoints(app.page_view,window,&p,1);CheckUI(GetPixel(dc,rail.track.left,rail.track.bottom-1)==GetPixel(expected,p.x,p.y),"Parent/nonclient repaint retains the exact artwork behind the scroll rail");SelectObject(expected,old);DeleteDC(expected);ReleaseDC(app.page_view,dc);}
     }
     { // Regressions from the user's native Windows video.
       app.Rescale(1);SetWindowPos(window,nullptr,20,20,kWidth,kHeight+kCaptionHeight,SWP_NOZORDER);app.turkish=false;app.Localize();app.ShowPage(0);app.ScrollPage(0);
@@ -370,7 +383,7 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!dialog.window&&app.settings.adaptive==initial,"Cancel preserves all pending trigger values");
     }
     app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
-    { // The seventh tab is an owned editor, not a seventh scrolling page.
+    { // Multiplayer is an owned editor opened from General.
       const auto initial=app.settings;const int page=app.current_page;
       for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
         const auto dialog_font=CreateFontW(-static_cast<int>(14*scale+.5),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Open Sans");
@@ -397,8 +410,8 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!GetDlgItem(window,kLanEnabled)&&!GetDlgItem(app.page_content,kLanEnabled),"Multiplayer controls no longer occupy General");
       std::atomic<bool> found=false;
       std::thread dismiss([&]{for(int i=0;i<500;++i){if(auto dialog=FindWindowW(L"MotoGPNetworkSettings",nullptr)){found=true;PostMessageW(dialog,WM_COMMAND,IDCANCEL,0);return;}Sleep(10);}});
-      SendMessageW(app.navigation[6],BM_CLICK,0,0);dismiss.join();
-      CheckUI(found&&IsWindowEnabled(window)&&app.current_page==page&&!FindWindowW(L"MotoGPNetworkSettings",nullptr),"The real Multiplayer tab opens and closes its owned modal without changing the current page");
+      app.ShowPage(3);SendMessageW(app.multiplayer_settings,BM_CLICK,0,0);dismiss.join();
+      CheckUI(found&&IsWindowEnabled(window)&&app.current_page==3&&!FindWindowW(L"MotoGPNetworkSettings",nullptr),"The General Multiplayer Settings button opens and closes its owned modal without changing the current page");
     }
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
@@ -498,7 +511,7 @@ int wmain(int argc,wchar_t** argv){
       std::wstring command=Quote((ExecutableFolder()/L"launcher_layout_probe.exe").wstring())+L" --fixture-child";
       STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION child{};
       CheckUI(CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&startup,&child),"Start actual launcher child fixture");
-      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);CheckUI(!IsWindowEnabled(app.navigation[6]),"Multiplayer launch-time options are disabled while a game runs");
+      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);CheckUI(!IsWindowEnabled(app.multiplayer_settings),"Multiplayer launch-time options are disabled while a game runs");
       Config external(app.config.path);Put(external.table,"audio_master_volume",58);Put(external.table,"fps_limit",165);Put(external.table,"keybind_a",std::string("Ctrl+J"));external.Save();
       CheckUI(WaitForSingleObject(app.process,10000)==WAIT_OBJECT_0,"Child fixture exited");app.Poll();
       CheckUI(!app.process&&app.GetControls().volume==58&&app.GetControls().fps_limit==165&&app.GetControls().bindings[0]=="Ctrl+J","Child exit reloads live values into actual launcher controls");
