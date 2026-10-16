@@ -35,15 +35,25 @@ unchanged. No additional HID library, service or controller middleware is added.
 | Option | Values |
 |---|---|
 | Master | Off / On |
-| Right and left effect | Off; Feedback (constant resistance); Weapon (resistance section) |
+| Right and left effect | Off; Constant resistance; Resistance zone |
 | Start position | 0–9: released to fully pressed |
-| End position | 0–9; Weapon requires end greater than start; unused in Feedback |
+| End position | 0–9; Resistance zone requires end greater than start; unused in Constant resistance |
 | Strength | 0–8; zero releases that side |
 
-Initial profiles match Downpour's screenshot: R2 Weapon 3 / 6 / 5 and L2 Feedback
-2 / 0 / 4. They have no physical effect until enabled. “Weapon” is the effect
-name, not a claim of MotoGP game-state integration. Vibration/calibration modes
-are not exposed.
+Existing saved profiles and defaults are preserved: R2 resistance zone 3 / 6 / 5
+and L2 constant resistance 2 / 0 / 4. Both stay inactive until enabled. The
+underlying protocol mode 0x02 is **section resistance**, which some tools call
+“Weapon”; it does not imply a weapon feature in MotoGP. The user-facing launcher
+and F1 menus now call it **Resistance zone / Direnç aralığı**, alongside
+**Constant resistance / Sabit direnç**. The serialized `weapon` / `feedback`
+identifiers remain compatible with existing settings. There is still no speed,
+RPM or braking-load telemetry driving these effects.
+
+The master switch disables all resistance editing when off. Off mode disables
+its positions/strength; Constant resistance disables its unused end position.
+Launcher selectors and sliders use the charcoal/orange theme. A closed selector
+ignores mouse-wheel changes. These behaviors also apply to the live F1 menu.
+Vibration/calibration modes are not exposed.
 
 The launcher dialog edits pending values; **Apply** accepts them, **Cancel**
 preserves the previous values. **Save settings / PLAY** persists them. F1 updates

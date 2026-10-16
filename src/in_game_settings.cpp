@@ -76,9 +76,9 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
   };
   s.push_back({"dualsense_adaptive_triggers","DualSense adaptive triggers (Experimental)","DualSense adaptif tetikler (Deneysel)",P::Controls,K::Toggle});
   for(int side=0;side<2;++side){const std::string key=side?"dualsense_lt_":"dualsense_rt_",en=side?"L2 · ":"R2 · ",tr=side?"L2 · ":"R2 · ";
-    s.push_back({key+"mode",en+"Effect mode",tr+"Efekt modu",P::Controls,K::Choice,0,0,{{"off","Off","Kapalı"},{"feedback","Feedback (constant resistance)","Feedback (sabit direnç)"},{"weapon","Weapon (resistance section)","Weapon (direnç bölgesi)"}}});
+    s.push_back({key+"mode",en+"Effect mode",tr+"Efekt modu",P::Controls,K::Choice,0,0,{{"off","Off","Kapalı"},{"feedback","Constant resistance","Sabit direnç"},{"weapon","Resistance zone","Direnç aralığı"}}});
     s.push_back({key+"start",en+"Start position",tr+"Başlangıç konumu",P::Controls,K::Integer,0,9});
-    s.push_back({key+"end",en+"End position (Weapon only)",tr+"Bitiş konumu (yalnızca Weapon)",P::Controls,K::Integer,0,9});
+    s.push_back({key+"end",en+"End position (zone only)",tr+"Bitiş konumu (direnç aralığı)",P::Controls,K::Integer,0,9});
     s.push_back({key+"strength",en+"Strength (0 = off)",tr+"Güç (0 = kapalı)",P::Controls,K::Integer,0,8});
   }
   for(const auto& b:launcher::kBindings){
@@ -335,6 +335,7 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
     if(view.page==Page::Controls){
       ImGui::TextWrapped("%s",Tr(tr,"DualSense / Edge + native SDL required; USB or Bluetooth. Static resistance profiles. Physical hardware testing is pending.","DualSense / Edge + yerel SDL gerekir; USB veya Bluetooth. Sabit direnç profilleri. Fiziksel donanım testi henüz yapılmadı."));
       if(!adaptive::LiveAvailable())ImGui::TextWrapped("%s",Tr(tr,"Select the SDL controller backend in the launcher to enable live DualSense controls.","Canlı DualSense ayarları için launcher’dan SDL kontrolcü arka ucunu seç."));
+      ImGui::TextWrapped("%s",Tr(tr,"Trigger resistance stays fixed during play; it does not follow speed, engine RPM or braking load.","Tetik direnci oyun sırasında sabit kalır; hız, motor devri veya fren yükünü takip etmez."));
       ImGui::TextWrapped("%s",adaptive::Status(tr).c_str());ImGui::Separator();
     }
     if(view.page==Page::Graphics&&(model.Value("present_effect")=="fsr2"||model.Value("present_effect")=="fsr3")){
@@ -345,7 +346,10 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
       if(s.key=="present_fsr_quality_mode"&&effect!="fsr2"&&effect!="fsr3")continue;
       if(s.key=="present_fsr_sharpness_reduction"&&effect!="fsr"&&effect!="fsr2"&&effect!="fsr3")continue;
       if(s.key=="present_cas_additional_sharpness"&&effect!="cas")continue;
-      Widget(model,view,s,tr);
+      const bool trigger=s.key.starts_with("dualsense_")&&s.key!="dualsense_adaptive_triggers";
+      const auto trigger_mode=trigger?model.Value(s.key.starts_with("dualsense_rt_")?"dualsense_rt_mode":"dualsense_lt_mode"):std::string{};
+      const bool inactive=trigger&&(model.Value("dualsense_adaptive_triggers")!="true"||(!s.key.ends_with("_mode")&&(trigger_mode=="off"||(s.key.ends_with("_end")&&trigger_mode!="weapon"))));
+      ImGui::BeginDisabled(inactive);Widget(model,view,s,tr);ImGui::EndDisabled();
     }
     ImGui::EndChild();
     ImGui::BeginChild("##settings_status",ImVec2(0,42),ImGuiChildFlags_None,ImGuiWindowFlags_NoBackground);

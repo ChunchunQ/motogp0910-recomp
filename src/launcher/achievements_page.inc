@@ -21,17 +21,18 @@
   }
   void BuildAchievements(){
     auto add=[&](const wchar_t* cls,DWORD style,int x,int y,int w,int h,int id){return PageControl(5,cls,L"",style,x,y,w,h,id);};
-    achievement_popup=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,0,62,236,26,kAchievementPopup);
-    achievement_sound=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,258,62,236,26,kAchievementSound);
+    achievement_popup=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,0,58,kColumnWidth,26,kAchievementPopup);
+    achievement_sound=add(L"BUTTON",WS_TABSTOP|BS_AUTOCHECKBOX,kColumnX,58,kColumnWidth,26,kAchievementSound);
     SetCheck(achievement_popup,true);SetCheck(achievement_sound,true);
-    achievement_search_label=add(L"STATIC",0,0,100,40,22,0);
-    achievement_search=add(L"EDIT",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,46,96,250,28,kAchievementSearch);SendMessageW(achievement_search,EM_SETLIMITTEXT,160,0);
-    achievement_filter=add(L"COMBOBOX",WS_TABSTOP|CBS_DROPDOWNLIST,310,96,184,180,kAchievementFilter);
+    achievement_search_label=add(L"STATIC",0,0,92,40,22,0);
+    achievement_search=add(L"EDIT",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,46,88,kFormWidth-250,28,kAchievementSearch);SendMessageW(achievement_search,EM_SETLIMITTEXT,160,0);
+    achievement_filter=add(L"COMBOBOX",WS_TABSTOP|CBS_DROPDOWNLIST,kFormWidth-190,88,190,180,kAchievementFilter);
     WNDCLASSW list_class{};list_class.lpfnWndProc=DefWindowProcW;list_class.hInstance=GetModuleHandleW(nullptr);list_class.lpszClassName=L"MotoGPAchievementList";list_class.hCursor=LoadCursorW(nullptr,IDC_ARROW);
     if(!GetClassInfoW(list_class.hInstance,list_class.lpszClassName,&list_class)&&!RegisterClassW(&list_class))throw std::runtime_error("Cannot register achievement list window");
-    achievement_list=add(L"MotoGPAchievementList",WS_TABSTOP,0,136,494,152,kAchievementList);
+    achievement_list=add(L"MotoGPAchievementList",WS_TABSTOP,0,126,kFormWidth,kPageHeight-150,kAchievementList);
     SetWindowSubclass(achievement_list,AchievementListProc,1,reinterpret_cast<DWORD_PTR>(this));
-    achievement_note=add(L"STATIC",0,0,296,494,22,0);
+    achievement_note=add(L"STATIC",0,0,kPageHeight-18,kFormWidth,18,0);
+    SendMessageW(achievement_note,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     page_extent[5]=kPageHeight;
   }
   fs::path AchievementRoot()const{return achievements::UserRoot(exe,Get(config.table,"user_data_root",std::string{}));}
@@ -68,7 +69,7 @@
       const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):T(L"Progress is read from your game save. F7 opens achievements in game.",L"İlerleme oyun kaydından okunur. Oyun içinde başarımlar için F7.");
       if(Text(achievement_note)!=note)SetWindowTextW(achievement_note,note);
       if(before_catalog!=catalog_key||before_error!=catalog_error||before_unlocks!=unlocks||before_known!=unlocks_known||before_stale!=unlocks_stale){
-      RECT summary{0,0,S(494),S(60)};InvalidateRect(page_content,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}
+      RECT summary{0,0,S(kFormWidth),S(60)};InvalidateRect(page_content,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}
     }catch(const std::exception& e){catalog_error=ErrorDetails(e);if(before_error!=catalog_error)InvalidateRect(achievement_list,nullptr,FALSE);}
   }
   void SaveAchievementOption(int id){
@@ -109,11 +110,11 @@
     auto text=ready?std::to_wstring(earned)+L" / "+std::to_wstring(catalog.entries.size())+T(L" unlocked",L" kazanıldı"):std::wstring(T(L"Loading your achievements...",L"Başarımlar yükleniyor..."));
     if(!unlocks_known&&unlocks_stale)text=T(L"Achievement progress unavailable",L"Başarım ilerlemesi okunamıyor");
     if(!catalog_error.empty())text=T(L"Achievement catalog unavailable",L"Başarım listesi yüklenemedi");
-    RECT r{0,0,S(390),S(22)};DrawTextW(dc,text.c_str(),-1,&r,DT_SINGLELINE|DT_NOPREFIX);
-    SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={0,S(24),S(390),S(45)};
+    RECT r{0,0,S(kFormWidth-104),S(22)};DrawTextW(dc,text.c_str(),-1,&r,DT_SINGLELINE|DT_NOPREFIX);
+    SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={0,S(24),S(kFormWidth-104),S(45)};
     text=ready?std::to_wstring(score)+L" / "+std::to_wstring(total)+L" G":T(L"Reading your existing game data",L"Mevcut oyun verileri okunuyor");DrawTextW(dc,text.c_str(),-1,&r,DT_SINGLELINE|DT_NOPREFIX);
-    if(ready){SelectObject(dc,heading);SetTextColor(dc,kAccent);r={S(398),0,S(494),S(44)};text=std::to_wstring(earned*100/catalog.entries.size())+L"%";DrawTextW(dc,text.c_str(),-1,&r,DT_RIGHT|DT_SINGLELINE);}
-    RECT track{0,S(50),S(494),S(54)};Rounded(dc,track,kField,kField,6);
+    if(ready){SelectObject(dc,heading);SetTextColor(dc,kAccent);r={S(kFormWidth-96),0,S(kFormWidth),S(44)};text=std::to_wstring(earned*100/catalog.entries.size())+L"%";DrawTextW(dc,text.c_str(),-1,&r,DT_RIGHT|DT_SINGLELINE);}
+    RECT track{0,S(50),S(kFormWidth),S(54)};Rounded(dc,track,kField,kField,6);
     if(ready&&earned){track.right=track.left+static_cast<LONG>((track.right-track.left)*earned/catalog.entries.size());Rounded(dc,track,kAccent,kAccent,6);}
   }
   void PaintAchievementList(HDC target){
@@ -121,22 +122,22 @@
     FillRect(dc,&client,card);SetBkMode(dc,TRANSPARENT);
     const int bitmap_width=client.right;client.right-=S(20);
     const auto description=[&](size_t index)->std::wstring{const auto& info=catalog.entries[index].info;return Wide(AchievementEarned(info.id)||info.unachieved_description.empty()?info.description:info.unachieved_description);};
-    auto height=[&](size_t index){SelectObject(dc,font);RECT r{0,0,std::max<LONG>(S(80),client.right-S(205)),0};auto text=description(index);DrawTextW(dc,text.c_str(),-1,&r,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);return std::max<int>(S(98),r.bottom+S(58));};
-    int total=0;for(auto index:achievement_rows)total+=height(index)+S(8);
+    auto height=[&](size_t index){SelectObject(dc,small_font);RECT r{0,0,std::max<LONG>(S(80),client.right-S(172)),0};auto text=description(index);DrawTextW(dc,text.c_str(),-1,&r,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);return std::max<int>(S(76),r.bottom+S(42));};
+    int total=0;for(auto index:achievement_rows)total+=height(index)+S(6);
     achievement_scroll=std::clamp(achievement_scroll,0,std::max<int>(0,total-client.bottom));
     achievement_total=total;
     int y=-achievement_scroll;
     for(auto index:achievement_rows){const int h=height(index);if(y+h>0&&y<client.bottom){
       const auto& info=catalog.entries[index].info;const bool earned=AchievementEarned(info.id);
       RECT row{0,y,client.right-S(4),y+h};Rounded(dc,row,kField,earned?RGB(101,78,41):kBorder,10);
-      RECT icon{S(14),y+S(21),S(64),y+S(71)};
+      RECT icon{S(12),y+S(18),S(52),y+S(58)};
       if(index<achievement_icons.size()&&achievement_icons[index]){Gdiplus::Graphics g(dc);Gdiplus::ColorMatrix matrix={1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,earned?1.f:.38f,0,0,0,0,0,1};Gdiplus::ImageAttributes attr;attr.SetColorMatrix(&matrix);auto& image=*achievement_icons[index];g.DrawImage(&image,Gdiplus::Rect(icon.left,icon.top,icon.right-icon.left,icon.bottom-icon.top),0,0,image.GetWidth(),image.GetHeight(),Gdiplus::UnitPixel,&attr);}
       else {Rounded(dc,icon,kCard,kBorder,8);SelectObject(dc,heading);SetTextColor(dc,earned?kAccent:kMuted);DrawTextW(dc,L"★",-1,&icon,DT_CENTER|DT_VCENTER|DT_SINGLELINE);}
-      SelectObject(dc,bold);SetTextColor(dc,kText);RECT r{S(82),y+S(13),client.right-S(117),y+S(37)};auto label=Wide(info.label);DrawTextW(dc,label.c_str(),-1,&r,DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
-      SelectObject(dc,font);SetTextColor(dc,kMuted);r={S(82),y+S(41),client.right-S(117),y+h-S(9)};auto text=description(index);DrawTextW(dc,text.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX);
-      SelectObject(dc,bold);SetTextColor(dc,earned?kAccent:kMuted);r={client.right-S(108),y+S(20),client.right-S(18),y+S(44)};text=std::to_wstring(info.gamerscore)+L" G";DrawTextW(dc,text.c_str(),-1,&r,DT_RIGHT|DT_SINGLELINE);
-      SelectObject(dc,small_font);r.top=y+S(51);r.bottom=y+S(76);DrawTextW(dc,T(!unlocks_known?L"UNKNOWN":earned?L"UNLOCKED":L"LOCKED",!unlocks_known?L"BİLİNMİYOR":earned?L"KAZANILDI":L"KİLİTLİ"),-1,&r,DT_RIGHT|DT_SINGLELINE);
-    }y+=h+S(8);}
+      SelectObject(dc,bold);SetTextColor(dc,kText);RECT r{S(68),y+S(9),client.right-S(104),y+S(30)};auto label=Wide(info.label);DrawTextW(dc,label.c_str(),-1,&r,DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
+      SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(68),y+S(34),client.right-S(104),y+h-S(8)};auto text=description(index);DrawTextW(dc,text.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX);
+      SelectObject(dc,bold);SetTextColor(dc,earned?kAccent:kMuted);r={client.right-S(94),y+S(12),client.right-S(14),y+S(34)};text=std::to_wstring(info.gamerscore)+L" G";DrawTextW(dc,text.c_str(),-1,&r,DT_RIGHT|DT_SINGLELINE);
+      SelectObject(dc,small_font);r.top=y+S(43);r.bottom=y+S(65);DrawTextW(dc,T(!unlocks_known?L"UNKNOWN":earned?L"UNLOCKED":L"LOCKED",!unlocks_known?L"BİLİNMİYOR":earned?L"KAZANILDI":L"KİLİTLİ"),-1,&r,DT_RIGHT|DT_SINGLELINE);
+    }y+=h+S(6);}
     if(achievement_rows.empty()){SelectObject(dc,font);SetTextColor(dc,kMuted);RECT r{S(18),S(25),client.right-S(24),client.bottom-S(18)};
       const auto message=!catalog_error.empty()?catalog_error:catalog.entries.empty()?std::wstring(T(L"Loading achievements from your game folder...",L"Başarımlar oyun klasöründen yükleniyor...")):std::wstring(T(L"No achievements match this filter.",L"Bu filtreye uygun başarım bulunamadı."));DrawTextW(dc,message.c_str(),-1,&r,DT_WORDBREAK|DT_NOPREFIX);}
     PaintRail(dc,achievement_list,achievement_total,client.bottom,achievement_scroll);

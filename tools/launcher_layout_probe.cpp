@@ -59,7 +59,7 @@ void CheckPolish(App& app){
   CheckUI(GetGlyphIndicesW(dc,turkish,std::size(turkish)-1,glyphs,GGI_MARK_NONEXISTING_GLYPHS)!=GDI_ERROR,"Embedded font can be queried for Turkish coverage");
   for(auto glyph:glyphs)CheckUI(glyph!=0xFFFF,"All Turkish letters have real glyphs in the launcher font");
   SelectObject(dc,app.bold);int previous_end=-1,first_gap=-1;RECT first{},last{};
-  for(int i:{3,0,4,1,2,5}){
+  for(int i:{3,0,4,1,2,5,6}){
     RECT r;GetWindowRect(app.navigation[i],&r);MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
     SIZE extent{};const auto text=app.Text(app.navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);
     CheckUI(extent.cx+app.S(8)<=r.right-r.left,"Every tab fits its real font without truncation");
@@ -68,8 +68,10 @@ void CheckPolish(App& app){
     else first=r;
     previous_end=text_start+extent.cx;last=r;
   }
-  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The six tabs stay within their content column");
+  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The seven tabs stay within their content column");
   CheckUI(std::abs(first.left+last.right-app.S(App::kPageX)*2-app.S(App::kPageWidth))<=1,"Navigation is centered as one group");
+  const std::array<int,7> order{3,0,4,1,2,5,6};
+  for(size_t i=0;i+1<order.size();++i)CheckUI(GetNextDlgTabItem(app.window,app.navigation[order[i]],FALSE)==app.navigation[order[i+1]],"Keyboard tab order follows the visible navigation order");
   SelectObject(dc,old);
 
   const auto a=app.CaptionBounds();const auto baseline=CreateCompatibleDC(dc),paint=CreateCompatibleDC(dc);
@@ -258,6 +260,7 @@ int wmain(int argc,wchar_t** argv){
         for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
           app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+          if(page==5){RECT list;GetClientRect(app.achievement_list,&list);CheckUI(list.bottom>=4*app.S(76)+3*app.S(6),"Achievement viewport fits at least four complete compact cards");}
           if(scale==1. || (scale==.75 && tr && page==2)){
             const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);if(scale==1.&&page==5&&!tr)Screenshot(window,pictures/L"launcher-achievements-full-window.bmp",true);
@@ -277,15 +280,15 @@ int wmain(int argc,wchar_t** argv){
       app.ShowPage(3);app.ScrollPage(0);
       const auto selected=SendMessageW(app.game_language,CB_GETCURSEL,0,0);
       SendMessageW(app.game_language,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);
-      CheckUI(SendMessageW(app.game_language,CB_GETCURSEL,0,0)==selected&&app.page_scroll[3]>0,"Wheel over closed Game language scrolls the page without changing the language");
+      CheckUI(SendMessageW(app.game_language,CB_GETCURSEL,0,0)==selected&&app.page_scroll[3]==0,"Wheel over closed Game language cannot change its value on a page that fits");
       SendMessageW(app.game_language,WM_MOUSEWHEEL,MAKEWPARAM(0,WHEEL_DELTA),0);
       CheckUI(SendMessageW(app.game_language,CB_GETCURSEL,0,0)==selected&&app.page_scroll[3]==0,"Reverse wheel preserves the selected language too");
-      for(auto control:{app.effect,app.fullscreen,app.prompt_style,app.fps_limit,app.lan_enabled}){
+      for(auto control:{app.effect,app.fullscreen,app.prompt_style,app.fps_limit}){
         const auto saved=SendMessageW(control,CB_GETCURSEL,0,0);SendMessageW(control,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(saved==SendMessageW(control,CB_GETCURSEL,0,0),"A closed selector cannot be changed accidentally by the wheel");
       }
-      app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+      app.ShowPage(0);app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
       CheckUI(!(GetWindowLongPtrW(app.page_view,GWL_STYLE)&WS_VSCROLL),"The page has no native scrollbar that could repaint white");
-      const auto rail=app.Rail(app.page_view,app.page_extent[3],App::kPageHeight,0);
+      const auto rail=app.Rail(app.page_view,app.page_extent[0],App::kPageHeight,0);
       for(int i=0;i<12;++i){SendMessageW(app.page_view,WM_NCPAINT,1,0);InvalidateRect(window,nullptr,FALSE);UpdateWindow(window);UpdateWindow(app.page_view);const auto dc=GetDC(app.page_view);CheckUI(GetPixel(dc,rail.track.left,rail.track.bottom-1)==kBackground,"Parent/nonclient repaint never turns the scroll rail white");ReleaseDC(app.page_view,dc);}
     }
     { // Regressions from the user's native Windows video.
@@ -302,12 +305,12 @@ int wmain(int argc,wchar_t** argv){
           CheckUI(pixel!=CLR_INVALID&&!(GetRValue(pixel)>225&&GetGValue(pixel)>225&&GetBValue(pixel)>225),"Visible fields stay dark after repeated scroll frames");
         }
       }
-      app.ScrollPage(0);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
-      ClickControl(app.effect,app.S(10));
-      CheckUI(app.page_scroll[0]==0,"Clicking a low visible selector does not jump the page");
-      CheckUI(SendMessageW(app.effect,CB_GETDROPPEDSTATE,0,0),"The partially visible bottom selector opens on the first real mouse click");
-      SendMessageW(app.effect,CB_SHOWDROPDOWN,FALSE,0);SetFocus(app.navigation[0]);SetFocus(app.effect);
-      CheckUI(app.page_scroll[0]>0,"Keyboard focus still reveals the complete selector");
+      app.ScrollPage(76);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
+      ClickControl(app.aspect,app.S(10));
+      CheckUI(app.page_scroll[0]==76,"Clicking a low visible selector does not jump the page");
+      CheckUI(SendMessageW(app.aspect,CB_GETDROPPEDSTATE,0,0),"The partially visible bottom selector opens on the first real mouse click");
+      SendMessageW(app.aspect,CB_SHOWDROPDOWN,FALSE,0);SetFocus(app.navigation[0]);SetFocus(app.aspect);
+      CheckUI(app.page_scroll[0]>76,"Keyboard focus still reveals the complete selector");
       app.ShowPage(3);app.ScrollPage(0);const auto generation=app.localization_generation;toml::table before;app.GetControls().Store(before);
       SendMessageW(app.language,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);PumpUI();
       CheckUI(!app.turkish&&app.localization_generation==generation,"An open language popup is not rebuilt inside its native selection transaction");
@@ -338,18 +341,26 @@ int wmain(int argc,wchar_t** argv){
     }
     {auto initial=app.settings.adaptive;
       for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
-        auto dialog_font=CreateFontW(-static_cast<int>(15*scale),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
+        auto dialog_font=CreateFontW(-static_cast<int>(14*scale+.5),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Open Sans");
         struct FontCleanup{HFONT font;~FontCleanup(){DeleteObject(font);}} font_cleanup{dialog_font};
         AdaptiveDialog dialog(app.window,dialog_font,tr,scale,app.settings.adaptive);auto modal=dialog.Create();
         CheckUI(modal&&GetDlgItem(modal,100)&&GetDlgItem(modal,110)&&GetDlgItem(modal,120),"DualSense modal creates master and independent right/left controls");
-        if(scale==1.){ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);Screenshot(modal,pictures/(tr?"dualsense-tr.bmp":"dualsense-en.bmp"),true);}
+        {NMCUSTOMDRAW draw{};draw.hdr.hwndFrom=GetDlgItem(modal,100);draw.hdr.code=NM_CUSTOMDRAW;draw.dwDrawStage=CDDS_PREPAINT;
+          CheckUI(SendMessageW(modal,WM_NOTIFY,100,reinterpret_cast<LPARAM>(&draw))!=CDRF_SKIPDEFAULT,"The master checkbox keeps its button painter on themed Windows");}
+        if(scale==1.){ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);Screenshot(modal,pictures/(tr?"dualsense-tr.bmp":"dualsense-en.bmp"));}
         RECT client;GetClientRect(modal,&client);
         for(auto id:{100,110,111,112,113,114,115,116,120,121,122,123,124,125,126,IDOK,IDCANCEL}){
           RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);
           CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"DualSense controls fit scaled modal");
         }
         {auto selector=GetDlgItem(modal,110);const auto mode=SendMessageW(selector,CB_GETCURSEL,0,0);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed DualSense selectors also ignore the mouse wheel");}
-        SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendDlgItemMessageW(modal,113,TBM_SETPOS,TRUE,8);
+        CheckUI(!IsWindowEnabled(GetDlgItem(modal,110))&&!IsWindowEnabled(GetDlgItem(modal,111)),"Disabled master disables resistance editing");
+        SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(100,BN_CLICKED),0);
+        CheckUI(IsWindowEnabled(GetDlgItem(modal,112))&&!IsWindowEnabled(GetDlgItem(modal,122)),"Only a resistance-zone mode enables its end-position slider");
+        SendDlgItemMessageW(modal,110,CB_SETCURSEL,1,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(110,CBN_SELCHANGE),0);CheckUI(!IsWindowEnabled(GetDlgItem(modal,112))&&IsWindowEnabled(GetDlgItem(modal,111)),"Constant resistance ignores end position but keeps start available");
+        SendDlgItemMessageW(modal,110,CB_SETCURSEL,2,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(110,CBN_SELCHANGE),0);
+        for(int id:{110,120}){wchar_t label[128]{};SendDlgItemMessageW(modal,id,CB_GETLBTEXT,2,reinterpret_cast<LPARAM>(label));CheckUI(std::wstring_view(label).find(L"Weapon")==std::wstring_view::npos,"Racing UI exposes resistance-zone terminology instead of Weapon");}
+        SendDlgItemMessageW(modal,113,TBM_SETPOS,TRUE,8);
         CheckUI(dialog.Commit()&&app.settings.adaptive.enabled&&app.settings.adaptive.right.strength==8,"Modal commits all trigger controls");
         SendDlgItemMessageW(modal,111,TBM_SETPOS,TRUE,9);
         CheckUI(!dialog.Commit()&&app.settings.adaptive.right.start==3,"Invalid interval cannot partially replace pending launcher profile");
@@ -359,12 +370,35 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!dialog.window&&app.settings.adaptive==initial,"Cancel preserves all pending trigger values");
     }
     app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
-    for(bool tr:{false,true})for(int mode=0;mode<3;++mode){
-      app.turkish=tr;app.Localize();SendMessageW(app.lan_enabled,CB_SETCURSEL,mode,0);app.Command(kLanEnabled,CBN_SELCHANGE);
-      SetWindowTextW(app.online_server,L"https://play.example.com");const auto actual=app.GetControls();
-      CheckUI(actual.network_mode==(mode==2?"online":mode==1?"lan":"offline"),"Actual mode selector preserves all three distinct values");
-      CheckUI(bool(IsWindowEnabled(app.online_server))==(mode==2)&&bool(IsWindowEnabled(app.lan_adapter))==(mode==1)&&bool(IsWindowEnabled(app.lan_host))==(mode==1),"Only the selected connection mode's fields are enabled");
-      app.Localize();CheckUI(app.GetControls().network_mode==actual.network_mode,"Launcher language change preserves network mode");
+    { // The seventh tab is an owned editor, not a seventh scrolling page.
+      const auto initial=app.settings;const int page=app.current_page;
+      for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
+        const auto dialog_font=CreateFontW(-static_cast<int>(14*scale+.5),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Open Sans");
+        struct FontCleanup{HFONT font;~FontCleanup(){DeleteObject(font);}} font_cleanup{dialog_font};
+        NetworkDialog dialog(window,dialog_font,tr,scale,app.settings);const auto modal=dialog.Create();ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);
+        CheckUI(modal&&GetWindow(modal,GW_OWNER)==window,"Multiplayer creates an owned separate window");
+        RECT client;GetClientRect(modal,&client);
+        for(int id:std::array<int,10>{kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer,170,IDOK,IDCANCEL}){RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Multiplayer fields fit the modal at each DPI");}
+        for(int mode=0;mode<3;++mode){
+          SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,mode,0);dialog.UpdateMode();SetDlgItemTextW(modal,kOnlineServer,L"https://play.example.com");
+          const auto selector=GetDlgItem(modal,kLanEnabled);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed multiplayer selector ignores the mouse wheel");
+          CheckUI(bool(IsWindowEnabled(GetDlgItem(modal,kOnlineServer)))==(mode==2)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanAdapter)))==(mode==1)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanHost)))==(mode==1),"Each connection mode enables only its relevant fields");
+          CheckUI(dialog.Commit()&&app.GetControls().network_mode==std::array{"offline","lan","online"}[mode],"Multiplayer Apply preserves all three real connection modes");
+          const auto current=app.GetControls();toml::table saved;current.Store(saved);const auto loaded=Settings::Load(saved);
+          CheckUI(loaded.network_mode==current.network_mode&&loaded.online_server==current.online_server,"Applied multiplayer values survive normal launcher serialization");
+          const auto arguments=Arguments(game,current,saved);CheckUI(std::count(arguments.begin(),arguments.end(),L"--network_mode="+Wide(current.network_mode))==1,"Applied multiplayer mode is forwarded to the game once");
+          if(scale==1.&&mode==1)Screenshot(modal,pictures/(tr?L"multiplayer-turkish.bmp":L"multiplayer-english.bmp"));
+        }
+        SetDlgItemTextW(modal,kOnlineServer,L"invalid server");const auto before=app.GetControls().online_server;CheckUI(!dialog.Commit()&&app.GetControls().online_server==before,"Invalid server cannot partially replace accepted network settings");
+        SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,1,0);SetDlgItemTextW(modal,kLanHost,L"999.1.1.1");CheckUI(!dialog.Commit(),"Invalid LAN IPv4 is rejected by existing validation");
+        SendMessageW(modal,WM_COMMAND,IDCANCEL,0);CheckUI(!dialog.window&&app.current_page==page,"Cancelling the network dialog preserves the current launcher page");app.settings=initial;
+      }
+      NetworkDialog dialog(window,app.font,false,1,app.settings);auto modal=dialog.Create();SetDlgItemTextW(modal,kLanPlayer,L"Not applied");SendMessageW(modal,WM_COMMAND,IDCANCEL,0);CheckUI(app.settings.lan_player_name==initial.lan_player_name,"Cancel leaves pending network edits untouched");
+      CheckUI(!GetDlgItem(window,kLanEnabled)&&!GetDlgItem(app.page_content,kLanEnabled),"Multiplayer controls no longer occupy General");
+      std::atomic<bool> found=false;
+      std::thread dismiss([&]{for(int i=0;i<500;++i){if(auto dialog=FindWindowW(L"MotoGPNetworkSettings",nullptr)){found=true;PostMessageW(dialog,WM_COMMAND,IDCANCEL,0);return;}Sleep(10);}});
+      SendMessageW(app.navigation[6],BM_CLICK,0,0);dismiss.join();
+      CheckUI(found&&IsWindowEnabled(window)&&app.current_page==page&&!FindWindowW(L"MotoGPNetworkSettings",nullptr),"The real Multiplayer tab opens and closes its owned modal without changing the current page");
     }
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
@@ -464,7 +498,7 @@ int wmain(int argc,wchar_t** argv){
       std::wstring command=Quote((ExecutableFolder()/L"launcher_layout_probe.exe").wstring())+L" --fixture-child";
       STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION child{};
       CheckUI(CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&startup,&child),"Start actual launcher child fixture");
-      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);
+      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);CheckUI(!IsWindowEnabled(app.navigation[6]),"Multiplayer launch-time options are disabled while a game runs");
       Config external(app.config.path);Put(external.table,"audio_master_volume",58);Put(external.table,"fps_limit",165);Put(external.table,"keybind_a",std::string("Ctrl+J"));external.Save();
       CheckUI(WaitForSingleObject(app.process,10000)==WAIT_OBJECT_0,"Child fixture exited");app.Poll();
       CheckUI(!app.process&&app.GetControls().volume==58&&app.GetControls().fps_limit==165&&app.GetControls().bindings[0]=="Ctrl+J","Child exit reloads live values into actual launcher controls");

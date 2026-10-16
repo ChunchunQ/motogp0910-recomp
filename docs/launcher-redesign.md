@@ -1,12 +1,13 @@
-# Compact Racing Lines launcher
+# Racing Lines launcher
 
 The user selected concept B, with a further requirement: minimize and close must
 sit directly over the background artwork, without a persistent title-bar tile.
-The production launcher now uses that layout, with a **940 × 578 logical-pixel**
-window at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
+The original compact layout used a **940 × 578 logical-pixel** window. The
+current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
 
-- Six horizontal tabs replace the sidebar: General, Graphics, Advanced, Audio,
-  Controls and Achievements. General remains the startup page.
+- General, Graphics, Advanced, Audio, Controls and Achievements are regular pages.
+  Multiplayer is a seventh tab that opens a separate owned dialog. General
+  remains the startup page.
 - The supplied cover inspired a separate Racing Lines background embedded in the
   launcher, rather than an external image that can disappear from the package.
   The left surface stays opaque for legibility; artwork continues behind both
@@ -152,10 +153,72 @@ their follow-up: Wine passing does not prove identical Windows compositor behavi
 [Current compiled launcher](screenshots/launcher-racing-lines-general.png) and
 [close-button hover](screenshots/launcher-racing-lines-caption-hover.png).
 
-Current package: `downloads/MotoGP0910-Windows-x64-launcher-polish.zip`.
+Previous package: `downloads/MotoGP0910-Windows-x64-launcher-polish.zip`.
 SHA-256: `7fc35e1480d7a59096b0d442dc7f41b1ccb222a837761863333801cb732a65da`.
 Archive CRC and contents were checked; compared with the previous hotfix, only
 `motogp0910-launcher.exe` changed. The game executable, pinned SDK runtime DLLs,
 game resources, controller mappings and crash-report map are byte-identical.
 No README, SHA256SUMS, sidecar licenses, personal configuration or game files
 are included.
+
+
+## Expanded layout and multiplayer editor
+
+The earlier achievement viewport was only 152 pixels high with cards at least
+98 pixels tall. It could show roughly one full achievement. The launcher now
+uses a **1040 × 732** window and a **610 × 480** settings viewport. Achievement
+cards use a 76-pixel minimum with measured wrapping for longer descriptions,
+40-pixel icons and a 330-pixel list. Four normal cards fit completely at once.
+The description uses Open Sans 12; titles stay semibold 14. Longer text still
+expands the row instead of being cut off. The original filters, real unlock
+save, sounds, popup preferences and independent scroll rail are retained.
+
+Seven measured navigation labels fit in the wider settings column, with visual
+creation order matching keyboard Tab order. The background preserves its source
+aspect ratio and crops from the left; its soft fade follows the content edge.
+Small desktops still fit the whole launcher automatically.
+
+**Multiplayer** opens an owned **640 × 548** client window. The mode, player/room
+names, automatic LAN local/host IP fields and community HTTPS URL move out of
+General. Apply validates the same supported inputs and changes only pending
+network settings. Cancel changes nothing. Save / PLAY stores the existing keys
+and forwards the existing game arguments. Unrelated pending graphics/input
+settings stay intact. The modal is disabled while a game is running, since
+these options apply on the next launch. LAN / Radmin discovery and IP fallback
+stay available alongside Offline and Online; no transport or server logic changes.
+
+Graphics puts Upscaler sharpness immediately below Upscaling / sharpening and
+FSR quality, above VSync, aspect ratio and other display toggles. It is visible
+in the initial viewport, and explains how to enable it when Bilinear is selected.
+
+The adaptive trigger audit confirms 0x02 is section resistance. Launcher and F1
+now use Constant resistance / Resistance zone terminology. Mode-specific unused
+fields are disabled, while config identifiers and physical effect bytes retain
+compatibility. The explicit fixed-resistance explanation avoids implying a
+speed/RPM-driven racing effect. See [trigger scope](adaptive-triggers.md).
+
+Compiled Windows UI screenshots: [achievements](screenshots/launcher-racing-lines-achievements.png),
+[graphics](screenshots/launcher-racing-lines-graphics.png),
+[multiplayer](screenshots/launcher-racing-lines-multiplayer.png) and
+[trigger editor](screenshots/launcher-racing-lines-triggers.png).
+
+The final Windows PE / Wine run passed **90,877 launcher UI checks** across
+English/Turkish and 75/100/125/150% scaling. New regressions cover four-card
+list capacity, seven-tab spacing and keyboard order, the real Multiplayer tab
+opening/closing its owned modal, all three modes, retained settings, validation
+failures, disabled unrelated fields, Cancel, serialization and exact outbound
+mode arguments. Mode-specific trigger fields and themed Windows checkbox
+custom-draw routing are covered too. Prior rapid scrolling, first mouse click,
+closed-selector wheel, language, achievement and file verification checks pass.
+The 120 rendered tab switches took 2,045 ms total (slowest 42 ms) in the fixture.
+
+The actual runtime's **200 adaptive trigger software/transport checks** and
+**345 live setting, input, persistence and UI checks** also passed. Packet
+encoding and physical parameters are unchanged. Physical DualSense feel and
+native Windows desktop/compositor behavior remain outside this cloud test.
+
+Current package: `downloads/MotoGP0910-Windows-x64-launcher-expanded.zip`.
+SHA-256: `dbf44a117a39f827f72fa34d1f6f985ee1d4bb03ed3857ff4c5cac6534881f59`.
+The package omits README, SHA256SUMS and sidecar licenses. Archive checks confirm
+that only the launcher, game EXE and matching crash map differ from the previous
+package. Pinned runtime DLLs and all external game/UI resources remain identical.

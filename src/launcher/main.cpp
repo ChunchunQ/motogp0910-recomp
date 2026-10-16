@@ -3,6 +3,7 @@
 #include "notices_dialog.h"
 #include "scroll_rail.h"
 #include "adaptive_triggers_dialog.h"
+#include "network_dialog.h"
 #include "hardware.h"
 #include "achievements.h"
 #include "../achievement_preferences.h"
@@ -22,7 +23,7 @@
 
 using namespace launcher;
 namespace {
-constexpr int kWidth=940,kHeight=550,kCaptionHeight=28;
+constexpr int kWidth=1040,kHeight=704,kCaptionHeight=28;
 constexpr UINT kApplyLauncherLanguage=WM_APP+23;
 constexpr COLORREF kBackground=RGB(13,15,20),kSidebar=RGB(19,21,27),kCard=RGB(23,26,33),
     kField=RGB(32,36,45),kText=RGB(242,244,247),kMuted=RGB(157,165,178),
@@ -46,9 +47,9 @@ struct App {
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},tooltip{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},fsr_notice{},aspect{};
-  std::array<HWND,6> navigation{};
+  std::array<HWND,7> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},lan_enabled{},lan_player{},lan_room{},lan_adapter{},lan_host{},online_server{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -155,12 +156,6 @@ struct App {
     for(auto& item:items)SendMessageW(c,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(item.c_str()));
     SendMessageW(c,CB_SETCURSEL,index<0?0:index,0);
   }
-  void NetworkControls(){
-    const auto mode=SendMessageW(lan_enabled,CB_GETCURSEL,0,0);
-    for(auto control:{lan_player,lan_room})EnableWindow(control,!process && mode>0);
-    for(auto control:{lan_adapter,lan_host})EnableWindow(control,!process && mode==1);
-    EnableWindow(online_server,!process && mode==2);
-  }
   void CancelCapture(){
     if(!capturing)return;
     capturing=false;if(binding_buttons[binding_index])SetWindowTextW(binding_buttons[binding_index],L"…");
@@ -186,7 +181,7 @@ struct App {
     const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
     const bool temporal=selected==3 || selected==4;
     if(fsr_quality)EnableWindow(fsr_quality,temporal && !process);
-    if(fsr_notice)SetWindowTextW(fsr_notice,temporal?T(L"Experimental: neutral motion/depth inputs.\nMay fall back to FSR 1; no frame generation.",L"Deneysel: nötr hareket/derinlik verileri.\nFSR 1’e dönebilir; kare üretimi yok."):T(L"Higher resolutions use more GPU memory.",L"Yüksek çözünürlük daha fazla GPU belleği kullanır."));
+    if(fsr_notice)SetWindowTextW(fsr_notice,temporal?T(L"Experimental: neutral motion/depth inputs.\nMay fall back to FSR 1; no frame generation.",L"Deneysel: nötr hareket/derinlik verileri.\nFSR 1’e dönebilir; kare üretimi yok."):selected==0?T(L"Choose AMD FSR or CAS above to adjust sharpness.",L"Keskinliği ayarlamak için yukarıdan AMD FSR veya CAS seç."):T(L"Sharpness applies to the selected upscaler / sharpener.",L"Keskinlik, seçili ölçekleyici / keskinleştiriciye uygulanır."));
     EnableWindow(sharpness,!process && SendMessageW(effect,CB_GETCURSEL,0,0)!=0);
     SetWindowTextW(sharp_value,(std::to_wstring(SendMessageW(sharpness,TBM_GETPOS,0,0))+L"%").c_str());
   }
@@ -226,7 +221,7 @@ struct App {
         current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):current_page==4?T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."):T(L"Your milestones. Every race counts.",L"Her yarış, yeni bir hedef."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
+    for(int i=0;i<7;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):i==5?T(L"Achievements",L"Başarımlar"):T(L"Multiplayer",L"Çok oyunculu"));
     LayoutNavigation();
     LocalizeAchievements();
     FillCombo(fullscreen,{T(L"Fullscreen",L"Tam ekran"),T(L"Borderless",L"Kenarlıksız"),T(L"Windowed",L"Pencereli")});SetWindowTextW(vsync,L"VSync");
@@ -237,7 +232,6 @@ struct App {
     SetWindowTextW(adaptive_triggers,T(L"DualSense adaptive triggers (Experimental)…",L"DualSense adaptif tetikler (Deneysel)…"));
     SetWindowTextW(keyboard,T(L"Enable keyboard",L"Klavyeyi etkinleştir"));
     SetWindowTextW(crash_diagnostics,T(L"Extended crash diagnostics",L"Gelişmiş çökme tanılaması"));
-    FillCombo(lan_enabled,{T(L"Offline",L"Çevrimdışı"),L"LAN / Radmin",T(L"Online (Experimental)",L"Çevrimiçi (Deneysel)")});
     SetWindowTextW(mute,T(L"Mute game audio",L"Oyun sesini kapat"));
     SetWindowTextW(save,T(L"Save",L"Kaydet"));
     SetWindowTextW(defaults,T(L"Defaults",L"Varsayılan"));
@@ -268,7 +262,7 @@ struct App {
       SendMessageW(size,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
     SendMessageW(size,CB_SETCURSEL,selected<0?0:selected,0);
     SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();RefreshRates();
-    NetworkControls();RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   void ApplyLanguage(){
     language_pending=false;
@@ -297,11 +291,7 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
-    SendMessageW(lan_enabled,CB_SETCURSEL,s.network_mode=="online"?2:s.network_mode=="lan"?1:0,0);
-    SetWindowTextW(online_server,Wide(s.online_server).c_str());
-    SetWindowTextW(lan_player,Wide(s.lan_player_name).c_str());SetWindowTextW(lan_room,Wide(s.lan_room_name).c_str());
-    SetWindowTextW(lan_adapter,Wide(s.lan_bind_ip).c_str());SetWindowTextW(lan_host,Wide(s.lan_host_ip).c_str());
-    NetworkControls();
+    NetworkDialog::CopyNetwork(settings,s);
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
@@ -344,9 +334,6 @@ struct App {
   }
   Settings GetControls()const{
     Settings s=settings;
-    s.network_mode=SendMessageW(lan_enabled,CB_GETCURSEL,0,0)==2?"online":SendMessageW(lan_enabled,CB_GETCURSEL,0,0)==1?"lan":"offline";
-    s.lan_enabled=s.network_mode=="lan";s.online_server=Utf8(Text(online_server));s.lan_player_name=Utf8(Text(lan_player));s.lan_room_name=Utf8(Text(lan_room));
-    s.lan_bind_ip=Utf8(Text(lan_adapter));s.lan_host_ip=Utf8(Text(lan_host));
     const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);
@@ -447,9 +434,9 @@ struct App {
     SelectObject(dc,small_font);SetTextColor(dc,kMuted);r={S(30),S(55+kCaptionHeight),S(520),S(76+kCaptionHeight)};
     DrawTextW(dc,T(L"P C   R E C O M P I L A T I O N",L"P C   Y E N İ D E N   D E R L E M E"),-1,&r,DT_LEFT|DT_SINGLELINE|DT_NOPREFIX);
     const auto pen=CreatePen(PS_SOLID,S(1),kBorder);auto old_pen=SelectObject(dc,pen);
-    MoveToEx(dc,S(28),S(129+kCaptionHeight),nullptr);LineTo(dc,S(548),S(129+kCaptionHeight));SelectObject(dc,old_pen);DeleteObject(pen);
+    MoveToEx(dc,S(28),S(129+kCaptionHeight),nullptr);LineTo(dc,S(kPageX+kPageWidth),S(129+kCaptionHeight));SelectObject(dc,old_pen);DeleteObject(pen);
     const auto dot=CreateSolidBrush(status_positive?RGB(80,198,112):kMuted);auto old_brush=SelectObject(dc,dot);auto old_dot_pen=SelectObject(dc,GetStockObject(NULL_PEN));
-    Ellipse(dc,S(28),S(475+kCaptionHeight),S(35),S(482+kCaptionHeight));SelectObject(dc,old_brush);SelectObject(dc,old_dot_pen);DeleteObject(dot);
+    Ellipse(dc,S(28),S(kStatusY+5+kCaptionHeight),S(35),S(kStatusY+12+kCaptionHeight));SelectObject(dc,old_brush);SelectObject(dc,old_dot_pen);DeleteObject(dot);
     DrawCaption(dc);BitBlt(target,0,0,client.right,client.bottom,dc,0,0,SRCCOPY);SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);
   }
   void Rescale(double value){
@@ -459,7 +446,7 @@ struct App {
     ScrollPage(page_scroll[current_page],true);
     LayoutNavigation();
     SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(heading),TRUE);
-    for(auto c:{folder_label,status})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
+    for(auto c:{folder_label,status,achievement_note})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   void BindingMenu(HWND control,POINT point){
@@ -548,7 +535,7 @@ struct App {
     CancelCapture();
     for(auto control:{path,browse,save,defaults,play}) EnableWindow(control,!value);
     for(size_t i=0;i<pages.size();++i) for(auto control:pages[i]) EnableWindow(control,i==5||!value);
-    Localize();
+    EnableWindow(navigation[6],!value);Localize();
   }
   void Command(int id,int event){
     try{
@@ -556,7 +543,6 @@ struct App {
         edited_bindings[id-kBindingBase]=Utf8(Text(binding_fields[id-kBindingBase]));
       }else if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
-      }else if(id==kLanEnabled && event==CBN_SELCHANGE){NetworkControls();
       }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
         if(!language_pending){language_pending=true;PostMessageW(window,kApplyLauncherLanguage,0,0);}
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
@@ -568,6 +554,7 @@ struct App {
         if(id>=kNavGraphics && id<=kNavAchievements){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
+          case kNavMultiplayer:NetworkDialog(window,font,turkish,scale,settings).Show();break;
           case kAdaptiveTriggers:AdaptiveDialog(window,font,turkish,scale,settings.adaptive).Show();break;
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");
             Status(L"Press a key or chord. Escape cancels.",L"Bir tuşa veya tuş birleşimine bas. Escape iptal eder.");break;

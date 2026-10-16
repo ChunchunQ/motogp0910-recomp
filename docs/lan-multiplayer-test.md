@@ -43,7 +43,7 @@ For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md)
    ayarlarını ve kayıtlarını koru. Eski EXE ile yeni DLL/EXE'leri karıştırma.
 2. Radmin VPN'de aynı ağa katıl. İki PC de Radmin'de çevrimiçi görünmeli.
    Aynı ev ağı kullanılıyorsa Radmin zorunlu değil.
-3. Her iki bilgisayarda launcher **General > Connection mode > LAN / Radmin**
+3. Her iki bilgisayarda launcher **Multiplayer > Connection mode > LAN / Radmin**
    seçeneğini seç. Farklı oyuncu adları yaz. Basit ASCII ad kullanabilirsin;
    oyuncu adı en fazla 15, oda adı 31 UTF-8 bayt. `Player` varsayılanına
    süreç başına farklı bir dört haneli ek gelir.
@@ -100,7 +100,7 @@ kanıtlamaz. Loglar yerel/Radmin IP'leri içerebilir.
   filtering and correct search row slot/property/context pointers. Public and
   private lobby capacities are represented. QoS metadata comes from the host;
   Internet bandwidth and latency are not measured.
-- General page: Offline / LAN / Online selection, player/room names, automatic local adapter selection
+- Multiplayer dialog: Offline / LAN / Online selection, player/room names, automatic local adapter selection
   with explicit IPv4 override, optional host IPv4 fallback. EN/TR localization.
 - Separate game cover and launcher logo icons, existing graphics/controller,
   collision, career livery readback and stability changes remain in the package.

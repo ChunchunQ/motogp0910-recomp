@@ -13,11 +13,11 @@
 REXCVAR_DEFINE_BOOL(dualsense_adaptive_triggers,false,"Input","Experimental DualSense adaptive trigger resistance; requires native SDL access");
 REXCVAR_DEFINE_STRING(dualsense_rt_mode,"weapon","Input","Right trigger resistance profile").allowed({"off","feedback","weapon"});
 REXCVAR_DEFINE_INT32(dualsense_rt_start,3,"Input","Right trigger start position (0-9)").range(0,9);
-REXCVAR_DEFINE_INT32(dualsense_rt_end,6,"Input","Right trigger end position (0-9), greater than start in Weapon mode").range(0,9);
+REXCVAR_DEFINE_INT32(dualsense_rt_end,6,"Input","Right trigger end position (0-9), greater than start in resistance-zone mode").range(0,9);
 REXCVAR_DEFINE_INT32(dualsense_rt_strength,5,"Input","Right trigger strength (0-8; zero releases resistance)").range(0,8);
 REXCVAR_DEFINE_STRING(dualsense_lt_mode,"feedback","Input","Left trigger resistance profile").allowed({"off","feedback","weapon"});
 REXCVAR_DEFINE_INT32(dualsense_lt_start,2,"Input","Left trigger start position (0-9)").range(0,9);
-REXCVAR_DEFINE_INT32(dualsense_lt_end,0,"Input","Left trigger end position (0-9), greater than start in Weapon mode").range(0,9);
+REXCVAR_DEFINE_INT32(dualsense_lt_end,0,"Input","Left trigger end position (0-9), greater than start in resistance-zone mode").range(0,9);
 REXCVAR_DEFINE_INT32(dualsense_lt_strength,4,"Input","Left trigger strength (0-8; zero releases resistance)").range(0,8);
 namespace motogp::adaptive {
 bool LiveAvailable(){return rex::cvar::GetFlagByName("input_backend")=="sdl"&&shared_sdl::HasGamepadEffects();}
