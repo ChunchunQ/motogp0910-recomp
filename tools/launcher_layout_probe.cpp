@@ -38,9 +38,51 @@ void CheckSurface(App& app,HWND control,int x,int y){
   CheckUI(GetPixel(paint,x,y)==GetPixel(expected,root.x,root.y),"Child and themed-parent backgrounds align exactly with the full-window artwork");
   SelectObject(paint,previous);SelectObject(expected,previous_expected);DeleteObject(bitmap);DeleteDC(paint);DeleteDC(expected);ReleaseDC(app.window,target);
 }
-std::wstring TooltipText(HWND tooltip,HWND control){
-  wchar_t text[2048]{};TOOLINFOW tool{sizeof(tool)};tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=text;
+std::wstring TooltipText(HWND tooltip,HWND control,UINT size=Tooltips::kInfoSize){
+  wchar_t text[2048]{};TOOLINFOW tool{size};tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=text;
   SendMessageW(tooltip,TTM_GETTEXTW,std::size(text),reinterpret_cast<LPARAM>(&tool));return text;
+}
+struct TooltipCompatibility {
+  UINT accepted_size=Tooltips::kInfoSize,last_update_size=0;int rejected=0;bool reject_adds=false;
+};
+LRESULT CALLBACK TooltipCompatibilityProc(HWND window,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
+  auto& policy=*reinterpret_cast<TooltipCompatibility*>(data);
+  if(message==TTM_ADDTOOLW||message==TTM_UPDATETIPTEXTW){
+    const auto& tool=*reinterpret_cast<TOOLINFOW*>(lp);
+    if(tool.cbSize>policy.accepted_size||(message==TTM_ADDTOOLW&&policy.reject_adds)){++policy.rejected;return FALSE;}
+    if(message==TTM_UPDATETIPTEXTW)policy.last_update_size=tool.cbSize;
+  }
+  if(message==WM_NCDESTROY)RemoveWindowSubclass(window,TooltipCompatibilityProc,id);
+  return DefSubclassProc(window,message,wp,lp);
+}
+void CheckTooltipCompatibility(HWND owner){
+  // Wine accepts the v6 struct without an activation manifest; native Windows
+  // v5 rejects it. Keep that stricter boundary in front of the real tooltip.
+  CheckUI(Tooltips::kInfoSize==TTTOOLINFOW_V2_SIZE&&Tooltips::kLegacyInfoSize==TTTOOLINFOW_V1_SIZE,"Tooltip compatibility sizes match the Windows SDK layouts");
+  const auto parent=CreateWindowExW(0,L"STATIC",L"Tooltip compatibility fixture",WS_CHILD,0,0,240,100,owner,nullptr,GetModuleHandleW(nullptr),nullptr);
+  const auto child=CreateWindowExW(0,L"BUTTON",L"Nested hint target",WS_CHILD,0,0,200,30,parent,nullptr,GetModuleHandleW(nullptr),nullptr);
+  CheckUI(parent&&child,"Nested tooltip compatibility fixture created");
+  {
+    TooltipCompatibility policy;Tooltips help;help.Create(owner,1);SetWindowSubclass(help.window,TooltipCompatibilityProc,901,reinterpret_cast<DWORD_PTR>(&policy));
+    TOOLINFOW unsupported{sizeof(unsupported)};unsupported.uFlags=TTF_IDISHWND|TTF_SUBCLASS;unsupported.hwnd=parent;unsupported.uId=reinterpret_cast<UINT_PTR>(child);wchar_t old_text[]=L"Old oversized registration";unsupported.lpszText=old_text;
+    CheckUI(!SendMessageW(help.window,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&unsupported)),"Strict native-v5 boundary reproduces rejection of the former v6-sized TOOLINFO");
+    CheckUI(help.Set(child,L"Compatible registration"),"Compatible tooltip registration succeeds at a native-v5 size boundary");
+    CheckUI(TooltipText(help.window,child)==L"Compatible registration","Compatible registration retains the real nested tooltip text");
+    CheckUI(help.Set(child,L"Türkçe yardım"),"Existing tool localization succeeds with the compatible layout");
+    CheckUI(policy.last_update_size==Tooltips::kInfoSize&&SendMessageW(help.window,TTM_GETTOOLCOUNT,0,0)==1&&TooltipText(help.window,child)==L"Türkçe yardım","Localization updates one tool without an oversized structure or duplicate");
+  }
+  {
+    TooltipCompatibility policy;policy.accepted_size=Tooltips::kLegacyInfoSize;Tooltips help;help.Create(owner,1);SetWindowSubclass(help.window,TooltipCompatibilityProc,902,reinterpret_cast<DWORD_PTR>(&policy));
+    CheckUI(help.Set(child,L"Legacy fallback")&&policy.rejected==1,"A smaller legacy registration is retried when v2 is rejected");
+    CheckUI(help.Set(child,L"Updated legacy fallback")&&policy.last_update_size==Tooltips::kLegacyInfoSize&&TooltipText(help.window,child,Tooltips::kLegacyInfoSize)==L"Updated legacy fallback","Fallback tools retain their accepted structure size during updates");
+  }
+  {
+    TooltipCompatibility policy;policy.reject_adds=true;Tooltips help;help.Create(owner,1);SetWindowSubclass(help.window,TooltipCompatibilityProc,903,reinterpret_cast<DWORD_PTR>(&policy));
+    CheckUI(!help.Set(child,L"Unavailable help")&&policy.rejected==2&&SendMessageW(help.window,TTM_GETTOOLCOUNT,0,0)==0,"A completely rejected hint is optional and cannot throw a launcher startup error");
+    policy.reject_adds=false;CheckUI(help.Set(child,L"Retry after rejection")&&SendMessageW(help.window,TTM_GETTOOLCOUNT,0,0)==1&&TooltipText(help.window,child)==L"Retry after rejection","Rejected registrations do not leave stale records and can be retried");
+  }
+  {Tooltips missing;CheckUI(!missing.Set(child,L"Unavailable tooltip window"),"Unavailable tooltip service leaves controls usable");missing.Pop();missing.SetScale(1.5);}
+  DestroyWindow(parent);
 }
 void CheckHelp(App& app,const fs::path& pictures){
   app.ShowPage(3);app.ScrollPage(0);app.turkish=false;app.Localize();
@@ -57,7 +99,7 @@ void CheckHelp(App& app,const fs::path& pictures){
   const auto deadline=GetTickCount64()+4000;
   while(!IsWindowVisible(app.help.window)&&GetTickCount64()<deadline){PumpUI();Sleep(10);}
   CheckUI(IsWindowVisible(app.help.window),"A native tooltip appears after actual mouse hover");
-  TOOLINFOW active{sizeof(active)};SendMessageW(app.help.window,TTM_GETCURRENTTOOLW,0,reinterpret_cast<LPARAM>(&active));
+  TOOLINFOW active{Tooltips::kInfoSize};SendMessageW(app.help.window,TTM_GETCURRENTTOOLW,0,reinterpret_cast<LPARAM>(&active));
   CheckUI(active.uId==reinterpret_cast<UINT_PTR>(app.verify_files),"Mouse hover displays help for the intended nested control");
   UpdateWindow(app.help.window);PumpUI();Screenshot(app.window,pictures/L"launcher-tooltip-english.bmp",false,true);
   app.ShowPage(0);CheckUI(!IsWindowVisible(app.help.window),"Changing pages dismisses the outgoing tooltip");SetCursorPos(1700,1000);PumpUI();
@@ -188,6 +230,7 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    CheckTooltipCompatibility(window);
     CheckHelp(app,pictures);app.ShowPage(3);
     {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kBackground,"Caption blends into the artwork instead of a sidebar strip");ReleaseDC(window,dc);}
     {const auto dc=GetDC(window);const auto memory=CreateCompatibleDC(dc);const auto bitmap=CreateCompatibleBitmap(dc,app.S(kWidth),app.S(kHeight+kCaptionHeight));const auto old=SelectObject(memory,bitmap);

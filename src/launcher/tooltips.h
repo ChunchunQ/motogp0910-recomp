@@ -1,15 +1,20 @@
 #pragma once
 #include <windows.h>
 #include <commctrl.h>
+#include <cstddef>
 #include <map>
 #include <string>
 #include <string_view>
-#include <stdexcept>
 namespace launcher {
 // Use the system tooltip rather than another painted popup. Owning the strings
 // keeps TOOLINFO text valid through localization and native hover callbacks.
 class Tooltips {
  public:
+  // sizeof(TOOLINFO) includes lpReserved (v6). Our launcher intentionally uses
+  // the default common-controls activation context, which can be v5 on Windows.
+  // These older sizes contain every field we use and work with both versions.
+  static constexpr UINT kInfoSize=offsetof(TOOLINFOW,lParam)+sizeof(LPARAM);
+  static constexpr UINT kLegacyInfoSize=offsetof(TOOLINFOW,lpszText)+sizeof(LPWSTR);
   HWND window{};
   Tooltips()=default;
   Tooltips(const Tooltips&)=delete;
@@ -18,7 +23,7 @@ class Tooltips {
   void Create(HWND owner,double scale){
     window=CreateWindowExW(WS_EX_TOPMOST,TOOLTIPS_CLASSW,nullptr,WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX,
         CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,owner,nullptr,GetModuleHandleW(nullptr),nullptr);
-    if(!window)throw std::runtime_error("Cannot create launcher tooltips");
+    if(!window){OutputDebugStringW(L"MotoGP launcher: hover help unavailable; continuing without tooltips.\n");return;}
     SendMessageW(window,TTM_SETDELAYTIME,TTDT_INITIAL,550);
     SendMessageW(window,TTM_SETDELAYTIME,TTDT_RESHOW,100);
     SendMessageW(window,TTM_SETDELAYTIME,TTDT_AUTOPOP,15000);
@@ -26,18 +31,25 @@ class Tooltips {
   }
   void SetScale(double scale){if(window)SendMessageW(window,TTM_SETMAXTIPWIDTH,0,static_cast<LPARAM>(360*scale+.5));}
   void Pop()const{if(window)SendMessageW(window,TTM_POP,0,0);}
-  void Set(HWND control,const wchar_t* text){
-    if(!window||!control)return;
+  bool Set(HWND control,const wchar_t* text){
+    if(!IsWindow(window)||!IsWindow(control))return false;
     wchar_t cls[32]{};GetClassNameW(control,cls,32);
     if(std::wstring_view(cls)==L"STATIC")SetWindowLongPtrW(control,GWL_STYLE,GetWindowLongPtrW(control,GWL_STYLE)|SS_NOTIFY);
-    auto [entry,inserted]=texts_.try_emplace(control,text);
-    if(!inserted)entry->second=text;
-    TOOLINFOW tool{sizeof(tool)};tool.uFlags=TTF_IDISHWND|TTF_SUBCLASS;
-    tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=entry->second.data();
-    if(inserted){if(!SendMessageW(window,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool)))throw std::runtime_error("Cannot attach launcher tooltip");}
-    else SendMessageW(window,TTM_UPDATETIPTEXTW,0,reinterpret_cast<LPARAM>(&tool));
+    auto [entry,inserted]=texts_.try_emplace(control,Entry{text});
+    if(!inserted)entry->second.text=text;
+    TOOLINFOW tool{entry->second.info_size};tool.uFlags=TTF_IDISHWND|TTF_SUBCLASS;
+    tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=entry->second.text.data();
+    if(!inserted){SendMessageW(window,TTM_UPDATETIPTEXTW,0,reinterpret_cast<LPARAM>(&tool));return true;}
+    if(SendMessageW(window,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool)))return true;
+    tool.cbSize=kLegacyInfoSize;
+    if(SendMessageW(window,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool))){entry->second.info_size=tool.cbSize;return true;}
+    // Hover help must never prevent startup, saving, language changes or opening
+    // a settings dialog. Remove failed records so a later update can retry.
+    texts_.erase(entry);
+    OutputDebugStringW(L"MotoGP launcher: one hover hint could not be registered; continuing.\n");return false;
   }
  private:
-  std::map<HWND,std::wstring> texts_;
+  struct Entry {std::wstring text;UINT info_size=kInfoSize;};
+  std::map<HWND,Entry> texts_;
 };
 }

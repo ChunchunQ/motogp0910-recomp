@@ -320,7 +320,7 @@ validation and serialization, Apply / Cancel and the real General button.
 selectors or changing pending settings. Current screenshots were refreshed from
 this exact probe; native popup capture includes the separate tooltip window.
 
-Current package: `downloads/MotoGP0910-Windows-x64-launcher-refined.zip`.
+Previous package: `downloads/MotoGP0910-Windows-x64-launcher-refined.zip`.
 SHA-256: `92e21e3463b1e0734cd75df18024268dcd8978c3a140561d504ac149fb5b526e`.
 ZIP integrity and membership checks passed. Only the launcher EXE differs from
 the previous composition package: game EXE/map, runtime DLLs and external
@@ -332,3 +332,49 @@ The exact packaged production EXE also passed the separate open, nested control
 actions, English/Turkish switching, save and close checks. An unrelated TOML key
 was retained and no game save was created. Both test fixtures were byte-compared
 against their final build outputs.
+
+
+## Windows tooltip registration startup hotfix
+
+The user reported `Cannot attach launcher tooltip` in the refined package on
+native Windows. The tooltip helper used `sizeof(TOOLINFOW)` (72 bytes on x64),
+including the v6-only `lpReserved` tail, while the executable has no v6 common-
+controls activation dependency. The default Windows v5 control can reject that
+registration. Wine accepted the oversized structure, so normal hover tests did
+not catch the Windows compatibility boundary.
+
+The shared helper now uses the v2 layout through `lParam` (64 bytes on x64),
+then retries the v1 layout through `lpszText` (56 bytes) if registration is
+rejected. Both contain every field used by our hints. Each entry remembers the
+accepted size for later localized text updates; native query tests also use
+compatible layouts. This changes neither activation contexts nor native control
+styles. No global common-controls v6 manifest is introduced.
+
+Hover help is optional: failed window creation or individual tool registration
+cannot raise a launcher action/startup error. A rejected entry is discarded so
+a future update can retry, while other controls continue to register. Diagnostic
+messages go only to the debugger. Settings, saves, the layout and game/runtime
+binaries are unaffected.
+
+Regression coverage places a strict compatibility subclass in front of the real
+Win32 tooltip to reject the old oversized registration under Wine. It verifies
+v2 success, localized updates without duplication, v1 fallback and its update
+size, total registration rejection without exceptions, successful retry after
+rejection and an unavailable tooltip window. The existing real mouse-hover test
+and UI suite still run normally. This is an explicit compatibility simulation;
+validation on the user's native Windows machine remains separate.
+
+Final UI result: **86,339** actual Windows PE UI checks passed under Wine/Xvfb,
+including the 12 added compatibility/failure assertions. 120 painted tab changes
+took 2,388 ms total (56 ms slowest).
+
+Current package: `downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip`.
+SHA-256: `6a3d6e38a6273d6b887f4bb1d65b14e88bca35a104df1d9944f8c239bcde8326`.
+ZIP integrity and membership checks passed; only `motogp0910-launcher.exe`
+differs from the previous refined package. Existing users can replace just that
+EXE in the original program folder. Other files and settings need no changes.
+No README, SHA256SUMS, external licenses or personal/game data are shipped.
+
+The separate exact production EXE also passed open, nested control actions,
+language switching, save and close under Wine; unrelated configuration was
+preserved and no game save was created. Native Windows confirmation is pending.
