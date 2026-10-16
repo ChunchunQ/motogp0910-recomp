@@ -1,5 +1,7 @@
 # MotoGP 09/10 — ReXGlue Nightly 0.10.0.24-dev.gbd833a2
 
+[Claude / site / VPS devir belgesi](CLAUDE_HANDOFF.md): güncel mimari, dosya haritası, kurulum, dağıtım, test sınırları ve açık işler. Geliştirme paketlerine bundan sonra README/özellik yönergeleri varsayılan olarak eklenmez; lisanslar ve gerekli kaynak dosyaları korunur. Devir belgesi paket dışında tutulur.
+
 Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-community-online.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
 
 [Türkçe oyun metinleri](docs/turkish-localization.md) eklendi: **General → Game language → Türkçe**. Menü, kariyer, eğitim, yarış mesajları, teknik açıklamalar ve 50 başarım çevrildi; sesler korunur. Orijinal yazı tiplerine Ğ/ğ, İ/ı ve Ş/ş eklendi. İşlevsiz **Xbox LIVE Marketplace** seçeneği Seçenekler menüsünden kaldırıldı. Yeni çevirinin Windows GPU üzerinde görsel kontrolü bekleniyor.
@@ -68,7 +70,7 @@ General menüsünde **Connection mode** ile Çevrimdışı, LAN/Radmin veya dene
 2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
 3. `motogp0910-launcher.exe`yi aç, ayarlarını seç ve **PLAY** düğmesine bas. **General → Launcher language** menüsü Türkçeye geçer; dil seçimi kaydedilir. **Game language → Türkçe** ise oyunun yazılarını Türkçeye geçirir; iki dil seçimi bağımsızdır. İstersen oyunu `motogp0910.exe` ile doğrudan da açabilirsin. Klavye varsayılan olarak açıktır: Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
 
-[Doğrudan EXE açılışı ve giriş tercihi notları](docs/direct-launch.md). Yeni paket `.cmd` içermez; yönergeler `readme.txt` ve `game/readme.txt` adlarıyla gelir. Kullanıcının sağladığı `gamecontrollerdb.txt` dosyası EXE yanında paketlenir; SDL gamepad eşlemeleri için kullanılır. [Controller eşleme notları](docs/controller-mappings.md).
+[Doğrudan EXE açılışı ve giriş tercihi notları](docs/direct-launch.md). Mevcut yayımlanmış paket `.cmd` içermez; eski paketleme politikasından kalan `readme.txt` ve `game/readme.txt` dosyalarını içerir. Sonraki geliştirme paketlerinde bu yönergeler bulunmaz. Kullanıcının sağladığı `gamecontrollerdb.txt` dosyası EXE yanında paketlenir; SDL gamepad eşlemeleri için kullanılır. [Controller eşleme notları](docs/controller-mappings.md).
 
 Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yoksa eski düz yerleşimi kullanır. Her iki yerde XEX varsa `game/` önceliklidir. İlk çalıştırmada uygulama oyun kökündeki title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kayıt/cache varsayılanı SDK'nın kullanıcı klasörüdür; varsayılan loglar EXE yanındaki `logs/` içindedir. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
 
