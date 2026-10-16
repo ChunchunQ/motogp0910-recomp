@@ -131,6 +131,13 @@ if(WIN32)
         $<TARGET_PROPERTY:rex::runtime,INTERFACE_INCLUDE_DIRECTORIES>)
     target_link_libraries(launcher_layout_probe PRIVATE motogp_launcher_achievements user32 shell32 ole32 comctl32 bcrypt uuid dxgi gdiplus gdi32 dwmapi uxtheme shlwapi)
     rexglue_apply_target_settings(launcher_layout_probe)
+    configure_file(resources/launcher/assets.rc.in "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc" @ONLY)
+    set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc" APPEND PROPERTY OBJECT_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/launcher/background.png"
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/verification/game-files.sha256")
+    foreach(launcher_asset_target motogp0910-launcher launcher_layout_probe)
+        target_sources(${launcher_asset_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc")
+    endforeach()
     add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp src/frame_pacing.cpp src/display_settings.cpp)
     target_link_libraries(launcher_probe PRIVATE rex::runtime shell32 bcrypt)
     add_executable(fsr_provider_probe EXCLUDE_FROM_ALL tools/fsr_provider_probe.cpp)

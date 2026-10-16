@@ -16,7 +16,12 @@ int main(int argc,char** argv) {
  auto w=FindWindowW(L"MotoGP0910Launcher",nullptr);
  if(!w || argc!=2) return 2;
  std::string mode=argv[1];
- auto child=[&](int id){return GetDlgItem(w,id);};
+ auto child=[&](int id){
+  struct Search{int id;HWND found=nullptr;} search{id};
+  EnumChildWindows(w,[](HWND control,LPARAM data)->BOOL{auto& search=*reinterpret_cast<Search*>(data);
+   if(GetDlgCtrlID(control)==search.id){search.found=control;return FALSE;}return TRUE;},reinterpret_cast<LPARAM>(&search));
+  return search.found;
+ };
  if(mode=="check-saved") {
   if(Text(child(kLanguage))!=L"Türkçe" || Text(child(kPlay))!=L"OYUNU BAŞLAT" ||
      Text(child(kSize))!=L"1920 × 1080" || SendMessageW(child(kBackend),CB_GETCURSEL,0,0)!=1 ||
@@ -48,6 +53,10 @@ int main(int argc,char** argv) {
   SendMessageW(child(kMsaa),BM_SETCHECK,BST_UNCHECKED,0);
   SetWindowTextW(child(kBindingBase),L"Ctrl+K,Space");
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kBindingBase,EN_CHANGE),reinterpret_cast<LPARAM>(child(kBindingBase)));
+ } else if(mode=="toggle-keyboard") {
+  const auto before=SendMessageW(child(kKeyboard),BM_GETCHECK,0,0);
+  SendMessageW(child(kKeyboard),BM_CLICK,0,0);
+  if(SendMessageW(child(kKeyboard),BM_GETCHECK,0,0)==before)return 1;
  } else if(mode=="standard-root") {
   SetWindowTextW(child(kPath),L".\\game");
  } else if(mode=="demo-graphics") {

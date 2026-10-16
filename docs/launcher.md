@@ -1,9 +1,7 @@
 # MotoGP 09/10 Launcher
 
 Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
-The interface uses charcoal cards with amber/red accents inspired by the MotoGP
-09/10 cover palette, an original vector racing ribbon and sidebar navigation.
-No reference launcher design, source code or artwork is copied.
+The current [Racing Lines redesign](launcher-redesign.md) uses a compact horizontal-tab layout, charcoal fields, amber/red cover-inspired art and a scrollable settings area. Minimize/close sit directly over the art. General includes cancellable, read-only game-file verification.
 The launcher opens on **General** every time. The default language is English; **General → Launcher language → Türkçe** switches the whole
 interface immediately and retains the choice in `motogp0910-launcher.toml`.
 File names stay English. No CMD file is required.
@@ -60,7 +58,7 @@ on the next game launch.
 
 ## Keyboard and controllers
 
-All 25 SDK controller actions appear as directly editable rows in two columns.
+All 25 SDK controller actions appear as directly editable rows in one scrollable list.
 Type a binding in its field or click the adjacent **…** to capture a key/chord.
 Escape cancels capture. Right-click a field for **Capture key**, **Unbind** and
 **Restore action default**. **Restore defaults** resets all launcher-managed

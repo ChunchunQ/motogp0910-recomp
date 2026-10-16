@@ -1,5 +1,8 @@
 # Project status — 16 October 2026
 
+
+**Launcher Racing Lines:** User-selected concept B is implemented as a compact 940 × 578 launcher with horizontal tabs, scrollable settings and title buttons drawn over the artwork. General adds read-only, cancellable SHA-256 game-file verification. See [scope and validation](launcher-redesign.md).
+
 This is the current status entry point. Older milestone documents describe
 historical builds; a stable SDK version or old ZIP mentioned there does not
 replace the current release pin. User observations are distinguished from

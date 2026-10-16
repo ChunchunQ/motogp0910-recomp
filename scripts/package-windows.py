@@ -281,6 +281,8 @@ def main():
     (STAGE / "SHA256SUMS.txt").write_text(hashes)
     archive = DIST / args.archive
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
+        # Preserve the player's game-data destination even without a README.
+        package.writestr("game/", b"")
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))
     with zipfile.ZipFile(archive) as package:

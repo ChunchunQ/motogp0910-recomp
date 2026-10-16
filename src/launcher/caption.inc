@@ -11,14 +11,14 @@
     return HTCAPTION;
   }
   void DrawCaption(HDC dc){
-    const auto a=CaptionBounds();RECT r{0,0,a.width,a.height};auto brush=CreateSolidBrush(kSidebar);FillRect(dc,&r,brush);DeleteObject(brush);
+    const auto a=CaptionBounds();RECT r{0,0,a.width,a.height};
+    // Repaint the same full-window artwork through the caption clip. There is
+    // no title strip or persistent rectangle behind minimize / close.
+    const int saved=SaveDC(dc);IntersectClipRect(dc,0,0,a.width,a.height);DrawBackground(dc);RestoreDC(dc,saved);
     SetBkMode(dc,TRANSPARENT);auto old=SelectObject(dc,small_font);SetTextColor(dc,kText);
-    const int icon_size=std::min(S(16),a.height-a.border-4);const int cy=(a.height+a.border)/2;
-    DrawIconEx(dc,a.border+S(6),cy-icon_size/2,LoadIconW(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(motogp::kIconResource)),icon_size,icon_size,0,nullptr,DI_NORMAL);
-    r={a.border+S(28),a.border,a.width-a.border-S(100),a.height};auto text=Text(window);DrawTextW(dc,text.c_str(),-1,&r,DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
     for(const int hit:{HTMINBUTTON,HTCLOSE}){
       const int right=a.width-a.border-(hit==HTMINBUTTON?S(46):0);r={right-S(46),a.border,right,a.height};
-      if(caption_hover==hit){auto b=CreateSolidBrush(hit==HTCLOSE?RGB(186,45,45):kField);FillRect(dc,&r,b);DeleteObject(b);}
+      SetTextColor(dc,caption_hover==hit?(hit==HTCLOSE?kRed:kAccent):kText);
       DrawTextW(dc,hit==HTCLOSE?L"×":L"—",-1,&r,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);
     }
     SelectObject(dc,old);

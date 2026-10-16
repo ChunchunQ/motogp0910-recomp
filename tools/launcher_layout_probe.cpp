@@ -22,8 +22,12 @@ void Screenshot(HWND window,const fs::path& file,bool whole=false){
 }
 void LayoutCheck(App& app){
   RECT client;GetClientRect(app.window,&client);std::vector<std::pair<RECT,HWND>> visible;
-  for(auto& item:app.placements){if(!IsWindowVisible(item.control))continue;RECT r;GetWindowRect(item.control,&r);
+  for(auto& item:app.placements){if(!IsWindowVisible(item.control) || item.control==app.page_view)continue;RECT r;GetWindowRect(item.control,&r);
     MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
+    const auto uncut=r;
+    if(GetParent(item.control)==app.page_view){RECT panel;GetClientRect(app.page_view,&panel);MapWindowPoints(app.page_view,app.window,reinterpret_cast<POINT*>(&panel),2);
+      RECT clipped;if(!IntersectRect(&clipped,&r,&panel))continue;r=clipped;
+      CheckUI(uncut.left>=panel.left && uncut.right<=panel.right,"Page controls fit the actual scroll viewport width");}
     CheckUI(r.left>=0 && r.top>=0 && r.right<=client.right && r.bottom<=client.bottom,"Visible control fits client area");
     for(auto& [previous,control]:visible){RECT overlap;const bool intersects=IntersectRect(&overlap,&previous,&r);
       if(intersects)std::cerr<<"Overlap: scale="<<app.scale<<" page="<<app.current_page<<" tr="<<app.turkish
@@ -33,9 +37,9 @@ void LayoutCheck(App& app){
     visible.emplace_back(r,item.control);wchar_t cls[32];GetClassNameW(item.control,cls,32);
     if(std::wstring_view(cls)==L"STATIC"){
       auto dc=GetDC(item.control);auto previous=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(item.control,WM_GETFONT,0,0)));
-      RECT measured{0,0,r.right-r.left,0};auto text=app.Text(item.control);
+      RECT measured{0,0,uncut.right-uncut.left,0};auto text=app.Text(item.control);
       DrawTextW(dc,text.c_str(),-1,&measured,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);
-      CheckUI(measured.bottom<=r.bottom-r.top,"Localized static text fits its height");
+      CheckUI(measured.bottom<=uncut.bottom-uncut.top,"Localized static text fits its height");
       SelectObject(dc,previous);ReleaseDC(item.control,dc);
     }
   }
@@ -57,11 +61,46 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
-    {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kSidebar,"Custom caption is visibly painted in the client surface");ReleaseDC(window,dc);}
+    {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kBackground,"Caption blends into the artwork instead of a sidebar strip");ReleaseDC(window,dc);}
+    {const auto dc=GetDC(window);const auto memory=CreateCompatibleDC(dc);const auto bitmap=CreateCompatibleBitmap(dc,app.S(kWidth),app.S(kHeight+kCaptionHeight));const auto old=SelectObject(memory,bitmap);
+      app.DrawBackground(memory);
+      for(int offset:{6,37,57,86})CheckUI(GetPixel(dc,app.S(kWidth-offset),app.S(5))==GetPixel(memory,app.S(kWidth-offset),app.S(5)),"Minimize and close have the real background behind them, without a box");
+      SelectObject(memory,old);DeleteObject(bitmap);DeleteDC(memory);ReleaseDC(window,dc);
+    }
     {RECT frame;GetWindowRect(window,&frame);const auto caption=app.CaptionBounds();const auto y=frame.top+(caption.height+caption.border)/2;
       for(int x=caption.border;x<caption.width-caption.border;++x)CheckUI(SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.left+x,y))!=HTMAXBUTTON,"No visible caption position exposes a maximize button");
       CheckUI(SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.right-caption.border-app.S(69),y))==HTMINBUTTON&&SendMessageW(window,WM_NCHITTEST,0,MAKELPARAM(frame.right-caption.border-app.S(23),y))==HTCLOSE,"Caption retains minimize and close actions");
       SendMessageW(window,WM_SYSCOMMAND,SC_MAXIMIZE,0);CheckUI(!IsZoomed(window),"Maximize command cannot enlarge the fixed launcher");
+    }
+
+    { // Read-only verification uses a shipped reference, not the user's files as a new baseline.
+      const auto references=GameFileReferences(EmbeddedBytes(103));CheckUI(references.size()==4386,"Full original disk-data reference is embedded");
+      std::atomic<bool> cancelled=false;std::atomic<size_t> progress=0;
+      const auto verified=VerifyGameData(game,references,cancelled,progress);
+      CheckUI(verified.Passed()&&verified.matched==references.size()&&progress==references.size(),"All original disk data match the shipped SHA-256 reference");
+      const auto scratch=app.exe/L"verification-fixture";fs::create_directories(scratch);
+      const auto sample=scratch/references.front().path;fs::create_directories(sample.parent_path());fs::copy_file(game/references.front().path,sample);
+      const std::vector<GameFileReference> one{references.front()};const auto original=Sha256(sample);
+      CheckUI(VerifyGameData(scratch,one,cancelled,progress).Passed()&&Sha256(sample)==original,"A successful check does not change the original bytes");
+      {std::fstream f(sample,std::ios::in|std::ios::out|std::ios::binary);char c=0;f.read(&c,1);c^=1;f.seekp(0);f.write(&c,1);}
+      const auto altered=Sha256(sample);CheckUI(VerifyGameData(scratch,one,cancelled,progress).changed==1&&Sha256(sample)==altered,"Same-size corruption is detected by SHA-256 and left untouched");
+      fs::remove(sample);CheckUI(VerifyGameData(scratch,one,cancelled,progress).missing==1&&!fs::exists(sample),"Missing files are reported without recreating them");
+      cancelled=true;CheckUI(VerifyGameData(game,references,cancelled,progress).cancelled,"Verification supports cancellation");
+      bool rejected=false;try{GameFileReferences(std::string(64,'0')+"\t1\t../outside");}catch(const std::exception&){rejected=true;}CheckUI(rejected,"Reference manifest cannot escape the game root");
+      app.StartVerification();CheckUI(app.verifying&&!IsWindowEnabled(app.play)&&!IsWindowEnabled(app.path)&&IsWindowEnabled(app.verify_files),"Actual verification runs asynchronously and keeps cancellation accessible");
+      app.StartVerification();const auto limit=GetTickCount64()+15000;
+      while(app.verifying&&GetTickCount64()<limit){app.PollVerification();Sleep(10);}
+      CheckUI(!app.verifying&&IsWindowEnabled(app.play)&&IsWindowEnabled(app.path),"Cancelling the actual worker restores the launcher controls");
+      // Complete the real asynchronous path too. Only dismiss this launcher's
+      // own result dialog, as a user pressing OK would do.
+      app.StartVerification();std::atomic<bool> dismiss_done=false;
+      std::thread dismiss([&]{while(!dismiss_done){auto dialog=FindWindowW(L"#32770",nullptr);
+        if(dialog&&GetWindow(dialog,GW_OWNER)==window){PostMessageW(dialog,WM_COMMAND,IDOK,0);break;}Sleep(10);}});
+      while(app.verifying){app.PollVerification();Sleep(10);}dismiss_done=true;dismiss.join();
+      CheckUI(app.status_positive&&app.status_en.starts_with(L"Verification passed")&&IsWindowEnabled(app.play),"Successful background verification updates status, writes a report and unlocks PLAY");
+      bool report_found=false;for(const auto& entry:fs::directory_iterator(app.exe/L"logs"))if(entry.path().filename().wstring().starts_with(L"verification-"))report_found=true;
+      CheckUI(report_found,"Verification result report is available through Open logs");
+      app.ReadyStatus();
     }
 
     // Read the actual original XEX in the background; never execute the title
@@ -132,6 +171,8 @@ int wmain(int argc,wchar_t** argv){
       for(bool tr:{false,true}){
         app.turkish=tr;
         for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+          for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
+          app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
           if(scale==1. || (scale==.75 && tr && page==2)){
             const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);if(scale==1.&&page==5&&!tr)Screenshot(window,pictures/L"launcher-achievements-full-window.bmp",true);
@@ -139,6 +180,11 @@ int wmain(int argc,wchar_t** argv){
         }
       }
     }
+    app.ShowPage(2);app.ScrollPage(0);app.Command(kCaptureBase+static_cast<int>(kBindings.size())-1,BN_CLICKED);
+    CheckUI(app.capturing&&app.page_scroll[2]>0&&GetFocus()==app.binding_buttons.back(),"Focusing the final keyboard binding automatically reveals it in the compact viewport");
+    {RECT field,panel;GetWindowRect(app.binding_buttons.back(),&field);GetWindowRect(app.page_view,&panel);
+      CheckUI(field.top>=panel.top&&field.bottom<=panel.bottom,"The focused final keyboard capture button remains fully visible");}
+    app.CancelCapture();
     for(auto maximum:{std::pair{1920,1080},std::pair{1366,768},std::pair{2560,1080},std::pair{3840,2160}}){
       auto sizes=WindowSizesFor(maximum);
       CheckUI(std::find(sizes.begin(),sizes.end(),maximum)!=sizes.end(),"Native monitor dimensions are offered");
