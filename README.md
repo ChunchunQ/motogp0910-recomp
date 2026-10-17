@@ -1,96 +1,96 @@
 # MotoGP 09/10 — ReXGlue Nightly 0.10.0.24-dev.gbd833a2
 
-[Racing Lines launcher kalite düzeltmesi](docs/launcher-redesign.md): sekme geçişinde tüm menüleri yeniden doldurma kaldırıldı; kaydırma çubukları tek çizim yoluna alındı. Kapalı seçim kutusunda fare tekerleği değer değiştirmez.
+[Racing Lines launcher quality fix](docs/launcher-redesign.md): removed repopulating all menus during tab switches; moved scrollbars to a single render path. Mouse wheel no longer changes values in closed selection boxes.
 
-[Yeni Racing Lines launcher](docs/launcher-redesign.md): B konsepti uygulandı; 940 × 578 pencere, yatay sekmeler, arka planın üzerinde küçültme/kapatma simgeleri ve General içinde iptal edilebilir oyun dosyası doğrulaması.
+[New Racing Lines launcher](docs/launcher-redesign.md): concept B is implemented; 940 × 578 window, horizontal tabs, minimize/close icons over the background, and cancellable game file validation inside General.
 
-Sonraki geliştirme paketlerine README, özellik yönergeleri, SHA256SUMS dosyası veya ayrı `licenses` klasörü eklenmez. Zorunlu üçüncü taraf bildirimleri launcher içine gömülür; Alt+Space → Üçüncü taraf bildirimleri üzerinden okunabilir. Gerekli kaynak dosyaları korunur.
+Future development packages do not include README, feature guidelines, SHA256SUMS, or a separate `licenses` folder. Required third-party notices are embedded in the launcher; read via Alt+Space → Third-party notices. Required source files are preserved.
 
-Xbox 360 sürümünün native PC yeniden derleme projesi. Ana hedef verilen stok XEX + title update ile **0.0.1.1** oyun sürümüdür. Windows x64 executable derlendi; **Linux üzerinde tam oyun verileriyle ana menüye ulaşma doğrulandı**. [Güncel Windows EXE + DLL paketi hazır](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip). Hedef kullanıcı sistemi Windows 10/11; bu bulut makinesi Linux'tur.
+Native PC recompilation project of the Xbox 360 version. The primary target is game version **0.0.1.1** with the provided stock XEX + title update. Windows x64 executable is built; **reaching the main menu on Linux with full game data is verified**. [Latest Windows EXE + DLL package is ready](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip). Target user system is Windows 10/11; this cloud machine is Linux.
 
-[Türkçe oyun metinleri](docs/turkish-localization.md) eklendi: **General → Game language → Türkçe**. Menü, kariyer, eğitim, yarış mesajları, teknik açıklamalar ve 50 başarım çevrildi; sesler korunur. Orijinal yazı tiplerine Ğ/ğ, İ/ı ve Ş/ş eklendi. İşlevsiz **Xbox LIVE Marketplace** seçeneği Seçenekler menüsünden kaldırıldı. Yeni çevirinin Windows GPU üzerinde görsel kontrolü bekleniyor.
+[Turkish in-game texts](docs/turkish-localization.md) were added: **General → Game language → Türkçe**. Menus, career, tutorials, race messages, technical descriptions, and 50 achievements are translated; voices are preserved. Original fonts now include Ğ/ğ, İ/ı, and Ş/ş. Non-functional **Xbox LIVE Marketplace** option was removed from Options. Visual check of the new translation on Windows GPU is pending.
 
-[Kontrol ekranı](docs/controller-prompts.md) artık orijinal PS3 DualShock 3 görselini veya koyu/turuncu canlı klavye listesini gösterir. Default / Alternative A / B açıklamaları seçili düzene göre değişir. Başarım kaydırma çubuğu gerçek fare sürüklemesiyle doğrulandı; launcher üst çubuğunda yalnızca küçültme/kapatma bulunur. QUIT GAME beyaz vurgusu ve Press Start çıkışı kullanıcı tarafından onaylandı.
+[Controller prompt screen](docs/controller-prompts.md) now shows original PS3 DualShock 3 visuals or a dark/orange high-contrast keyboard list. Default / Alternative A / B descriptions update by selected layout. Achievement scrollbar is verified with real mouse dragging; launcher top bar has only minimize/close. QUIT GAME white highlight and Press Start exit flow are user-confirmed.
 
-[F1 oyun içi ayar menüsü](docs/in-game-settings.md) eklendi: başarım ekranıyla aynı koyu/turuncu tasarım, yalnızca anında uygulanan ses/grafik/efekt/simge/tuş atama seçenekleri. **Kaydet** launcher ayarlarını da günceller; yeniden başlatma gerektiren seçenekler menüde yok. **337 hedefli Windows/Wine kontrolü** geçti; native Windows görsel/oyun içi test bekleniyor.
+[F1 in-game settings menu](docs/in-game-settings.md) added: same dark/orange design as achievements, only instant-apply audio/graphics/effects/icon/keybind options. **Save** also updates launcher settings; options requiring restart are not shown here. **337-target Windows/Wine checks passed**; native Windows visual/in-game validation is pending.
 
-[Ana menü QUIT GAME ve Press Start çıkış onayı](docs/quit-menu.md): QUIT GAME vurgusu beyaz; Press Start kontrolü gerçek açılış durumunu (`828DA060`) okuyacak şekilde düzeltildi. **98 hedefli Windows/Wine kontrolü geçti**. Native Windows görünüm/çıkış testi bekleniyor.
+[Main menu QUIT GAME and Press Start exit confirmation](docs/quit-menu.md): QUIT GAME highlight is white; Press Start exit logic fixed to read real startup state (`828DA060`). **98-target Windows/Wine checks passed**. Native Windows appearance/exit test is pending.
 
-[Launcher başarımlar sayfası, F7 menüsü ve yumuşak ses](docs/achievements.md): **50 orijinal simge / 1000 G**, kazanılan/kilitli listesi, arama, ilerleme çubuğu ve ortak bildirim/ses tercihleri. Mevcut kayıtlar yalnızca okunur; oyun açıkken güncellenir. **286 runtime ve 59.199 launcher UI kontrolü geçti**. [Güncel proje durumu ve sıradaki işler](docs/project-status.md). [Mevcut çalışmadan en yüksek getiriyi çıkaracak görevler](docs/project-priorities.md).
+[Launcher achievements page, F7 menu, and soft sound](docs/achievements.md): **50 original icons / 1000 G**, earned/locked lists, search, progress bar, and shared notification/sound preferences. Existing saves are read-only and update while the game is running. **286 runtime and 59,199 launcher UI checks passed**. [Current project status and next tasks](docs/project-status.md). [Highest-impact tasks from current work](docs/project-priorities.md).
 
-[Klavye simgeleri yenilendi](docs/keyboard-prompts.md): koyu tuşlar, turuncu MotoGP detayları ve Open Sans yazı; gerçek tuş eşlemeleri korunur. Güncel arayüz talepleri sırayla, ayrı teslimatlar halinde ilerler.
+[Keyboard prompts refreshed](docs/keyboard-prompts.md): dark keys, orange MotoGP accents, and Open Sans font; real key mappings are preserved. Current interface requests are handled in order, as separate deliveries.
 
-[Geliştirme notları ve yol haritası](docs/roadmap.md): [game/ dosya düzeni tamamlandı](docs/game-layout.md); [Yenilenen İngilizce/Türkçe launcher; 720p/1440p/4K, FSR 1.0, ses ve sade tuş eşlemeleri](docs/launcher.md). [Stabilite düzeltmeleri ve Windows regresyon sonuçları](docs/stability-quality-control.md) mevcut; [Radmin VPN/LAN kaynak araştırması ve rota](docs/lan-research.md) hazır. [İlk LAN keşif/guest oturum altyapısı](docs/lan-lobby-preview.md) iki ayrı Windows süreciyle doğrulandı. [Yeni deneysel LAN entegrasyonu ve iki-PC kullanım adımları](docs/lan-multiplayer-test.md) hazır; **kullanıcı iki oyunculu Radmin yarışının sorunsuz çalıştığını bildirdi**. İlk lobi girişlerinde görülen iki hata [lobi düzeltmesinde](docs/lan-lobby-stability.md) giderildi; yeni EXE için Radmin testi bekleniyor. [Boş IP ile launcher başlangıç çökmesi düzeltildi](docs/lan-startup-fix.md); 17 hedefli Windows/Wine başlangıç kontrolü geçti. [Otomatik çökme raporları](docs/crash-reports.md) ve isteğe bağlı launcher izleyicisi eklendi. Kullanıcı son yarış başlangıcı düzeltmesinden sonra oyunun düzgün çalıştığını bildirdi; tüm mod/pistlerin kalite kontrolü henüz tamamlanmadı.
+[Development notes and roadmap](docs/roadmap.md): [game/ layout completed](docs/game-layout.md); [refreshed English/Turkish launcher; 720p/1440p/4K, FSR 1.0, audio, and simplified key mapping](docs/launcher.md). [Stability fixes and Windows regression results](docs/stability-quality-control.md) are available; [Radmin VPN/LAN source research and route](docs/lan-research.md) is ready. [Initial LAN discovery/guest session infrastructure](docs/lan-lobby-preview.md) was verified with two separate Windows processes. [New experimental LAN integration and two-PC usage steps](docs/lan-multiplayer-test.md) is ready; **user reported smooth two-player Radmin racing**. Two first-login lobby bugs were fixed in [lobby stability patch](docs/lan-lobby-stability.md); Radmin test is pending for the new EXE. [Launcher startup crash with empty IP fixed](docs/lan-startup-fix.md); 17-target Windows/Wine startup checks passed. [Automatic crash reports](docs/crash-reports.md) and optional launcher tracing were added. User reported the game works fine after the latest race-start fix; full mode/track quality control is still incomplete.
 
-[Deneysel LAN Windows build'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip): oyun EXE'si kullanıcıdan gelen MotoGP 09/10 kapağını, launcher ayrı MotoGP logosunu kullanır. Çevrimdışı oyun varsayılan kalır; Launcher her açılışta General sayfasında başlar. Temiz paket oyun verisi, kayıt, kişisel ayar ve log içermez. İsteğe bağlı [tek PC bağlantı testi](docs/lan-one-pc-test.md) betiği kaynak depoda bulunur. Multiplayer penceresindeki LAN seçeneği otomatik oda aramasını ve isteğe bağlı IP yedeğini açar. [Kapsam, sınırlamalar ve kullanım](docs/lan-multiplayer-test.md).
+[Experimental LAN Windows build](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip): game EXE uses MotoGP 09/10 cover from user; launcher uses separate MotoGP logo. Offline gameplay stays default; Launcher always opens on General page. Clean package includes no game data, saves, personal settings, or logs. Optional [single-PC connection test](docs/lan-one-pc-test.md) script is in source repo. LAN option in Multiplayer opens automatic room discovery with optional IP fallback. [Scope, limits, and usage](docs/lan-multiplayer-test.md).
 
-**Güncel kullanım: [güncel kaynak depo](https://github.com/inflamesgo/motogp0910-recomp/tree/main) ve [Windows yerel derleme rehberi](docs/windows-build.md).** Güncel paket önceki başlangıç düzeltmelerini ve yarışa geçişteki `0x82271650` callback kaydını içerir. Manifest, eksik CRT callback/initializer, kaynak karşılaştırıcısı ve video/arayüz fonksiyonlarını gerçek komut sınırlarıyla üretime dahil eder; oyunun rutinleri stub ile değiştirilmez. [Gerçek Linux açılış görüntüleri](docs/screenshots/) ve [Linux grafik denemesini yeniden çalıştırma adımları](docs/linux-startup.md) depoda bulunur.
-
-
-## Doğrulananlar
-
-- ReXGlue **Nightly 0.10.0.24-dev.gbd833a2**, commit `bd833a2ab69d305f99ddf57418fc38ffec8af93d` kullanılıyor. Sürüm ve resmi paket hashleri `sdk-version.json` ile sabitlenmiştir. 0.9.0 kurulumu ve çıktıları kaldırıldı.
-- Verilen XEX ve LIVE/STFS title update: Title ID `434307F0`, Media ID `321F1634`.
-- Title update SDK'nın STFS okuyucusuyla açıldı; `default.xexp` çıkarıldı. SDK'nın hash/anahtar kontrolleri korunarak patch uygulandı: `0.0.0.1` → `0.0.1.1`.
-- Stok ve TU analizlerindeki birer eksik fonksiyon sınırı gerçek disassembly ile belirlendi. TU manifesti sıfır çözülemeyen çağrıyla kod üretti; `--force` kullanılmadı.
-- TU sürümü için 113 C++ translation unit, 30.626 fonksiyon mapping girdisi üretildi; manifestte 63 doğrulanmış fonksiyon sınırı bulunur. Güncel Windows Release executable derlendi.
-- Önceki menü düzeltmesinin Linux entegrasyon probunda **47/47 davranış kontrolü geçti**: 10 asin/acos, 5 CRT callback, 24 kayıt initializer, 6 kaynak karşılaştırıcısı ve 2 arayüz getter vakası. Gerçek XEX içindeki 7144 CRT initializer hedefinin tamamı kayıtlıdır. Bu probe tek başına menü/yarış doğrulaması değildir.
-- SDK PowerPC + tarih testlerinde **43/43 vaka, 170 assertion geçti**. Eski chrono 1601-epoch taşması `sdk-stability.patch` ile düzeltildi; 1601–9999 tarih aralığı ve 100 ns hassasiyet için ayrıca **19 kontrol UBSan altında geçti**. Windows sunum yolu ve ek düzeltmeler checksum ile sabitlenmiş özel runtime çiftiyle dağıtılır.
-- Güncel stabilite taraması: TLS sınır/taşma koruması, thread kimliği yarış koşulu, başlatma yolu metin ömrü ve işlemci önbelleği düzeltildi. Windows/Wine altında **168 gerçek runtime kontrolü**, 8.000 eşzamanlı kimlik ve launcher/giriş/fizik/FSR planlayıcı testleri geçti. [Kapsam ve tekrar çalıştırma](docs/stability-quality-control.md).
-
-- Linux GUI için Xvfb + Mesa lavapipe Vulkan kuruldu. Tam disk verileriyle açılış videosu, başlık ekranı, ilk profil/zorluk ayarları geçildi ve **gerçek ana menüye ulaşıldı**. [Ekran görüntüsü](docs/screenshots/linux-main-menu.png) doğrudan Xvfb'den alındı. ALSA null endpoint ses backend'ini açar; duyulabilir ses kalitesi sınanmadı.
-- Windows x64 PE executable Clang 20/MSVC ABI ve resmi Windows SDK ile çapraz derlendi. Güncel Windows PE regresyonunda Wine altında **50/50 kontrol geçti** (önceki 47 vaka ve yarış başlangıcındaki callback için 3 ek vaka); gerçek XEX 0.0.1.1 ve 7144 initializer hedefi doğrulandı. Windows STFS çıkarma aracının çıktısı da beklenen patch SHA-256 değeriyle eşleşti. GUI denemesi bu makinenin ekran/GPU erişimi olmadığı için Direct3D 12 initialization aşamasında durdu. Kullanıcı GTX 1650 SUPER üzerinde Windows ana menüsünü, motorcu/pist seçimini ve Time Trial hazırlık ekranını doğruladı. Start sonrasında bildirilen `0x82271650` kayıt dışı callback güncel pakette düzeltildi; kullanıcı son düzeltmeden sonra oyunun düzgün çalıştığını bildirdi.
-- Genişletilmiş Windows launcher ve eşleşen FSR 1/CAS runtime çifti derlendi. **58 launcher + 140 runtime + 50 oyun kodu kontrolü geçti**; gerçek İngilizce/Türkçe GUI sekmeleri, kaydet/yeniden aç ve tuş yakalama Wine/Xvfb altında sınandı. FSR testleri gerçek SDK pass planlamasını doğrular; Windows GPU üzerinde yeni seçeneklerle yarış testi değildir. [Ayarlar, testler ve ekran görüntüleri](docs/launcher.md).
+**Current usage: [latest source repository](https://github.com/inflamesgo/motogp0910-recomp/tree/main) and [native Windows build guide](docs/windows-build.md).** Current package includes prior startup fixes and `0x82271650` callback registration for race transition. Manifest now includes missing CRT callback/initializer, resource comparer, and video/UI functions with real command bounds; game routines are not replaced with stubs. [Real Linux startup screenshots](docs/screenshots/) and [steps to rerun Linux graphics attempt](docs/linux-startup.md) are in the repo.
 
 
-- Oyun içi kayıtlı tuş simgeleri için Xbox/PlayStation/klavye seçimi uygulandı. Güncel Windows PE kontrolleri Wine altında **337/337 geçti** (44 simge çizimi, 45 giriş/eşleme, 58 launcher, 140 runtime ve 50 oyun kodu). Klavye simgeleri gerçek kayıtlı eşlemeleri gösterir. [Kapsam, otomatik algılama ve XInput ile PS denemesi](docs/controller-prompts.md).
+## Verified
 
-- Launcher arayüzü MotoGP kapak paletine uygun koyu kartlar ve turuncu/kırmızı vurgularla yenilendi. Tek iç çözünürlük seçimi ve 25 doğrudan tuş alanı bulunur. Üç sayfanın iki dilde, %75/%100/%125/%150 ölçekte yerleşimi doğrulandı; **72 launcher + 140 runtime kontrolü geçti**. Sayısal başlatma ayarlarının boolean olarak aktarılmasına neden olan TOML dönüşümü de düzeltildi. [Görünüm ve doğrulama](docs/launcher.md).
+- ReXGlue **Nightly 0.10.0.24-dev.gbd833a2**, commit `bd833a2ab69d305f99ddf57418fc38ffec8af93d`, is in use. Version and official package hashes are pinned in `sdk-version.json`. 0.9.0 setup and outputs were removed.
+- Provided XEX and LIVE/STFS title update: Title ID `434307F0`, Media ID `321F1634`.
+- Title update opened with SDK STFS reader; `default.xexp` extracted. Patch applied with SDK hash/key checks preserved: `0.0.0.1` → `0.0.1.1`.
+- One missing function boundary in each stock/TU analysis was determined from real disassembly. TU manifest generated code with zero unresolved calls; `--force` was not used.
+- For TU version, 113 C++ translation units and 30,626 function mapping entries were generated; manifest has 63 verified function boundaries. Current Windows Release executable was built.
+- Linux integration probe for the prior menu fix passed **47/47 behavior checks**: 10 asin/acos, 5 CRT callbacks, 24 registry initializers, 6 resource comparer cases, and 2 interface getter cases. All 7144 CRT initializer targets in real XEX are registered. This probe alone is not menu/race validation.
+- SDK PowerPC + date tests passed **43/43 cases, 170 assertions**. Legacy chrono 1601-epoch overflow fixed by `sdk-stability.patch`; additional **19 checks under UBSan** passed for 1601–9999 range and 100 ns precision. Windows presentation path and extra fixes ship with checksum-pinned custom runtime pair.
+- Current stability sweep: TLS bound/overflow protection, thread-ID race condition, startup path string lifetime, and CPU cache fixes applied. Under Windows/Wine, **168 real runtime checks**, 8,000 concurrent IDs, and launcher/login/physics/FSR scheduler tests passed. [Scope and rerun details](docs/stability-quality-control.md).
 
-- Çarpışma kayıtlarının endian dönüşümünde sonlu koordinatları değiştiren bit kaybı giderildi. Gerçek XEX rutinleriyle Linux ve Windows/Wine altında **192/192 veri ve ABI kontrolü geçti**; eski Windows rutini aynı testte hatayı yeniden üretir. Kullanıcı güncel buildle Windows’ta Qatar Time Trial’da 4–5 tur boyunca pistin altına düşmediğini doğruladı; gönderdiği log gerçek çarpışma kayıtlarında onarımın devreye girdiğini gösteriyor. [Düzeltme ve test kapsamı](docs/collision-data.md).
+- For Linux GUI, Xvfb + Mesa lavapipe Vulkan installed. With full disk data, startup video, title screen, initial profile/difficulty setup passed and **real main menu was reached**. [Screenshot](docs/screenshots/linux-main-menu.png) was captured directly from Xvfb. ALSA null endpoint enables audio backend; audible quality was not tested.
+- Windows x64 PE executable was cross-built with Clang 20/MSVC ABI and official Windows SDK. Current Windows PE regression under Wine passed **50/50 checks** (previous 47 cases + 3 callback cases for race start); real XEX 0.0.1.1 and 7144 initializer targets were verified. Windows STFS extractor output also matched expected patch SHA-256. GUI attempt in this machine stopped at Direct3D 12 initialization due to no screen/GPU access. User validated Windows main menu, rider/track selection, and Time Trial prep on GTX 1650 SUPER. Reported unregistered callback `0x82271650` after Start is fixed in current package; user reported game works properly after latest fix.
+- Extended Windows launcher and matching FSR 1/CAS runtime pair were built. **58 launcher + 140 runtime + 50 game-code checks passed**; real English/Turkish GUI tabs, save/reopen, and key capture were tested under Wine/Xvfb. FSR tests validate real SDK pass scheduling; they are not race tests with new options on Windows GPU. [Settings, tests, and screenshots](docs/launcher.md).
 
-- Kullanıcının PS3 dumpından orijinal buton kaplamaları eklendi: yüz tuşları, L1/R1, L2/R2, SELECT, analog ve D-pad yönleri. Kayıtlı 21 simge, Second Chance panelinin üstündeki 5 tuş ve tam tekrar panelindeki 8 tuş dönüştürülür. v2’de yanlışlıkla değiştirilen alt geri sarma/kamera satırı v3’te korunur. Windows/Wine altında **222 çizim/piksel aktarımı/tekrar paneli kontrolü geçti**; Kullanıcı v2’de menüdeki PS simgelerinin düzeldiğini doğruladı; v3 tekrar panelinin Windows oyun içi testi kullanıcıya bırakıldı. İlk PS3 buildinde parçalanmış simgelere yol açan 256/512 bayt satır aralığı uyumsuzluğu giderildi. `resources/controller/` klasörünü de ZIP’ten çıkar. Ayrı START, PS/Guide ve yazılı L3/R3 kaplaması bulunmadı. Kariyer kaplama readback düzeltmesi yeni pakete eklendi; Windows yarış görüntüsü kullanıcı tarafından sınanacak. [Kapsam](docs/controller-prompts.md).
 
-- Kariyer modunun özel motorcu/motor kaplamalarını oluştururken GPU sonucunu CPU belleğine geri yazan kapsamlı readback yolu etkinleştirildi. **13 kapsam/ABI (16 guest çağrısı), 72 launcher ve 140 runtime kontrolü geçti**; güncel çiftle PS3 simge/giriş/çarpışma/başlangıç kontrolleri de geçti. Oyun içi kariyer denemesi kullanıcının isteğiyle yerel Windows cihazına bırakıldı. Launcher sol altındaki SDK/platform yazısı ve şeritleri örten kutu kaldırıldı. [Düzeltmenin kapsamı](docs/career-textures.md).
+- Xbox/PlayStation/keyboard selection for in-game saved key icons is implemented. Current Windows PE checks under Wine passed **337/337** (44 icon renders, 45 input/mapping, 58 launcher, 140 runtime, 50 game-code). Keyboard icons show real saved mappings. [Scope, auto-detection, and XInput/PS testing](docs/controller-prompts.md).
 
-- DualSense / Edge adaptif tetikler **deneysel** olarak eklendi: Launcher → Controls ve F1 → Controls içinde sağ/sol mod, başlangıç, bitiş ve güç ayrı ayarlanır. Varsayılan kapalı; yerel SDL gerekir. Downpour’un SDL yaklaşımı kaynaklardan incelendi. 8BitDo/DS3/DS4’e efekt gönderilmez; fiziksel DualSense direnç testi henüz yapılmadı. [Kaynaklar ve kapsam](docs/adaptive-triggers.md).
-- Kullanıcı Press Start’tan geri basınca çıkış onayının artık çalıştığını doğruladı. QUIT GAME’in üstte kalan mavi parçası da katman parlaklığı ve alfa korunarak beyaz/griye çevrildi; üst katmanın görünümü de kullanıcı tarafından onaylandı.
+- Launcher UI refreshed with dark cards and orange/red accents matching MotoGP cover palette. Single internal resolution choice and 25 direct key fields are available. Layout across three pages in two languages at 75%/100%/125%/150% scale was validated; **72 launcher + 140 runtime checks passed**. TOML conversion that caused numeric startup settings to be passed as booleans was also fixed. [Appearance and validation](docs/launcher.md).
 
-## Topluluk sunucusu: Offline / LAN / Online
+- Bit loss in collision-record endian conversion that altered finite coordinates was fixed. With real XEX routines, **192/192 data and ABI checks passed** on Linux and Windows/Wine; legacy Windows routine reproduces the same bug in test. User validated on Windows current build that in Qatar Time Trial they no longer fell through track for 4–5 laps; provided log shows repair activated on real collision records. [Fix and test scope](docs/collision-data.md).
 
-**Sunucu güvenlik güncellemesi:** Online protokolü **MGO2 / v2** oldu; oyun ve sunucu paketlerini birlikte güncelle. UDP adres kanıtı, eski oda yanıtlarına karşı üyelik kontrolü, HTTP/TLS bağlantı sınırları, doğrulanmış proxy başlıkları ve veritabanı kotaları eklendi. [Ayrıntılı güvenlik incelemesi ve kalan sınırlar](docs/community-security.md). Mevcut veritabanı/profiller korunur; LAN02 ve çevrimdışı oyun değişmez.
+- Original button overlays from user PS3 dump were added: face buttons, L1/R1, L2/R2, SELECT, analog, and D-pad directions. Converted: 21 saved icons, 5 keys above Second Chance panel, and 8 keys in full replay panel. Bottom rewind/camera row accidentally changed in v2 is preserved in v3. Under Windows/Wine, **222 render/pixel-transfer/replay-panel checks passed**; user confirmed PS icons in menu are fixed in v2; v3 replay panel in-game Windows test is left to user. 256/512-byte row-stride mismatch causing fragmented icons in first PS3 build was fixed. Extract `resources/controller/` folder from ZIP too. Separate START, PS/Guide, and text L3/R3 overlays were not found. Career overlay readback fix added to new package; Windows race visuals will be user-tested. [Scope](docs/controller-prompts.md).
 
-İkinci incelemede sahte/tekrar UDP paketlerinin normal oyuncu kotasını tüketmesi ve geçersiz kimliklerin kota tablosunu doldurması düzeltildi. Aynı modem arkasındaki 20 oyuncunun eşzamanlı bağlantısı ve art arda yeniden bağlanması için sınırlar düzeltildi; Windows Python/Wine testleri geçti. [Mevcut profil kimliği ve kurtarma sınırları](docs/community-online.md#how-player-identity-works) belgelendi. Kullanıcı adı/şifreyle taşınabilir hesap sistemi **henüz eklenmedi**, [tasarım notu](docs/community-accounts-plan.md) ileride uygulanmak üzere saklandı.
+- Broad readback path that writes GPU result back to CPU memory while building custom rider/bike textures in Career mode is enabled. **13 scope/ABI (16 guest calls), 72 launcher, and 140 runtime checks passed**; with current pair, PS3 icon/input/collision/startup checks also passed. In-game Career validation is left to user local Windows device by request. SDK/platform text and ribbons in lower-left launcher that obscured elements were removed. [Fix scope](docs/career-textures.md).
 
-General → Multiplayer Settings düğmesinin açtığı pencerede **Connection mode** ile Çevrimdışı, LAN veya deneysel Çevrimiçi seçilebilir. [Linux ve Windows VDS sunucu paketi](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Community-Server.zip) oda keşfi, doğrulanmış UDP aktarımı ve 378 yerel leaderboard görünümünde kalıcı sonuçları sağlar. [Kurulum ve kapsam](docs/community-online.md). Online için kendi HTTPS sunucu adresin gerekir; henüz ortak bir sunucu kurulmadı. Yarış simülasyonu oyunculardan birinde çalışır; **Player Match** kullanılır. Resmî Xbox Live ranked/arkadaş/ses hizmetleri geri getirilmez. Mevcut LAN seçeneği korunur. Yerel Windows/Wine kontrolleri geçti; gerçek VDS üzerinden yarış ve canlı leaderboard ekranı testi bekleniyor.
+- DualSense / Edge adaptive triggers added as **experimental**: Launcher → Controls and F1 → Controls now have separate right/left mode, start, end, and force. Default is off; local SDL required. Downpour SDL approach was reviewed from sources. No effects sent to 8BitDo/DS3/DS4; physical DualSense resistance test not yet done. [Sources and scope](docs/adaptive-triggers.md).
+- User confirmed exit confirmation now works when pressing back from Press Start. The blue leftover part above QUIT GAME was also converted to white/gray while preserving layer glow and alpha; upper-layer appearance was user-confirmed too.
 
-**Türkçe yükleme düzeltmesi:** Çeviri dosyalarının oyunun gerçek dosya açma yolunda atlanması giderildi. Ana menü/Press Start Türkçe olarak açıldı; çalışan oyundaki 2.102 metnin tamamı katalogla eşleşti. Küçük fonttaki İ/ı çizimi de düzeltildi. Tam ZIP'i çıkarıp **General → Game language → Türkçe** seç. [Ayrıntılar](docs/turkish-localization.md).
+## Community server: Offline / LAN / Online
 
-## Hazır Windows paketi
+**Server security update:** Online protocol is now **MGO2 / v2**; update game and server packages together. Added UDP address proof, membership checks against stale room responses, HTTP/TLS connection limits, validated proxy headers, and database quotas. [Detailed security review and remaining limits](docs/community-security.md). Existing database/profiles are preserved; LAN02 and offline gameplay are unchanged.
 
-[Güncel Windows x64 EXE + DLL ZIP'i](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip). GitHub hesabına giriş yaptıktan sonra dosya sayfasındaki **Download raw file** düğmesiyle indir. Paket **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** kullanır; Visual Studio/derleme araçları gerekmez.
+Second review fixed fake/replay UDP packets consuming normal player quota and invalid identities filling quota table. Limits were fixed for 20 concurrent players behind same modem and repeated reconnects; Windows Python/Wine tests passed. [Current profile ID and recovery limits](docs/community-online.md#how-player-identity-works) are documented. Portable username/password account system is **not added yet**; [design note](docs/community-accounts-plan.md) is kept for future implementation.
 
-1. ZIP'i program klasörüne çıkar; yeni EXE/DLL'ler üst dizinde kalır.
-2. Tüm orijinal disk dosyalarını, `default.xex`, `default.xexp`, TU paketi, `xenondata/` ve `nxeart/` birlikte **`game/`** altklasörüne koy. [Taşıma rehberi](docs/game-layout.md) örnek düzeni gösterir.
-3. `motogp0910-launcher.exe`yi aç, ayarlarını seç ve **PLAY** düğmesine bas. **General → Launcher language** menüsü Türkçeye geçer; dil seçimi kaydedilir. **Game language → Türkçe** ise oyunun yazılarını Türkçeye geçirir; iki dil seçimi bağımsızdır. İstersen oyunu `motogp0910.exe` ile doğrudan da açabilirsin. Klavye varsayılan olarak açıktır: Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
+In the window opened by General → Multiplayer Settings button, **Connection mode** can select Offline, LAN, or experimental Online. [Linux and Windows VDS server package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Community-Server.zip) provides room discovery, validated UDP relay, and persistent results in local 378 leaderboard view. [Setup and scope](docs/community-online.md). Online needs your own HTTPS server address; no shared public server exists yet. Race simulation runs on one of the players; use **Player Match**. Official Xbox Live ranked/friends/voice services are not restored. Existing LAN option remains. Local Windows/Wine checks passed; race and live leaderboard tests over real VDS are pending.
 
-[Doğrudan EXE açılışı ve giriş tercihi notları](docs/direct-launch.md). Güncel geliştirme paketi `.cmd`, README veya özellik yönergeleri içermez; gerekli oyun kaynakları ve lisanslar korunur. Kullanıcının sağladığı `gamecontrollerdb.txt` dosyası EXE yanında paketlenir; SDL gamepad eşlemeleri için kullanılır. [Controller eşleme notları](docs/controller-mappings.md).
+**Turkish loading fix:** translation files being skipped in the game's real file-open path is fixed. Main menu/Press Start opens in Turkish; all 2,102 texts in running game now match catalog. Rendering of İ/ı in small font is also fixed. Extract full ZIP and choose **General → Game language → Türkçe**. [Details](docs/turkish-localization.md).
 
-Yeni EXE açık bir oyun yolu verilmediğinde önce `game/default.xex` arar; yoksa eski düz yerleşimi kullanır. Her iki yerde XEX varsa `game/` önceliklidir. İlk çalıştırmada uygulama oyun kökündeki title update'ten `default.xexp` çıkarır; orijinal XEX'i ve mevcut patch'i değiştirmez. Oyun sürümü **0.0.1.1** olmalı. Oyun ikilileri, patch ve disk verileri ZIP'te bulunmaz. Kayıt/cache varsayılanı SDK'nın kullanıcı klasörüdür; varsayılan loglar EXE yanındaki `logs/` içindedir. Windows 10/11 x64 ve uygun Direct3D 12 GPU gerekir.
+## Ready Windows package
 
-Linux'ta tam oyun ana menüsü ve en az iki dakikalık çökmesiz gözlem doğrulandı. Güncel Windows PE probunda 50 kontrol geçti. Kullanıcı önceki yarış düzeltmesini ve `game/` düzenini sorunsuz çalıştırdığını bildirdi. Bu teslimattaki giriş tercihi kontrolleri Windows PE probunda Wine altında 5/5 geçti; yeni EXE bu bulut ortamında Windows GPU üzerinde oynanmadı. Tüm mod/pistlerin kalite kontrolü ve duyulabilir ses kalitesi henüz doğrulanmadı. Eski `MotoGP0910-Windows-x64-preview.zip` bu düzeltmeleri içermez.
+[Current Windows x64 EXE + DLL ZIP](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-tooltip-fix.zip). After logging into GitHub, download with **Download raw file** button on the file page. Package uses **ReXGlue Nightly 0.10.0.24-dev.gbd833a2**; Visual Studio/build tools are not required.
 
-Paket SHA-256: `6a3d6e38a6273d6b887f4bb1d65b14e88bca35a104df1d9944f8c239bcde8326`.
+1. Extract ZIP into program folder; keep new EXE/DLLs at top level.
+2. Put all original disc files, `default.xex`, `default.xexp`, TU package, `xenondata/`, and `nxeart/` together under **`game/`** subfolder. [Move guide](docs/game-layout.md) shows sample layout.
+3. Open `motogp0910-launcher.exe`, choose settings, and press **PLAY**. **General → Launcher language** switches launcher UI to Turkish; language choice is saved. **Game language → Türkçe** switches in-game texts to Turkish; the two language selections are independent. You can also run game directly with `motogp0910.exe`. Keyboard defaults are enabled: Enter=Start, Space=A, Backspace=B; W/S/A/D=left stick, Shift+arrows=D-pad.
 
-## Windows'ta kaynaktan derleme
+[Direct EXE launch and startup preference notes](docs/direct-launch.md). Current development package does not include `.cmd`, README, or feature guidelines; required game resources and licenses are preserved. User-provided `gamecontrollerdb.txt` is packaged beside EXE; used for SDL gamepad mappings. [Controller mapping notes](docs/controller-mappings.md).
 
-3 GB'lık oyun verisini buluta yüklemek gerekmez. Proje paketini kendi bilgisayarında açıp tam çıkarılmış oyun klasörünü orada kullanabilirsin. Oyun verisi bu proje paketinde bulunmaz.
+When no explicit game path is given, new EXE first looks for `game/default.xex`; if not found, it uses legacy flat layout. If both locations contain XEX, `game/` is prioritized. On first run, app extracts `default.xexp` from title update in game root; it does not alter original XEX or existing patch. Game version should be **0.0.1.1**. Game binaries, patch, and disc data are not included in ZIP. Save/cache default is SDK user folder; default logs are under `logs/` next to EXE. Windows 10/11 x64 and suitable Direct3D 12 GPU are required.
 
-Gerekli araçlar: Visual Studio **2022 veya daha yeni (2026 dahil)** Desktop development with C++ bileşenleri, Windows SDK, **Clang 20+**, CMake 3.25+ ve Ninja. VS 2026 içindeki Clang 22 ve C++ CMake araçları bu gereksinimleri karşılar.
+On Linux, full game main menu and at least two minutes crash-free observation are verified. Current Windows PE probe passed 50 checks. User reported previous race fix and `game/` layout worked without issues. Startup preference checks in this delivery passed 5/5 under Wine in Windows PE probe; new EXE was not played on Windows GPU in this cloud environment. Full mode/track quality control and audible audio quality are still unverified. Old `MotoGP0910-Windows-x64-preview.zip` does not include these fixes.
 
-Güncel betik normal PowerShell'den kurulu VS sürümünün x64 ortamını otomatik hazırlar; VS içindeki Clang, CMake ve Ninja'yı bulur. Uygun harici LLVM/PATH araçlarını da kullanabilir. Kurulum bağlantıları, RAM'e göre Jobs önerileri ve log alma komutu [ayrıntılı rehberde](docs/windows-build.md).
+Package SHA-256: `6a3d6e38a6273d6b887f4bb1d65b14e88bca35a104df1d9944f8c239bcde8326`.
 
-Proje klasöründe şu komutu kendi dosya yollarınla çalıştır:
+## Build from source on Windows
+
+No need to upload 3 GB game data to cloud. You can open this project package on your own machine and use the fully extracted game folder there. Game data is not included in this project package.
+
+Required tools: Visual Studio **2022 or newer (including 2026)** with Desktop development with C++ components, Windows SDK, **Clang 20+**, CMake 3.25+, and Ninja. Clang 22 and C++ CMake tools in VS 2026 satisfy these requirements.
+
+Current script automatically prepares x64 environment of installed VS version from normal PowerShell; finds Clang, CMake, and Ninja inside VS. It can also use suitable external LLVM/PATH tools. Setup links, RAM-based Jobs suggestions, and log capture command are in the [detailed guide](docs/windows-build.md).
+
+Run this command in project folder with your file paths:
 
 ```powershell
 .\scripts\build-windows.ps1 `
@@ -99,23 +99,21 @@ Proje klasöründe şu komutu kendi dosya yollarınla çalıştır:
   -Jobs 2
 ```
 
-Betik `sdk-version.json` ile sabitlenmiş resmi Windows AMD64 SDK paketini indirip GitHub yayınındaki SHA-256 ile doğrular. Verilen XEX/TU hash'lerini kontrol eder; STFS çıkarma aracını derler, patch'i çıkarır, yalnızca XEX/patch'i yerel `assets/game-tu` altına hazırlar. Tam oyun klasörünü kopyalamaz. Kod üretimini, Release derlemesini ve headless entegrasyon probunu çalıştırır. Native komutların hataları saklanmaz.
+The script downloads the official Windows AMD64 SDK package pinned in `sdk-version.json` and verifies it with SHA-256 from GitHub release. It checks provided XEX/TU hashes; builds STFS extraction tool, extracts patch, and prepares only XEX/patch under local `assets/game-tu`. It does not copy full game folder. It runs codegen, Release build, and headless integration probe. Native command failures are not hidden.
 
-Başarılı yerel derlemenin çıktısı: `out/build/win-amd64-release/motogp0910.exe`. SDK runtime DLL'leri ve Xenos GPU plugin'i yanında hazırlanır. Aynı hedef için bulutta ayrıca Windows çapraz derlemesi yapıldı; yerel betik kendi Windows makinesinde tekrar derlemek içindir.
+Output of successful local build: `out/build/win-amd64-release/motogp0910.exe`. SDK runtime DLLs and Xenos GPU plugin are prepared beside it. Windows cross-build is also done in cloud for same target; local script is for rebuilding on your own Windows machine.
 
-Tam oyun klasörüyle çalıştırma denemesi:
+Run attempt with full game folder:
 
 ```powershell
 .\scripts\run-windows.ps1 -GameRoot 'D:\Games\MotoGP0910'
 ```
 
-Çalıştırma betiği orijinal XEX hash'ini kontrol eder. Çıkarılan/doğrulanan `default.xexp` dosyasını tam oyun klasörüne yalnızca yoksa ekler; var olan farklı patch'i değiştirmez. Orijinal `default.xex` ve oyun veri dosyaları korunur. SDK patch'i çalışma sırasında tekrar uygular; üretilmiş fonksiyon tablosu bu sürümle eşleşir. Kayıtlar `out/userdata`, log `out/motogp-windows.log` altına gider.
+Run script checks original XEX hash. It adds extracted/verified `default.xexp` into full game folder only if missing; it does not overwrite an existing different patch. Real Windows test on GTX 1650 SUPER confirmed menu and Time Trial prep screen. Missing callback after Start was added in current sources; race validation should be repeated with the new package.
 
-GTX 1650 SUPER üzerindeki gerçek Windows denemesi menü ve Time Trial hazırlık ekranını doğruladı. Start sonrasında eksik callback güncel kaynaklarda eklendi; yeni paketle yarış doğrulaması ayrıca yapılmalıdır.
+## Continue in cloud environment
 
-## Bulut ortamında devam
-
-Görev zaten izole bir makinededir; mevcut checkout'u kullan, ayrıca Git worktree oluşturma.
+Task already runs on an isolated machine; use the current checkout and do not create additional Git worktrees.
 
 ```bash
 cd /workspace/motogp0910-recomp
@@ -129,38 +127,38 @@ cmake --build --preset linux-amd64-release --target motogp_headless_probe --para
 out/build/linux-amd64-release/motogp_headless_probe assets/game-tu
 ```
 
-Kurulum Debian 13'te root gerektirmeden `/workspace/shared` altında yapılır. Debian paket imzaları ve SDK checksum'ları kontrol edilir. Bulut Clang 19'u SDK'nın Clang 18+ gereksinimini karşılar; gerçek oyun ve SDK testleriyle sınandı. Her yeni shell'de `cloud-env.sh` tekrar source edilmelidir. Yayınlama canlı süreçleri korumaz.
+Setup on Debian 13 is under `/workspace/shared` without requiring root. Debian package signatures and SDK checksums are verified. Cloud Clang 19 satisfies SDK Clang 18+ requirement; validated with real game and SDK tests. In each new shell, `cloud-env.sh` must be sourced again. Publishing does not preserve live processes.
 
-SDK testleri:
+SDK tests:
 
 ```bash
 bash scripts/smoke-sdk.sh
-# SDK kaynak düzeltmeleri uygulandıktan sonra 43 vaka + 19 aralık kontrolü geçer.
-# PowerPC altkümesini ayrı çalıştır:
+# After SDK source fixes are applied, 43 cases + 19 range checks pass.
+# Run PowerPC subset separately:
 out/smoke/build/ppc_smoke '[ppc]'
 ```
 
-SDK'nın kod üretimi fingerprint'inin patch dosyasını izlediğini varsayma. XEX/patch değişince hash kontrolünü ve `--ignore-stamp` ile kod üretimini tekrar yap; başka oyun sürümü için adres sınırlarını yeniden analiz et. Stok sürüme ait sınır TU manifestinde kullanılmaz.
+Do not assume SDK codegen fingerprint tracks patch file automatically. When XEX/patch changes, rerun hash checks and codegen with `--ignore-stamp`; re-analyze address boundaries for other game versions. Stock-version boundaries are not used in TU manifest.
 
-## Girdi hash'leri
+## Input hashes
 
-| Dosya | SHA-256 |
+| File | SHA-256 |
 |---|---|
-| Stok `default.xex` | `54245417e996ed0aa561a5a803fd810e87684bd0b43082f316db711b3ee786ae` |
-| Verilen TU paketi | `441df6cc2e20ac8aeeed475138c1714d477f965423d8c5c9b0202e3a18d8141f` |
-| Çıkarılan `default.xexp` | `0419205ba10dc65eaa7b0bb62abc64cada46119ece5ed749e4ba20c06a6bc079` |
+| Stock `default.xex` | `54245417e996ed0aa561a5a803fd810e87684bd0b43082f316db711b3ee786ae` |
+| Provided TU package | `441df6cc2e20ac8aeeed475138c1714d477f965423d8c5c9b0202e3a18d8141f` |
+| Extracted `default.xexp` | `0419205ba10dc65eaa7b0bb62abc64cada46119ece5ed749e4ba20c06a6bc079` |
 | Linux AMD64 SDK ZIP | `0a56565221a4e75f91fc71f787d9299a0d0298127b970c8a88a292f8d3a3befe` |
 | Windows AMD64 SDK ZIP | `1e19d7ec9be0d9d7e1a0088a34a33b068d4dea520181e81318528ef3b37627e7` |
 
-## Dosya düzeni
+## File layout
 
-`assets/game/default.xex` stok kopyadır. `assets/game-tu/` analiz/derleme için orijinal XEX + kardeş `default.xexp` içerir. `assets/updates/` orijinal title update ve çıkarılan patch'i tutar. `generated/default/` oyun kodudur. Bu dosyalar ve `out/` Git'e eklenmez. `generated/rexglue.cmake` SDK tarafından yönetilir.
+`assets/game/default.xex` is the stock copy. `assets/game-tu/` contains original XEX + sibling `default.xexp` for analysis/build. `assets/updates/` keeps original title update and extracted patch. `generated/default/` is game code. These files and `out/` are not committed to Git. `generated/rexglue.cmake` is managed by SDK.
 
-`tools/motogp_inspect` SDK loader'larıyla XEX section dump ve STFS çıkarma sağlar; var olan çıktı dizinini/dosyaları değiştirmeyi reddeder. Analiz notları `docs/analysis.md`, bu ortamın ham raporları `out/analysis/` altındadır.
+`tools/motogp_inspect` provides XEX section dump and STFS extraction with SDK loaders; it refuses to overwrite existing output directories/files. Analysis notes are in `docs/analysis.md`; raw reports for this environment are under `out/analysis/`.
 
-Resmi SDK: https://github.com/rexglue/rexglue-sdk/tree/bd833a2ab69d305f99ddf57418fc38ffec8af93d
+Official SDK: https://github.com/rexglue/rexglue-sdk/tree/bd833a2ab69d305f99ddf57418fc38ffec8af93d
 
-## Linux bulutundan Windows derlemesi
+## Windows build from Linux cloud
 
 ```bash
 cd /workspace/motogp0910-recomp
@@ -169,9 +167,9 @@ bash scripts/build-windows-cross.sh
 python3 scripts/package-windows.py
 ```
 
-Microsoft SDK/CRT xwin 0.10.0 ile sabit VS17 manifestinden hazırlanır. Windows kaynakları Clang 20 ile MSVC ABI'sine derlenir; kod üretimi sdk-version.json ile sabitlenmiş aynı Nightly Linux host aracında yapılır. Compiler resource include yolu Microsoft include yollarından önce gelmelidir; aksi halde MMX ve constexpr offsetof hataları çıkar. SDK/library doğrulamaları ve static assertion'lar korunur. SDK paketleri checksum, LLVM paketleri APT imza kontrolünden geçer. Önbellek ve araçlar `/workspace/shared` altındadır.
+Microsoft SDK/CRT is prepared with xwin 0.10.0 from pinned VS17 manifest. Windows resources are compiled with Clang 20 to MSVC ABI; codegen runs on the same Nightly Linux host tools pinned by sdk-version.json. Compiler resource include path must come before Microsoft include paths; otherwise MMX and constexpr offsetof errors occur. SDK/library validations and static assertions are preserved. SDK packages pass checksum verification; LLVM packages pass APT signature checks. Cache and tools are under `/workspace/shared`.
 
-Çıktı `out/build/windows-nightly-release/motogp0910.exe`; paket `out/dist/MotoGP0910-Windows-x64-stability-update.zip` olur. Wine yalnızca ek yükleme/CPU probu içindir; gerçek Windows grafik doğrulamasının yerine geçmez.
+Output is `out/build/windows-nightly-release/motogp0910.exe`; package is `out/dist/MotoGP0910-Windows-x64-stability-update.zip`. Wine is only for additional loading/CPU probes; it does not replace real Windows graphics validation.
 
 Experimental FSR 2/3 and horizontal-plus 21:9/32:9 camera options: [sources, implementation and limitations](docs/experimental-rendering.md). FSR quality modes do not lower scene rendering cost; correct temporal motion/depth integration remains unfinished.
 
