@@ -27,9 +27,9 @@ In **General → Multiplayer Settings → Connection mode** choose:
 
 | Mode | Behavior |
 |---|---|
-| Offline / Çevrimdışı | Original local game and saves; no community or LAN connection |
+| Offline | Original local game and saves; no community or LAN connection |
 | LAN | Existing broadcast room discovery and optional host IPv4 fallback |
-| Online / Çevrimiçi | Community HTTPS handshake, server room discovery, UDP relay and persistent native leaderboards |
+| Online | Community HTTPS handshake, server room discovery, UDP relay and persistent native leaderboards |
 
 For Online enter the administrator's **HTTPS origin**, for example
 `https://play.example.com`, in **Online server**. Set a player name and optionally

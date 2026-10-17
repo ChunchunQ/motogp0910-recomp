@@ -1,45 +1,38 @@
-# Doğrudan EXE ile açılış
+# Launching the game directly
 
-Yeni Windows paketi: `MotoGP0910-Windows-x64-launcher.zip`.
-ZIP'i mevcut program klasörüne çıkarıp EXE/DLL'leri güncelle. Oyun dosyaları
-`game/` altında kalır. `motogp0910.exe`ye çift tıkla; klavye kontrolü için
-CMD veya komut satırı parametresi gerekmez. Yeni paketteki yönerge dosyaları
-`readme.txt` ve `game/readme.txt` adlarıyla gelir. Önceki paketten kalan CMD
-ve Türkçe yönerge dosyalarını kullanman gerekmez; istersen silebilirsin.
+Extract the complete current Windows package into the program directory, keeping
+existing game data, configuration and saves. Double-click `motogp0910.exe`;
+no command prompt or special keyboard argument is required. Use the current
+package linked from the [project README](../README.md), rather than an old ZIP.
+Development packages omit README files, launch scripts and separate license
+folders; required third-party notices are embedded in the launcher.
 
-Enter=Start, Space=A, Backspace=B; W/S/A/D=sol stick, Shift+oklar=D-pad.
-SDK'nın gamepad backend'i ve mevcut tuş eşlemeleri aynı şekilde kullanılır.
-Doğrudan açılış davranışı korunur; [launcher kullanımı](launcher.md) ayrı belgede açıklanır.
+Keyboard defaults: Enter = Start, Space = A, Backspace = B, W/S/A/D = left
+stick, Shift + arrows = D-pad. Existing controller backends and bindings are
+preserved. The optional [launcher](launcher.md) remains available.
 
-## Kullanıcı tercihini koruma
+## Preserving explicit preferences
 
-Uygulama, SDK yapılandırması yüklendikten sonra ve giriş sistemi kurulmadan
-önce `mnk_mode` kaynağını kontrol eder. Değer hâlâ SDK varsayılanıysa klavye
-emülasyonunu açar. Açık TOML, ortam değişkeni, CLI veya runtime tercihini
-değiştirmez. EXE yanındaki mevcut `motogp0910.toml` içinde `mnk_mode = false`
-varsa, klavyeyi açmak için bu değeri `true` yap veya ilgili satırı kaldır.
-Gamepad kullanan ve klavyeyi kapatmak isteyen kullanıcı `false` bırakabilir.
+Before input initialization, the application enables `mnk_mode` only if its
+source is still the SDK default. Explicit TOML, environment, CLI and runtime
+values remain unchanged. If `motogp0910.toml` contains `mnk_mode = false`, set
+it to `true` or remove that line to enable keyboard emulation. Controller users
+can retain `false`.
 
-## Doğrulama
+## Validation
 
-ReXGlue v0.10.0 ile Windows x64 uygulaması derlendi. İsteğe bağlı
-`input_defaults_probe` hedefi gerçek SDK registry/config/env/CLI kodunu ve
-uygulamanın aynı giriş başlangıç fonksiyonunu kullanır; yeni bir flag tanımı
-veya taklit parser içermez. Windows PE çıktısı Wine altında şu kontrolleri geçti:
+The Windows `input_defaults_probe` uses the real SDK config registry and the
+production input-startup helper. Five Wine scenarios passed with exit 0:
 
-| Senaryo | Beklenen sonuç |
-|---|---|
-| Parametresiz, özel ayarsız açılış | Klavye açık |
-| TOML `mnk_mode=false`, özel backend ve tuş eşlemesi | Klavye kapalı, backend/eşleme korunur |
-| Ortam değişkeni false, TOML true | Klavye kapalı |
-| CLI false, ortam değişkeni/TOML true | Klavye kapalı |
-| CLI true, ortam değişkeni/TOML false | Klavye açık |
+| Inputs | Result |
+| --- | --- |
+| No custom setting | Keyboard enabled |
+| TOML false with custom backend/bindings | Keyboard disabled; mappings retained |
+| Environment false over TOML true | Keyboard disabled |
+| CLI false over environment/TOML true | Keyboard disabled |
+| CLI true over environment/TOML false | Keyboard enabled |
 
-Her senaryo ayrıca sonradan verilen runtime false tercihinin korunmasını
-kontrol etti. **5/5 senaryo, exit 0.** Bu kontroller grafik ve fiziksel gamepad
-etkileşimi çalıştırmaz. Bu bulut makinesinde Windows Direct3D 12 oynanışı
-yeniden test edilmedi; kullanıcı önceki paketin düzgün çalıştığını bildirdi.
-
-Paket CRC'si, her üyenin SHA-256 değeri, EXE'nin derleme çıktısıyla eşleşmesi,
-CMD içermemesi ve İngilizce dosya adları ayrıca kontrol edilir. Orijinal oyun
-dosyaları/TU/patch dağıtım paketine dahil edilmez.
+Every scenario also checks that a later runtime false value is retained. These
+are precedence checks, not physical controller or Windows GPU gameplay tests.
+Packaging separately checks ZIP integrity, output hashes and original-data
+exclusion. See [game layout](game-layout.md) for data discovery and save paths.

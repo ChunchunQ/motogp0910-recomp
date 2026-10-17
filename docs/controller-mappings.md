@@ -1,36 +1,28 @@
-# Gamepad eşleme veritabanı
+# Gamepad mapping database
 
-ReXGlue v0.10.0 SDL giriş backend'i `hid_mappings_file` ayarını kullanır.
-Varsayılan değer `gamecontrollerdb.txt` olduğundan gönderilen dosya aynı adla
-EXE yanında paketlenir. `game/` içine konmaz. SDK dosyayı
-`SDL_AddGamepadMappingsFromFile` ile yükler; başarılı yükleme logda
-`SDL GameControllerDB: loaded ... mappings.` satırıyla gösterilir.
+The pinned ReXGlue SDL backend reads `hid_mappings_file`, whose default is
+`gamecontrollerdb.txt`. The package places this file beside the EXE, outside
+`game/`. SDL loads it through `SDL_AddGamepadMappingsFromFile`; success appears
+as `SDL GameControllerDB: loaded ... mappings.`
 
-Bu dosya, kolun GUID kimliği için düğme/eksen eşlemeleri sağlar. SDL'nin zaten
-tanıdığı bir kol dosya olmadan da çalışabilir. Kullanıcıya ait belirli bir
-kolun bağlantısını ve bütün düğmelerini bu bulut makinesinde doğrulamak mümkün
-değildir; dosyanın yüklenmesi bütün kolların doğru çalışacağı anlamına gelmez.
-`input_backend=xinput` kullanılırsa SDL eşleme dosyası kullanılmaz.
+The database maps buttons/axes for controller GUIDs. SDL may already recognize
+a device without this file. Successful database loading does not verify every
+physical controller. The XInput backend does not use this SDL database.
 
-SDK v0.10.0 bu varsayılan dosya adını çalışma dizinine göre arar. Normalde
-program klasöründen açılır. Kısayoldan başlatıyorsan **Start in / Başlangıç**
-alanını EXE klasörüne ayarla. Özel `hid_mappings_file` ayarın varsa bu tercih
-korunur; gerekirse dosyanın tam yolunu verebilirsin. Launcher aşamasında oyun
-işleminin çalışma dizini program klasörü olarak seçilmelidir.
+Relative mapping paths are resolved from the working directory. The launcher
+sets that directory to the program folder. For shortcuts, set **Start in** to
+the EXE directory, or supply an absolute `hid_mappings_file` path. Explicit
+user settings are retained.
 
-Gönderilen dosya değiştirilmeden `third_party/SDL_GameControllerDB/` altında
-saklandı. 2241 girişin 860'ı Windows içindir. SHA-256:
+The supplied file is preserved unchanged under `third_party/SDL_GameControllerDB/`:
+2,241 entries, including 860 Windows entries, SHA-256
 `e4e5cb4b96e36b439531c5fdfd648b56e69d579844cb970e680a40d9b314b786`.
-Upstream kaynak ve zlib lisansı birlikte korunur. Paketleme betiği her Windows
-paketine dosyayı ve `licenses/SDL_GameControllerDB-LICENSE.txt` lisansını ekler.
+Upstream attribution and the zlib license remain in source; distribution notices
+are embedded in the launcher, rather than a separate licenses folder.
 
-Linux SDK'nın gerçek SDL API'siyle içe aktarım başarıyla tamamlandı (472 yeni
-eşleme). Bu sayı platform filtresinden ve mevcut/tekrarlanan eşlemelerden
-etkilenir; dosyadaki toplam satır sayısıyla aynı olması gerekmez.
-
-Windows SDK ile verilen aynı SDL static library kullanılarak oluşturulan Windows
-PE probu Wine altında paket klasöründeki dosyayı yükledi: platform Windows,
-569 yeni eşleme, exit 0. SDK registry varsayılan dosya adı ve bir örnek Windows
-GUID eşlemesinin ad/düğme içeriği doğrulandı. Bu, fiziksel kol testi değildir.
-Paket CRC ve üye SHA-256 kontrollerinden geçti; eklenen veritabanı yüklenen
-dosyayla byte olarak aynıdır. Oyun EXE/DLL kodu bu teslimatta değişmedi.
+The real Linux SDK SDL API imported 472 new mappings. A Windows PE linked to
+the SDK's SDL library loaded the packaged file under Wine: Windows platform,
+569 new mappings, exit 0. Default filename and a sample GUID/button mapping
+were checked. Import counts depend on platform filtering and existing entries;
+these checks do not replace physical controller testing. Packaged bytes match
+the supplied database.

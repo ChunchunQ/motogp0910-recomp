@@ -1,4 +1,4 @@
-# Project status — 16 October 2026
+# Project status — 17 October 2026
 
 
 **Launcher Racing Lines:** User-selected concept B is implemented as a compact 940 × 578 launcher with horizontal tabs, scrollable settings and title buttons drawn over the artwork. General adds read-only, cancellable SHA-256 game-file verification. See [scope and validation](launcher-redesign.md).
@@ -31,7 +31,7 @@ Don't publish original game data, personal logs or preview screenshots.
 | Community service security | MGO2 UDP endpoint proof, strict room transitions, pre-TLS admission, authenticated Caddy proxy, bounded SQLite/HTTP/UDP work; 46 server tests and 12 real HTTPS checks per Linux/Windows backend | Windows Python/clients exercised under Wine; deployed VDS OS/firewall/provider DDoS controls and Internet race remain unverified. See community-security.md. |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
 | Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 345 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
-| Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
+| Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; normalized 48 Turkish glyphs across four banks; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
 | Quit menu | Uppercase entry; white stripe and upper cap with brightness/alpha retained; separate boot/frontend guards; 109 checks | User confirmed Press Start Back now opens exit confirmation. User also accepted the white upper cap. See quit-menu.md. |
 | Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 60,132 actual launcher UI checks | EN/TR previews inspected. Native scrollbar now passes actual mouse-drag input; title bar has only minimize/close. Native game GPU/listening check pending |
 | DualSense adaptive triggers | Downpour SDL approach researched first; nine shared launcher/F1 parameters, native PS5/Edge targeting, explicit reset on disable/focus/shutdown; 200 software/transport checks | Experimental and default off. User owns 8BitDo; physical DualSense USB/Bluetooth resistance remains untested. See adaptive-triggers.md. |
@@ -40,7 +40,22 @@ Don't publish original game data, personal logs or preview screenshots.
 | Performance | Reduced avoidable queries/logging/locking; synthetic path checks | No measured native game FPS improvement |
 | Runtime safety / crash reports | TLS, thread IDs, owned paths, dates; external native exception monitor | Dumps help diagnose complete exits; lobby returns are a different failure category |
 
-## Current controls / UI update — 15 October 2026
+## Current QA and documentation update — 17 October 2026
+
+The [wet Motegi log audit](motegi-rain-qa.md) addresses all recorded error
+categories and the repeated null-descriptor diagnostic. Final checks passed:
+1,768 font geometry/block comparisons, 74,885 native localization checks,
+2,146 real kernel/VFS checks and 80 exact SDK texture-parser checks; all 25
+Windows PE/Wine suite entries passed. A new native Windows rainy race remains
+required. Experimental FSR 2/3 warnings are retained.
+
+Repository Markdown prose is now English. Exact translated UI labels/glyph
+samples remain localized where useful. The obsolete cancelled Claude handoff
+was removed; source licenses, required assets and historical ZIPs are retained.
+See [repository instructions](../AGENTS.md). The current package is linked
+from the [README](../README.md).
+
+## Historical controls / UI update — 15 October 2026
 
 - Native Control Settings follows Xbox / original PS3 DualShock 3 / Keyboard.
   The supplied PS3 bank already contained the diagram; no new upload needed.
@@ -76,8 +91,7 @@ revert are preserved.
    [source research, settings and hardware verification boundary](adaptive-triggers.md).
 8. Turkish written localization and Marketplace removal completed; native visual review pending. [Scope and validation](turkish-localization.md).
 9. Community Online service and native leaderboards implemented at the user's new priority. Public VDS deployment and Internet playtest require the future server endpoint. LAN remains available.
-10. Launcher Controls simplification: ask the user for details before designing.
-11. Final launcher redesign: ask the user for details before designing.
+10. Launcher redesign and Controls interaction refinements delivered; current design and acceptance notes are in launcher-redesign.md.
 
 The FPS/physics investigation was explicitly cancelled and reverted. Don't
 resume speculative simulation or handling changes. Frame generation is excluded

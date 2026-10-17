@@ -175,6 +175,37 @@ add_executable(livery_readback_probe EXCLUDE_FROM_ALL tools/livery_readback_prob
 target_link_libraries(livery_readback_probe PRIVATE rex::runtime ${CMAKE_DL_LIBS})
 rexglue_apply_target_settings(livery_readback_probe)
 
+# CPU-only validation of the exact patched texture parser. Requires the pinned
+# SDK source tree used by scripts/build-spatial-sdk.py; no GPU device is opened.
+set(MOTOGP_SDK_VALIDATION_SOURCE "" CACHE PATH "Pinned patched SDK sources for texture-key regression checks")
+if(MOTOGP_SDK_VALIDATION_SOURCE)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(MOTOGP_TEXTURE_PARSER_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/texture-parser-check.cpp")
+    add_custom_command(OUTPUT "${MOTOGP_TEXTURE_PARSER_SOURCE}"
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/extract-texture-parser-check.py"
+            --source "${MOTOGP_SDK_VALIDATION_SOURCE}/src/graphics/pipeline/texture/cache.cpp"
+            --output "${MOTOGP_TEXTURE_PARSER_SOURCE}"
+        DEPENDS "${MOTOGP_SDK_VALIDATION_SOURCE}/src/graphics/pipeline/texture/cache.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/scripts/extract-texture-parser-check.py" VERBATIM)
+    add_executable(texture_binding_probe EXCLUDE_FROM_ALL tools/texture_binding_probe.cpp
+        "${MOTOGP_TEXTURE_PARSER_SOURCE}"
+        "${MOTOGP_SDK_VALIDATION_SOURCE}/src/graphics/pipeline/texture/util.cpp"
+        "${MOTOGP_SDK_VALIDATION_SOURCE}/src/graphics/flags.cpp")
+    target_include_directories(texture_binding_probe SYSTEM PRIVATE "${MOTOGP_SDK_VALIDATION_SOURCE}/include" "${MOTOGP_SDK_VALIDATION_SOURCE}/thirdparty/renderdoc")
+    target_link_libraries(texture_binding_probe PRIVATE rex::runtime)
+    rexglue_apply_target_settings(texture_binding_probe)
+    if(MSVC)
+        target_compile_options(texture_binding_probe PRIVATE /Gy /Gw)
+    else()
+        target_compile_options(texture_binding_probe PRIVATE -ffunction-sections -fdata-sections)
+    endif()
+    if(WIN32)
+        target_link_options(texture_binding_probe PRIVATE "LINKER:/OPT:REF")
+    else()
+        target_link_options(texture_binding_probe PRIVATE -Wl,--gc-sections)
+    endif()
+endif()
+
 # Optional check of direct-launch input defaults against the actual SDK.
 add_executable(input_defaults_probe EXCLUDE_FROM_ALL tools/input_defaults_probe.cpp)
 target_link_libraries(input_defaults_probe PRIVATE rex::runtime)
@@ -218,6 +249,10 @@ if(TARGET motogp0910_recomp)
     target_include_directories(lan_guest_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(lan_guest_probe PRIVATE motogp0910_recomp motogp_lan_guest)
     rexglue_apply_target_settings(lan_guest_probe)
+    add_executable(file_compat_probe EXCLUDE_FROM_ALL tools/file_compat_probe.cpp)
+    target_include_directories(file_compat_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(file_compat_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(file_compat_probe)
     add_executable(runtime_stability_probe EXCLUDE_FROM_ALL tools/runtime_stability_probe.cpp)
     target_include_directories(runtime_stability_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(runtime_stability_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -292,7 +327,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -302,7 +337,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File

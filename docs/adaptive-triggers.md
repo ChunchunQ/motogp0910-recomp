@@ -44,8 +44,8 @@ Existing saved profiles and defaults are preserved: R2 resistance zone 3 / 6 / 5
 and L2 constant resistance 2 / 0 / 4. Both stay inactive until enabled. The
 underlying protocol mode 0x02 is **section resistance**, which some tools call
 “Weapon”; it does not imply a weapon feature in MotoGP. The user-facing launcher
-and F1 menus now call it **Resistance zone / Direnç aralığı**, alongside
-**Constant resistance / Sabit direnç**. The serialized `weapon` / `feedback`
+and F1 menus now call it **Resistance zone**, alongside
+**Constant resistance**. The serialized `weapon` / `feedback`
 identifiers remain compatible with existing settings. There is still no speed,
 RPM or braking-load telemetry driving these effects.
 

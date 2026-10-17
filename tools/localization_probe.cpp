@@ -141,7 +141,7 @@ int main(int argc,char** argv){try{
    const auto* m=bytes.data()+metric_offset+(cp-32)*32;const auto f=[&](unsigned j){return std::bit_cast<float>(U32(m+4*j));};
    Check(std::isfinite(c.f1.f64)&&std::abs(c.f1.f64-(f(1)-f(0)+f(4)+f(5))*1024)<.001,"Native font lookup and advance match the enlarged atlas");
   }
-  for(unsigned cp:{286u,287u,304u,305u,350u,351u}){
+  for(unsigned cp:{199u,231u,286u,287u,304u,305u,214u,246u,350u,351u,220u,252u}){
    const auto* m=bytes.data()+metric_offset+(cp-32)*32;const auto f=[&](unsigned j){return std::bit_cast<float>(U32(m+4*j));};
    Check((f(1)-f(0))*1024>10&&(f(3)-f(2))*h>20&&f(2)>=.5f,"Turkish glyph has a real full-size cell in appended atlas");
   }

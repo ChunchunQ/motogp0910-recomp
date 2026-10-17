@@ -8,6 +8,7 @@
 
 #include <rex/rex_app.h>
 #include <rex/filesystem.h>
+#include <rex/filesystem/vfs.h>
 #include <rex/filesystem/devices/stfs_container_device.h>
 #include <rex/filesystem/file.h>
 #include <rex/system.h>
@@ -133,6 +134,9 @@ class Motogp0910App : public rex::ReXApp {
   void OnPostSetup() override {
     motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
     motogp::localization::Install(runtime(),rex::filesystem::GetExecutableFolder()/"resources/localization/tr/overlay");
+    // The title opens its image volume by the Xbox device name during startup.
+    if(auto* root=runtime()->file_system()->ResolvePath("game:\\"))
+      runtime()->file_system()->RegisterSymbolicLink("\\Device\\Image",root->absolute_path());
     try {
       motogp::lan::Start(runtime()->kernel_state());
     } catch(const std::exception& error) {

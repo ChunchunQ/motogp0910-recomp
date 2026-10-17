@@ -44,25 +44,25 @@
     {
       "path": "fonts/impact_17pt.font",
       "source_decoded_sha256": "6df58a1901ee4f5cd057af05278c9fe1fb7891d689e32c73b6e6085cd21fab39",
-      "sha256": "4d1e82e9f70b84b4051c630631b8119fee4a013a07a1da99bfcba19127d6ff8a",
+      "sha256": "8a518eb3a0bcd1ced41e8f81d836e58ca124f07ad1a8688b547033fb675de5a6",
       "size": 2108952
     },
     {
       "path": "fonts/impact_small.font",
       "source_decoded_sha256": "723dee6c2541b05763f8fb966ede519414b0fa2f6911e2ace16670e0f15cb919",
-      "sha256": "34847d75bb416d69a901677fd9d5a41a3d8622a97d79fe2e6f10de70baf808fa",
+      "sha256": "76705cd68e86d8eee3c0072f4c11eaac8516136caa3f27093f4845b69354cd78",
       "size": 536088
     },
     {
       "path": "fonts/arial_bold_17pt.font",
       "source_decoded_sha256": "8cf697da91c24935518fe581abc002c0541dec7c52db941078833de6c5e33f33",
-      "sha256": "ac281c3d74deae8b024f2680749bd3660438242c69328973e49574b954fb61af",
+      "sha256": "654a07e0cb83d4dda1ac6ae9519b9e16785239ba48d71409d0d4bcc2c6c47085",
       "size": 2108952
     },
     {
       "path": "fonts/arial_bold_small.font",
       "source_decoded_sha256": "395bdcacc71d2c2d8816345bdb2a5ec379d4c9401494d1a7b7b20f9a2efca8d2",
-      "sha256": "ca6c4082bd4bfe2f45af2c1559f57534f62f27238bc1e6e2d0bfc5ead7de4504",
+      "sha256": "2d1ea05e9c09ca5d86729215e83d6004f002b9dfb1c79f83ee2ad955c8960949",
       "size": 536088
     }
   ]

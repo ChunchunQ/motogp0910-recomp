@@ -1,56 +1,51 @@
-# Oyun verilerini game klasörüne yerleştirme
+# Game data layout
 
-Bu belge standart oyun dosya düzenini açıklar. [Windows launcher kullanımı](launcher.md)
-ayrı belgede bulunur. ReXGlue sürümü **v0.10.0**, oyun sürümü **0.0.1.1**.
-
-## Hedef düzen
+Use the current package linked from the [README](../README.md).
+The active SDK pin is in `sdk-version.json`; the title requires TU **0.0.1.1**.
+See the separate [launcher guide](launcher.md).
 
 ```text
-D:\x\motogp0910\
+MotoGP0910/
 ├── motogp0910-launcher.exe
 ├── motogp0910.exe
+├── motogp0910-crash-monitor.exe
 ├── rexruntime.dll
 ├── rexgpu-xenos.dll
-├── diğer paket DLL'leri
+├── other packaged runtime DLLs
 ├── gamecontrollerdb.txt
-├── readme.txt
-└── game\
+├── resources/
+└── game/
     ├── default.xex
     ├── default.xexp
     ├── TU_11K61VG_0000004000000.0000000000081
-    ├── xenondata\
-    ├── nxeart\
-    └── diğer orijinal disk dosyaları/dizinleri
+    ├── xenondata/
+    ├── nxeart/
+    └── remaining original disc files/directories
 ```
 
-## Mevcut kurulumdan geçiş
+## Updating an installation
 
-1. Oyunu kapat. [Yeni Windows paketini](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher.zip)
-   GitHub'da **Download raw file** ile indir ve program klasörüne çıkar.
-2. Kendi oyununun **tüm orijinal disk dosyalarını**, `default.xex`, mevcut
-   `default.xexp` ve TU paketiyle birlikte `game` altklasörüne taşı. `xenondata`
-   ve `nxeart` içindeki dizin yapısını koru. EXE/DLL dosyaları üstte kalır.
-3. Üst klasördeki `motogp0910.exe`ye çift tıkla. Klavye varsayılan olarak açıktır;
-   `.cmd` gerekmez. Program doğru oyun dizinini kendisi bulur.
+1. Close the game and extract the complete package into the program directory.
+2. Keep all original disc files together under `game/`, including XEX, patch/TU
+   and the original directory structure. EXEs and runtime DLLs stay above it.
+3. Open the launcher or double-click the game EXE. Keyboard emulation defaults
+   to enabled; a CMD script is unnecessary.
 
-ZIP program/DLL'leri, EXE yanındaki `gamecontrollerdb.txt` eşleme dosyasını
-ve yönerge/lisans dosyalarını içerir.
-Oyun verileri, XEX, title update veya patch ZIP'te bulunmaz. Dosyaları otomatik
-taşıyan bir işlem yapılmaz; mevcut oyun dosyaları kullanıcı tarafından taşınır.
+The package does not include or automatically move original game data, XEX,
+TU or patch files. Development packages omit readmes and separate license
+folders; required notices remain embedded in the launcher.
 
-## Seçim kuralları ve kayıtlar
+## Discovery and saves
 
-- Açıkça verilen `--game_data_root` her zaman önceliklidir. Yeni düzen için bu
-  parametre veya `run-windows.ps1 -GameRoot`, `D:\x\motogp0910\game` yolunu göstermeli.
-- Parametre verilmediğinde önce EXE yanındaki `game/default.xex` aranır.
-- Orada XEX yoksa eski düz yerleşim (EXE yanında `default.xex`) desteklenir.
-- Her iki yerde XEX varsa yeni EXE `game` klasörünü seçer.
-- EXE farklı bir çalışma dizininden başlatıldığında da kendi klasörünü esas alır.
-- Kayıt/cache varsayılanı aynı SDK kullanıcı klasöründe kalır. Kayıtları `game`
-  içine taşımak gerekmez. Özel `--user_data_root` kullanıyorsan aynı yolu koru.
-  Programı başka bir klasöre taşıyorsan kendi `motogp0910.toml` ayar dosyanı da
-  yeni EXE'nin yanına al; kendine ait ayar/kayıt dosyalarını silme.
+- An explicit `--game_data_root` always wins. `run-windows.ps1 -GameRoot` should
+  point to the directory containing the original XEX and complete disc data.
+- Otherwise, `game/default.xex` beside the EXE takes priority over a legacy
+  `default.xex` beside the EXE. The executable directory is used even when
+  launched from another working directory.
+- Default saves/cache remain in the SDK user-data location. Do not move saves
+  into `game/`; retain an explicit `--user_data_root` when updating.
+- Preserve `motogp0910.toml` and launcher settings when moving program folders.
 
-Title update yüklemesi aynı şekilde devam eder: patch yoksa uygulama `game`
-içindeki TU'dan `default.xexp` çıkarır; stok XEX'i ve mevcut patch'i değiştirmez.
-Uygulama yalnızca 0.0.1.1 sürümünü kabul eder.
+When a patch is absent, the title extracts `default.xexp` from the original TU.
+It does not rewrite the stock XEX or replace an existing patch. The runtime
+applies the patch in memory and rejects title versions other than 0.0.1.1.

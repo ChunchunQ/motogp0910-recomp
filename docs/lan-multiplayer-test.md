@@ -37,49 +37,43 @@ committed here.
 
 For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md).
 
-## Kullanım: iki Windows bilgisayarı
+## Usage: two Windows PCs
 
-1. İki bilgisayara da aynı ZIP'in **tamamını** çıkar. Mevcut `game/` klasörünü,
-   ayarlarını ve kayıtlarını koru. Eski EXE ile yeni DLL/EXE'leri karıştırma.
-2. Radmin VPN'de aynı ağa katıl. İki PC de Radmin'de çevrimiçi görünmeli.
-   Aynı ev ağı kullanılıyorsa Radmin zorunlu değil.
-3. Her iki bilgisayarda launcher **General > Multiplayer Settings > Connection mode > LAN**
-   seçeneğini seç. Farklı oyuncu adları yaz. Basit ASCII ad kullanabilirsin;
-   oyuncu adı en fazla 15, oda adı 31 UTF-8 bayt. `Player` varsayılanına
-   süreç başına farklı bir dört haneli ek gelir.
-4. **Local IPv4** ve **Host IPv4** alanlarını önce boş bırak.
-   Otomatik seçim, etkin Radmin adaptörünü tercih eder. Başka adaptör
-   seçilirse her bilgisayarda Local IPv4'e **kendi** Radmin IP'sini yaz.
-   Ayarlar bir sonraki oyun açılışında uygulanır.
-5. Windows güvenlik duvarı izin isterse `motogp0910.exe` için kullandığın
-   ağda erişime izin ver. Keşif ve oyun paketleri **UDP 30810–30817**
-   aralığını kullanır; internet modeminde port yönlendirme gerekmez.
-6. Oyunu başlat. Oyun içindeki online/Xbox Live menüsünden **Player Match**
-   (derecesiz maç) akışını kullan. Bir PC oda/maç oluştursun, diğeri oyun
-   içindeki maç arama listesini açsın. Oda otomatik bulunursa katıl.
-7. Oda bulunamazsa katılacak PC'de oyunu kapat; launcher General >
-   **Host IPv4** alanına kurucunun **Radmin IPv4** adresini yaz, kaydet ve
-   oyunu tekrar aç. Yeniden maç ara. Kurucuda Host IPv4 boş kalabilir.
-   Aynı yerel ağda Radmin yerine kurucunun yerel IPv4 adresini kullan.
-8. İlk denemede iki oyuncuyla başla. Odaya giriş, yarış başlangıcı,
-   diğer oyuncunun hareketi ve yarış sonunu gözle. Bir oyuncu çıkınca tekrar
-   katılmayı da deneyebilirsin. LAN'ı kapatmak için launcher'daki tiki kaldır.
+1. Extract the complete matching ZIP on both PCs. Preserve game data, settings
+   and saves; do not mix old EXEs with new runtime DLLs.
+2. Join the same physical or compatible virtual LAN. No specific VPN brand is
+   required. Both peers must be reachable on that network.
+3. Select **General > Multiplayer Settings > Connection mode > LAN** on both
+   launchers. Use different names; player names allow at most 15 UTF-8 bytes,
+   room names 31. The default Player name gets a per-process suffix.
+4. Initially leave Local IPv4 and Host IPv4 empty. If automatic adapter selection
+   chooses the wrong network, set each PC's Local IPv4 to its own LAN address.
+   These settings apply at the next game launch.
+5. Allow `motogp0910.exe` through Windows Firewall for the selected network.
+   Discovery/transport uses **UDP 30810–30817**; ordinary same-LAN use does not
+   require Internet router port forwarding.
+6. Use the original **Online/Xbox Live > Player Match** flow. One PC creates a
+   room; the other searches and joins the discovered result.
+7. If discovery fails, close the joining game and set Host IPv4 in Multiplayer
+   Settings to the host's reachable address on that LAN. Restart and search
+   again. The host can leave Host IPv4 empty.
+8. Begin with two players. Check joining, race start, remote movement, race end
+   and rejoining after departure. Select Offline to disable LAN.
 
-Gerçek Xbox Live'a giriş, hesap/parola ve merkezi/dedicated sunucu gerekmez.
-**Ranked**, Xbox Live arkadaşlar/davetler, leaderboards ve host migration
-bu sürümün kapsamında değil. Ranked oturum oluşturma açıkça reddedilir.
+No official Xbox Live login, account/password or dedicated server is needed.
+Ranked session creation is explicitly rejected. Official friends/invites,
+ranked arbitration, voice and host migration are outside the LAN bridge.
+Community Online leaderboards are a separate mode; see
+[community deployment](community-online.md).
 
-## Sorun olursa gönderilecekler
+## Diagnosing a failure
 
-Her iki PC'de oluşan en son oyun logunu (`logs/`), hangi PC'nin kurucu
-olduğunu ve sorunun aşamasını gönder: menüye giriş / oda arama / katılma /
-yarış başlatma / yarış sırasında / tekrar katılma. Otomatik aramanın mı,
-yoksa Host IPv4 yedeğinin mi kullanıldığını da belirt.
-
-`LAN_LOBBY` seçilen adaptörü/endpoint'i, `LAN_SESSION` oturum mesajlarını,
-`LAN_PACKET` ilk oyun paketini gösterir. Bir socket gönderme denemesi logda
-bulunması tek başına karşı tarafın aldığını veya yarışın senkron olduğunu
-kanıtlamaz. Loglar yerel/Radmin IP'leri içerebilir.
+Collect the latest game log from both PCs and identify the host, failure stage
+(menu/search/join/start/race/rejoin) and whether discovery or explicit Host IPv4
+was used. `LAN_LOBBY` records adapter/endpoint selection, `LAN_SESSION` records
+session messages and `LAN_PACKET` identifies initial game traffic. A recorded
+send alone does not prove remote reception or synchronized racing. Logs may
+contain local/virtual LAN addresses; review them before sharing.
 
 ## Implemented in this delivery
 

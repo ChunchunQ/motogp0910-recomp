@@ -16,7 +16,7 @@ import tempfile
 import time
 
 PROBES = {
-    'localization_probe': 'localization', 'runtime_stability_probe': 'game', 'nightly_input_probe': '',
+    'localization_probe': 'localization', 'file_compat_probe': 'game', 'runtime_stability_probe': 'game', 'nightly_input_probe': '',
     'fsr_provider_probe': '', 'engine_settings_probe': 'game',
     'game_language_probe': 'game', 'physics_asset_probe': 'game',
     'button_prompt_probe': 'game', 'livery_readback_probe': 'gpu',

@@ -3,24 +3,25 @@
 Crash capture is included with the LAN launcher startup fix. The original
 empty-IP launcher/SDK argument bug is documented in [lan-startup-fix.md](lan-startup-fix.md).
 
-## Kullanım
+## Usage
 
-- ZIP'in **tamamını** çıkar. `motogp0910-crash-monitor.exe` diğer EXE ve DLL'lerin
-  yanında kalmalı. Mevcut oyun dosyalarını, ayarlarını ve kayıtlarını koru.
-- Launcher **General > Extended crash diagnostics / Gelişmiş çökme tanılaması**
-  varsayılan olarak açık. Oyunu launcher'ın **PLAY** düğmesiyle başlat.
-- Çökerse **Open logs** düğmesine bas. `crash-...` klasörünün içinde `report.txt`,
-  başarılıysa `crash.dmp`, son oyun logu ve mevcut ayar dosyaları bulunur.
-  Bu klasörü ZIP yapıp gönder. **Error report** düğmesi de en son çökme klasörünü
-  kendi rapor klasörüne `native-crash/` olarak ekler.
-- İzleyici ayarını kapatırsan ek dış izleme devre dışı kalır. Doğrudan EXE'de
-  temel hata yakalama devam eder; zorunlu kapanışlarda kapsamı daha sınırlıdır.
-  İzleme debugger olaylarını kullanır ve ek yük oluşturabilir. Launcher'ı
-  kapatmak oyunu kapatmaz; izleyici bağımsız çalışmaya devam eder.
+Extract the complete ZIP and keep `motogp0910-crash-monitor.exe` beside the
+other EXEs/DLLs. Preserve existing game data, settings and saves. Enable
+**General > Extended crash diagnostics** (default on), then start with PLAY.
 
-Normal konum: `EXE-klasörü/logs/crash-.../`. Klasöre yazılamazsa yedek konum
-`%LOCALAPPDATA%/MotoGP0910/crashes/`; son yedek Windows geçici klasörüdür.
-İsimlerde UTC tarih/saat, süreç ve thread kimliği bulunur.
+After a crash, use **Logs**. A `crash-...` directory contains `report.txt`,
+`crash.dmp` when dump writing succeeds, the latest game log and current
+settings. **Report** includes the latest crash directory as `native-crash/`.
+Review diagnostic contents before sharing the ZIP.
+
+Disabling the monitor removes external debugger-based capture. Direct EXE
+startup retains best-effort in-process handlers, with narrower coverage for
+forced exits. Monitoring can add overhead. Closing the launcher does not
+terminate the independently running game/monitor.
+
+Normal output is `PROGRAM_FOLDER/logs/crash-.../`; fallback is
+`%LOCALAPPDATA%/MotoGP0910/crashes/`, then the Windows temporary directory.
+Names contain UTC time, process ID and thread ID.
 
 ## Captured data and coverage
 

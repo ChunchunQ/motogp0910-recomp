@@ -1,4 +1,8 @@
-# Launcher requests — 14 October 2026
+# Historical launcher requests — 14 October 2026
+
+These are milestone notes. The implemented Racing Lines launcher and current
+follow-up work are documented in [launcher-redesign.md](launcher-redesign.md)
+and [project-status.md](project-status.md).
 
 The user asked to work from simple to complex, show each finished stage before
 moving on, and ask before implementing any unclear requirement.

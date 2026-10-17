@@ -29,19 +29,28 @@ Direct launch supports `--game_text_language=turkish`.
 
 ## Native fonts
 
-The original fonts cover codepoints 32–399 but have empty placeholders for
-Ğ/ğ, İ/ı and Ş/ş. All four native faces now contain these six letters. Original
-G/g/I/i/S/s letterforms and the existing dot/cedilla are reused; the missing
-breve is composed at matching scale. The atlas is extended vertically. Existing
-BC3 blocks are preserved byte for byte, normalized vertical metrics rescale,
-and physical advances/bearings are retained. Only Turkish selects these fonts.
+All four native faces now normalize **ÇçĞğİıÖöŞşÜü**: 48 glyph cells.
+The original font's Ç/ç cells had different bodies and bearings from C/c;
+retaining them made Turkish letters visibly smaller. Every Turkish body now
+comes from its matching original ASCII letter, including its baseline and
+advance. Native cedilla tails and umlaut dots are isolated from visible ink;
+İ uses a compact native dot and ı retains the original i stem. Only the missing
+breve is drawn, at the face's own scale.
 
-The small Impact atlas contains BC3 alpha noise of 7/255 in the gap between the
-lowercase i's dot and stem. The old generator treated any alpha as ink, joining
-those components: dotted İ received an extra full i above it and dotless ı lost
-its stem. Dot separation now uses visible alpha (>=32/255), checks the dot's
-height and preserves the stem explicitly. All four banks were regenerated with
-the original BC3 blocks still byte-exact.
+The atlas is extended vertically. Original upper-half BC3 blocks remain
+byte-exact, and unrelated glyph metrics preserve pixel geometry. New cells
+reuse native body blocks at matching compression-block alignment wherever
+possible, avoiding a second lossy encoding of the letter body. Top marks are
+separated from the body and checked for clipping. Only Turkish selects these
+fonts; original disk files are unchanged.
+
+`check-turkish-fonts.py` passed **1,768** native-bank comparisons across all
+four faces: body size, baseline, advance, line height, mark placement, dot
+removal, original atlas blocks and unrelated glyph metrics. It also renders
+word sheets directly from shipped BC3 atlases and native metrics:
+[Impact](screenshots/turkish-impact-native-proof.png) and
+[small Arial](screenshots/turkish-arial-small-native-proof.png).
+These are font proofs, not gameplay screenshots.
 
 ## Resource loading
 
@@ -84,6 +93,7 @@ it from the owner's separately decoded files:
 ```sh
 python scripts/build-turkish-localization.py --decoded LOCAL_DECODED_DIRECTORY
 python scripts/build-turkish-fonts.py --decoded-fonts LOCAL_DECODED_FONTS
+python scripts/check-turkish-fonts.py --decoded-fonts LOCAL_DECODED_FONTS --preview-dir out/font-proof
 python scripts/generate-turkish-achievements.py
 python scripts/build-turkish-localization.py --check
 texlua tools/localization_data_check.lua LOCAL_DECODED_SCRIPTS resources/localization/tr/overlay/scripts
@@ -91,7 +101,7 @@ texlua tools/localization_data_check.lua LOCAL_DECODED_SCRIPTS resources/localiz
 
 The font generator needs Pillow >= 11.2 with DDS/BC3 encoding. The local research
 TD/LZX extractor is not bundled or linked into the game. Original decoded banks,
-source dumps, fonts, logs and preview images remain outside Git.
+source dumps, fonts and logs remain outside Git; selected derived font proofs are documented.
 
 Windows PE checks run under Wine with the pinned actual SDK and patched title:
 
@@ -104,7 +114,7 @@ Windows PE checks run under Wine with the pinned actual SDK and patched title:
 - The revised probe checks absolute/physical paths, three directory-handle
   scopes, every replacement through actual VFS `OpenFile`, and byte-exact
   fallback for previously unopened rider-script/music files. The complete
-  symlinked game fixture passed **74,861** checks on Windows PE/Wine and Linux;
+  symlinked game fixture passed **74,885** checks on Windows PE/Wine and Linux;
   most checks are per-codepoint/font-metric comparisons, not playthroughs.
 - A separate Lua interpreter loaded the original/translated data in empty
   environments: **6,140** non-display values/keys matched; **610** display fields
@@ -127,3 +137,5 @@ in that visual check was corrected in the generator as described above.
 Final glyph appearance, long-text wrapping, every career screen and captions
 inside video playback still need native visual review. The supplied dump had
 no separate subtitles to retime. Burned-in video/art text is not translated.
+
+See the [Motegi rain log audit](motegi-rain-qa.md) for the current runtime checks and native Windows retest limits.

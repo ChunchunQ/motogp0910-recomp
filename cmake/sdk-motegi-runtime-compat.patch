@@ -1,0 +1,145 @@
+diff --git a/src/filesystem/virtual_file_system.cpp b/src/filesystem/virtual_file_system.cpp
+index 682b23d..42f3e96 100644
+--- a/src/filesystem/virtual_file_system.cpp
++++ b/src/filesystem/virtual_file_system.cpp
+@@ -120,10 +120,10 @@ Entry* VirtualFileSystem::ResolvePath(const std::string_view path) {
+     return rex::string::utf8_starts_with_case(normalized_path, d->mount_path());
+   });
+   if (it == devices_.cend()) {
+-    REXFS_WARN("VFS: '{}' -> [no device]", path);
+     // Supress logging the error for ShaderDumpxe:\CompareBackEnds as this is
+     // not an actual problem nor something we care about.
+     if (path != "ShaderDumpxe:\\CompareBackEnds") {
++      REXFS_WARN("VFS: '{}' -> [no device]", path);
+       REXFS_ERROR("ResolvePath({}) failed - device not found", path);
+     }
+     return nullptr;
+@@ -215,8 +215,27 @@ X_STATUS VirtualFileSystem::OpenFile(Entry* root_entry, const std::string_view p
+   Entry* parent_entry = nullptr;
+   Entry* entry = nullptr;
+ 
++  // A volume handle can name a device root without a trailing slash. Do not
++  // look up its fictitious parent \Device: that namespace is not a volume.
++  // Resolve exact registered roots (including aliases) before child traversal.
++  if (!root_entry) {
++    auto device_lock = global_critical_region_.Acquire();
++    std::string resolved;
++    ResolveSymbolicLink(rex::string::utf8_canonicalize_guest_path(path), resolved);
++    while (!resolved.empty() && resolved.back() == '\\') resolved.pop_back();
++    for (const auto& device : devices_) {
++      auto mount = device->mount_path();
++      while (!mount.empty() && mount.back() == '\\') mount.pop_back();
++      if (resolved.size() == mount.size() && rex::string::utf8_starts_with_case(resolved, mount)) {
++        entry = device->ResolvePath("");
++        break;
++      }
++    }
++  }
+   auto base_path = rex::string::utf8_find_base_guest_path(path);
+-  if (!base_path.empty()) {
++  if (entry) {
++    // Exact device root already found.
++  } else if (!base_path.empty()) {
+     parent_entry = !root_entry ? ResolvePath(base_path) : root_entry->ResolvePath(base_path);
+     if (!parent_entry) {
+       *out_action = FileAction::kDoesNotExist;
+diff --git a/src/graphics/pipeline/texture/cache.cpp b/src/graphics/pipeline/texture/cache.cpp
+index 76f5600..2455015 100644
+--- a/src/graphics/pipeline/texture/cache.cpp
++++ b/src/graphics/pipeline/texture/cache.cpp
+@@ -914,12 +914,10 @@ void TextureCache::BindingInfoFromFetchConstant(const xenos::xe_gpu_texture_fetc
+       if (REXCVAR_GET(gpu_allow_invalid_fetch_constants)) {
+         break;
+       }
+-      REXGPU_WARN(
+-          "Texture fetch constant ({:08X} {:08X} {:08X} {:08X} {:08X} {:08X}) "
+-          "has \"invalid\" type! This is incorrect behavior, but you can try "
+-          "bypassing this by launching Xenia with "
+-          "--gpu_allow_invalid_fetch_constants=true.",
+-          fetch.dword_0, fetch.dword_1, fetch.dword_2, fetch.dword_3, fetch.dword_4, fetch.dword_5);
++      // Type zero is an unbound texture descriptor, including when the title
++      // leaves old address/format words behind. The shader's static usage mask
++      // includes conditionally unused samplers, so this alone is not an error.
++      // Keep the null key; never reinterpret stale words as a bound texture.
+       return;
+     default:
+       REXGPU_WARN(
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_io.cpp b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
+index cce4f65..d3e635f 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_io.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
+@@ -12,6 +12,8 @@
+ // Disable warnings about unused parameters for kernel functions
+ #pragma GCC diagnostic ignored "-Wunused-parameter"
+ 
++#include <rex/filesystem/devices/host_path_device.h>
++#include <rex/filesystem/devices/null_device.h>
+ #include <rex/filesystem/device.h>
+ #include <rex/kernel/xboxkrnl/private.h>
+ #include <rex/logging.h>
+@@ -729,8 +731,14 @@ u32 IoCreateDevice_entry(u32 device_struct, u32 r4, u32 r5, u32 r6, u32 r7, mapp
+ }
+ 
+ u32 IoDismountVolumeByFileHandle_entry(u32 handle) {
+-  REXKRNL_WARN("IoDismountVolumeByFileHandle({:#x}) - stub", (uint32_t)handle);
+-  return X_STATUS_SUCCESS;
++  const auto file = REX_KERNEL_OBJECTS()->LookupObject<XFile>(handle);
++  if (!file) return X_STATUS_INVALID_HANDLE;
++  // A host-directory device has no guest filesystem driver or deferred guest
++  // volume cache to dismount. Its host I/O completes at the file layer. Do not
++  // unregister a shared mount or invalidate open handles during cache probing.
++  if ((dynamic_cast<rex::filesystem::HostPathDevice*>(file->device()) ||
++      dynamic_cast<rex::filesystem::NullDevice*>(file->device()))) return X_STATUS_SUCCESS;
++  return X_STATUS_NOT_SUPPORTED;
+ }
+ 
+ u32 IoDismountVolumeByName_entry(ppc_ptr_t<X_ANSI_STRING> name) {
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp b/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
+index bd5de65..7753f4e 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
+@@ -13,6 +13,8 @@
+ #pragma GCC diagnostic ignored "-Wunused-parameter"
+ 
+ #include <rex/filesystem/device.h>
++#include <rex/filesystem/devices/host_path_device.h>
++#include <rex/filesystem/devices/null_device.h>
+ #include <rex/kernel/xboxkrnl/private.h>
+ #include <rex/logging.h>
+ #include <rex/memory.h>
+@@ -149,9 +151,13 @@ u32 NtQueryInformationFile_entry(u32 file_handle, ppc_ptr_t<X_IO_STATUS_BLOCK> i
+       break;
+     }
+     case XFileXctdCompressionInformation: {
+-      REXKRNL_ERROR(
+-          "NtQueryInformationFile(XFileXctdCompressionInformation) "
+-          "unimplemented");
++      // Extracted host-directory files have no Xbox filesystem-level XCTD
++      // compression. INVALID_PARAMETER is the title's normal capability-probe
++      // result for an uncompressed file, not a runtime implementation failure.
++      // Preserve this negative result and the existing output/position contract.
++      if (!dynamic_cast<rex::filesystem::HostPathDevice*>(file->device())) {
++        REXKRNL_ERROR("XCTD compression metadata is unsupported for this device");
++      }
+       // Files that are XCTD compressed begin with the magic 0x0FF512ED but we
+       // shouldn't detect this that way. There's probably a flag somewhere
+       // (attributes?) that defines if it's compressed or not.
+@@ -431,9 +437,15 @@ u32 NtQueryVolumeInformationFile_entry(u32 file_handle,
+     }
+     case XFileFsDeviceInformation: {
+       auto info = info_ptr.as<X_FILE_FS_DEVICE_INFORMATION*>();
+-      REXKRNL_WARN("Stub XFileFsDeviceInformation!");
+-      info->device_type = FILE_DEVICE_UNKNOWN;
+-      info->characteristics = 0;
++      if (dynamic_cast<rex::filesystem::HostPathDevice*>(file->device()) ||
++          dynamic_cast<rex::filesystem::NullDevice*>(file->device())) {
++        info->device_type = static_cast<X_FILE_DEVICE_TYPE>(0x07); // FILE_DEVICE_DISK
++        info->characteristics = 0x20 | (file->device()->is_read_only() ? 0x02 : 0); // mounted / read-only
++      } else {
++        REXKRNL_WARN("Volume device metadata is unavailable for this backend");
++        info->device_type = FILE_DEVICE_UNKNOWN;
++        info->characteristics = 0;
++      }
+       out_length = sizeof(X_FILE_FS_DEVICE_INFORMATION);
+       break;
+     }

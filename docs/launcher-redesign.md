@@ -23,7 +23,7 @@ current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monit
 
 ## Verify game files
 
-General → **Verify game files / Dosyaları doğrula** starts a cancellable background
+General → **Verify game files** starts a cancellable background
 worker. The UI stays usable; game-folder edits and PLAY are temporarily disabled.
 It checks the original executable/title update using the existing trusted hashes,
 then all **4,386 `xenondata` files** against the embedded supported-disk SHA-256

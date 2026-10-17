@@ -69,3 +69,24 @@ python3 scripts/build-spatial-sdk.py \
 `stage-spatial-runtime.py` and `.ps1` verify checksums before copying the pair.
 CMake invokes staging after copying the official SDK runtime, including IDE
 builds. No original game data is contained in this archive.
+
+## Motegi rain log compatibility
+
+`cmake/sdk-motegi-runtime-compat.patch` handles exact device-root opens,
+host-volume and SDK virtual raw-cache disk metadata, negative XCTD capability queries on extracted
+host files, and validated host/null-cache virtual dismount handles. The title registers
+`\Device\Image` against its actual active game root, including the localized
+merged tree. Type-zero texture bindings keep their null resource behavior;
+conditionally unused samplers no longer emit a warning on every draw. Actual
+malformed descriptor types retain diagnostics. Missing optional
+`ShaderDumpxe:\CompareBackEnds` developer data is quiet; missing ordinary
+paths still report failures.
+
+`file_compat_probe` exercises the packaged runtime's real kernel/VFS paths.
+For the additional CPU texture-parser check, configure the game build with
+`-DMOTOGP_SDK_VALIDATION_SOURCE=/path/to/pinned/patched/sdk` and build
+`texture_binding_probe`. Its generated translation unit extracts the exact
+SDK parser body, failing if expected source boundaries change. It tests all
+38 unique unbound descriptors from the supplied race log, plus valid-bind,
+unbind and rebind transitions; it does not simulate GPU rendering.
+See [audit and limits](../../docs/motegi-rain-qa.md).
