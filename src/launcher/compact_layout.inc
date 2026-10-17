@@ -23,10 +23,9 @@
     if(!force&&page_scroll[current_page]==next)return;
     help.Pop();
     page_scroll[current_page]=next;
-    // Move one clipped surface. Repositioning every native combo / trackbar
-    // on each wheel tick lets their synchronous Windows paints expose partial
-    // frames, even with SWP_NOREDRAW. Child coordinates now stay unchanged.
-    SetWindowPos(page_content,nullptr,0,-S(next),S(kPageWidth-22),S(std::max(kPageHeight,page_extent[current_page])),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOCOPYBITS);
+    // Move the clipped surface without copying old screen pixels or allowing
+    // native controls to paint midway through the move. Repaint once below.
+    SetWindowPos(page_content,nullptr,0,-S(next),S(kPageWidth-22),S(std::max(kPageHeight,page_extent[current_page])),SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOCOPYBITS|SWP_NOREDRAW);
     if(!switching_page)RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
   }
   void Reveal(HWND control){
@@ -176,7 +175,9 @@
     // Creation order matches visual and keyboard tab order.
     for(int i:{3,0,4,1,2,5})navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
     page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN,kPageX,kPageY,kPageWidth,kPageHeight);
-    SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT|WS_EX_COMPOSITED);
+    // Each painted control owns its buffer. Ancestor WS_EX_COMPOSITED can
+    // defer native child updates and expose stale/blank frames while scrolling.
+    SetWindowLongPtrW(page_view,GWL_EXSTYLE,GetWindowLongPtrW(page_view,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
     SetWindowSubclass(page_view,PageProc,1,reinterpret_cast<DWORD_PTR>(this));
     page_content=Control(L"STATIC",L"",WS_CLIPCHILDREN,0,0,kPageWidth-22,kPageHeight,0,page_view);
     SetWindowLongPtrW(page_content,GWL_EXSTYLE,GetWindowLongPtrW(page_content,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);

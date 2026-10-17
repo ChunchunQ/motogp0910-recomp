@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-turkish-fonts-motegi-qa.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-scroll-paint-fix.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -37,14 +37,15 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Code signing is deferred until the final release. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `bb07377a4bc7062c30f09d513437ee0475647d5ebfdeed626ebd9d171c73d8d7`.
+Package SHA-256: `cda46bc9c0f0035dd5f5aafe2e9c0768af4c4f9aab481962c4a48f3b3e5d8b9a`.
 
 ## Current features and evidence
 
 - **Racing Lines launcher:** dark/orange MotoGP artwork, horizontal tabs,
   native hover help, file verification, larger achievement list and separate
   Multiplayer Settings dialog. Fixed tab redraw/scroll jumps, closed combo-box
-  wheel changes and native Windows tooltip registration. The user confirmed
+  wheel changes and native Windows tooltip registration. Slider/button painting
+  now suppresses intermediate erase frames while scrolling. The user confirmed
   the latest tooltip fix works. [Design and validation](docs/launcher-redesign.md).
 - **Turkish written localization:** 2,102 native message IDs reviewed, five data
   scripts and 50 achievements localized; voices preserved. Four native font

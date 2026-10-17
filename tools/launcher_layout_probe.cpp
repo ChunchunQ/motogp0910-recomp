@@ -38,6 +38,16 @@ void CheckSurface(App& app,HWND control,int x,int y){
   CheckUI(GetPixel(paint,x,y)==GetPixel(expected,root.x,root.y),"Child and themed-parent backgrounds align exactly with the full-window artwork");
   SelectObject(paint,previous);SelectObject(expected,previous_expected);DeleteObject(bitmap);DeleteDC(paint);DeleteDC(expected);ReleaseDC(app.window,target);
 }
+void CheckNoEraseFlash(App& app,HWND control,int x,int y){
+  RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),dc=CreateCompatibleDC(target);
+  const auto bitmap=CreateCompatibleBitmap(target,r.right,r.bottom);const auto old=SelectObject(dc,bitmap);
+  SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(dc),PRF_CLIENT);
+  const auto before=GetPixel(dc,x,y);
+  SendMessageW(control,WM_ERASEBKGND,reinterpret_cast<WPARAM>(dc),0);
+  const auto after=GetPixel(dc,x,y);
+  SelectObject(dc,old);DeleteObject(bitmap);DeleteDC(dc);ReleaseDC(app.window,target);
+  CheckUI(before!=CLR_INVALID&&before==after,"Background erasure cannot replace a painted slider/button with an empty intermediate frame");
+}
 std::wstring TooltipText(HWND tooltip,HWND control,UINT size=Tooltips::kInfoSize){
   wchar_t text[2048]{};TOOLINFOW tool{size};tool.hwnd=GetParent(control);tool.uId=reinterpret_cast<UINT_PTR>(control);tool.lpszText=text;
   SendMessageW(tooltip,TTM_GETTEXTW,std::size(text),reinterpret_cast<LPARAM>(&tool));return text;
@@ -382,7 +392,11 @@ int wmain(int argc,wchar_t** argv){
     }
     { // Regressions from the user's native Windows video.
       app.Rescale(1);SetWindowPos(window,nullptr,20,20,kWidth,kHeight+kCaptionHeight,SWP_NOZORDER);app.turkish=false;app.Localize();app.ShowPage(0);app.ScrollPage(0);
-      CheckUI(GetWindowLongPtrW(app.page_view,GWL_EXSTYLE)&WS_EX_COMPOSITED,"The viewport composes its native children into a complete frame");
+      app.ScrollPage(70);CheckSurface(app,app.sharpness,1,1);
+      CheckNoEraseFlash(app,app.sharpness,app.S(20),app.S(15));
+      app.ShowPage(2);app.ScrollPage(100);CheckSurface(app,app.binding_buttons[0],0,0);
+      CheckNoEraseFlash(app,app.binding_buttons[0],app.S(14),app.S(14));
+      app.ShowPage(0);app.ScrollPage(0);
       std::map<HWND,RECT> fixed;
       for(auto c:app.pages[0]){RECT r;GetWindowRect(c,&r);MapWindowPoints(nullptr,app.page_content,reinterpret_cast<POINT*>(&r),2);fixed.emplace(c,r);}
       for(int i=0;i<48;++i){
@@ -393,7 +407,28 @@ int wmain(int argc,wchar_t** argv){
           const auto dc=GetDC(window);ScreenToClient(window,&p);const auto pixel=GetPixel(dc,p.x,p.y);ReleaseDC(window,dc);
           CheckUI(pixel!=CLR_INVALID&&!(GetRValue(pixel)>225&&GetGValue(pixel)>225&&GetBValue(pixel)>225),"Visible fields stay dark after repeated scroll frames");
         }
+        CheckSurface(app,app.sharpness,1,1);
+        CheckNoEraseFlash(app,app.sharpness,app.S(20),app.S(15));
       }
+      app.ScrollPage(70);Screenshot(window,pictures/L"launcher-graphics-scroll-paint.bmp");
+      app.ShowPage(2);const auto stored=app.GetControls().bindings;
+      for(int i=0;i<32;++i){
+        app.ScrollPage(i%2?app.PageMaximum():0);
+        RECT view;GetWindowRect(app.page_view,&view);
+        for(auto c:app.binding_buttons){RECT r,visible;GetWindowRect(c,&r);if(!IntersectRect(&visible,&view,&r))continue;
+          CheckSurface(app,c,0,0);CheckNoEraseFlash(app,c,app.S(14),app.S(14));
+          const auto dc=GetDC(nullptr);const auto pixel=GetPixel(dc,(r.left+r.right)/2,visible.top+std::min<LONG>(app.S(5),(visible.bottom-visible.top)/2));ReleaseDC(nullptr,dc);
+          CheckUI(pixel!=CLR_INVALID&&!(GetRValue(pixel)>225&&GetGValue(pixel)>225&&GetBValue(pixel)>225),"Visible capture buttons remain painted immediately after each scroll, including clipped rows");
+        }
+      }
+      app.ScrollPage(140);Screenshot(window,pictures/L"launcher-controls-scroll-paint.bmp");
+      ClickControl(app.binding_buttons[5],app.S(14));CheckUI(app.capturing&&app.binding_index==5,"Buffered capture button still accepts a real mouse click after scrolling");app.CancelCapture();
+      CheckUI(app.GetControls().bindings==stored,"Scrolling and repainting preserve all pending key bindings");
+      app.ShowPage(1);const auto position=SendMessageW(app.volume,TBM_GETPOS,0,0);SetFocus(app.volume);
+      SendMessageW(app.volume,WM_KEYDOWN,position?VK_LEFT:VK_RIGHT,0);SendMessageW(app.volume,WM_KEYUP,position?VK_LEFT:VK_RIGHT,0);
+      const auto changed=SendMessageW(app.volume,TBM_GETPOS,0,0);CheckUI(position!=changed&&app.Text(app.volume_value)==std::to_wstring(changed)+L"%","Buffered slider retains native keyboard input and percentage notification");
+      CheckNoEraseFlash(app,app.volume,app.S(20),app.S(20));SendMessageW(app.volume,TBM_SETPOS,TRUE,position);
+      app.ShowPage(0);
       app.ScrollPage(24);SetFocus(app.navigation[0]);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
       ClickControl(app.aspect,app.S(10));
       CheckUI(app.page_scroll[0]==24,"Clicking a low visible selector does not jump the page");

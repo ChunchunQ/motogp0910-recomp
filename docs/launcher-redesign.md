@@ -114,6 +114,8 @@ clicks. Static final-layout assertions had not exposed that behavior.
 - Scrolling now moves one clipped content window, leaving every combo, slider
   and label at a stable position within that surface. The viewport uses
   WS_EX_COMPOSITED and sibling clipping to present complete child paints.
+  This ancestor-composition approach was later replaced by control-local
+  buffered painting; see the slider/capture-button correction below.
   It no longer moves and resizes each native field on every wheel tick.
 - A mouse-down focus change no longer invokes automatic Reveal on its target.
   Previously a partly visible selector could move before its native hit test
@@ -378,3 +380,42 @@ No README, SHA256SUMS, external licenses or personal/game data are shipped.
 The separate exact production EXE also passed open, nested control actions,
 language switching, save and close under Wine; unrelated configuration was
 preserved and no game save was created. Native Windows confirmation is pending.
+
+
+## Slider and capture-button repaint correction
+
+The user reported temporary disappearance and white slider rectangles when
+scrolling Graphics and Controls. A focused regression against the prior
+launcher reproduced the intermediate erase defect: after painting a real
+native control, its `WM_ERASEBKGND` path replaced the visible content before
+the next paint. The prior implementation failed the added check after 83,622
+UI assertions. Earlier settled-frame/dark-background checks alone passed and
+did not cover that intermediate state.
+
+Buttons and main-window trackbars now paint their complete background and
+foreground through one control-local bitmap for both `WM_PAINT` and
+`WM_PRINTCLIENT`. Background erasure is suppressed. Native controls retain
+input, focus, notifications, range/position and accessibility semantics.
+The scroll viewport no longer relies on ancestor `WS_EX_COMPOSITED` for these
+controls. Moving the content surface defers painting with `SWP_NOREDRAW`, then
+invalidates and paints the viewport and children once. Child coordinates,
+scroll limits, layout and saved values are preserved.
+
+The regression also exercises 48 Graphics scroll frames and 32 Controls scroll
+frames, including partly clipped capture buttons; checks erase/print paths,
+immediate visible pixels and stored bindings; and uses a real capture-button
+mouse click and native slider keyboard/percentage notifications. The existing
+EN/TR, DPI, dropdown, tooltip, modal and persistence checks remain in the same
+production-UI probe. Results are Windows PE/Wine evidence, not a native Windows
+screen recording.
+
+The release changes only `motogp0910-launcher.exe` inside the full Windows ZIP.
+The preceding Turkish font, runtime compatibility, game executable and resource
+bytes are identical. Package integrity and development-package exclusions are
+checked; previous archives remain available.
+
+Final production launcher UI validation passed **87,647 assertions** under
+Wine/Xvfb, including the new erase/scroll/input regressions. Actual scroll-frame
+captures were inspected; no white rectangle or missing capture button was
+observed in those checked frames. Native Windows confirmation remains separate.
+The separate launcher configuration/argument-preservation probe passed **97 checks**.

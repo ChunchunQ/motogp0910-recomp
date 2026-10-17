@@ -106,6 +106,8 @@ struct App {
     auto c=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|WS_CLIPSIBLINGS|style,S(x),S(y+(parent?0:kCaptionHeight)),S(w),S(h),parent?parent:window,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     if(!c)throw std::runtime_error("Cannot create launcher control");
+    if(button||std::wstring_view(cls)==TRACKBAR_CLASSW)
+      SetWindowSubclass(c,PaintedControlProc,21,reinterpret_cast<DWORD_PTR>(this));
     placements.push_back({c,x,y,w,h});
     if(std::wstring_view(cls)==L"STATIC")SetWindowSubclass(c,LabelProc,20,reinterpret_cast<DWORD_PTR>(this));
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
@@ -431,6 +433,7 @@ struct App {
     Ellipse(draw.hdc,cx-S(6),cy-S(6),cx+S(6),cy+S(6));SelectObject(draw.hdc,old);SelectObject(draw.hdc,pen);DeleteObject(brush);
     if(GetFocus()==c){RECT focus=r;InflateRect(&focus,-S(2),-S(2));DrawFocusRect(draw.hdc,&focus);}return CDRF_SKIPDEFAULT;
   }
+  #include "control_paint.inc"
   void Paint(HDC target){
     RECT client;GetClientRect(window,&client);auto dc=CreateCompatibleDC(target);
     auto bitmap=CreateCompatibleBitmap(target,std::max<LONG>(1,client.right),std::max<LONG>(1,client.bottom));auto old=SelectObject(dc,bitmap);
