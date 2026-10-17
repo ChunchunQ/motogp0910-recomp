@@ -22,11 +22,42 @@ void Screenshot(HWND window,const fs::path& file,bool whole=false,bool include_p
   CheckUI(bool(output),"Screenshot saved");SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(include_popups?nullptr:window,dc);
 }
 void PumpUI(){MSG message;while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}}
-void ClickControl(HWND control,int y){
-  RECT r;GetClientRect(control,&r);POINT p{r.right/2,y};ClientToScreen(control,&p);
+void ClickControl(HWND control,int y,int x=-1){
+  RECT r;GetClientRect(control,&r);POINT p{x<0?r.right/2:x,y};ClientToScreen(control,&p);
   std::atomic<bool> done=false,ok=true;
   std::thread mouse([&]{SetCursorPos(p.x,p.y);Sleep(25);for(DWORD flags:{MOUSEEVENTF_LEFTDOWN,MOUSEEVENTF_LEFTUP}){INPUT input{};input.type=INPUT_MOUSE;input.mi.dwFlags=flags;if(SendInput(1,&input,sizeof(input))!=1)ok=false;Sleep(25);}done=true;});
   while(!done){PumpUI();Sleep(2);}mouse.join();PumpUI();CheckUI(ok,"Actual mouse input delivered to the native control");
+}
+void CheckSliderJump(HWND control){
+  CheckUI(IsWindowVisible(control)&&IsWindowEnabled(control),"Slider click regression uses a visible, enabled native control");
+  RECT r,channel{};GetClientRect(control,&r);SendMessageW(control,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));
+  const auto saved=SendMessageW(control,TBM_GETPOS,0,0),page=SendMessageW(control,TBM_GETPAGESIZE,0,0);
+  const auto low=SendMessageW(control,TBM_GETRANGEMIN,0,0),high=SendMessageW(control,TBM_GETRANGEMAX,0,0);
+  SetFocus(control);SendMessageW(control,TBM_SETPAGESIZE,0,high-low);SendMessageW(control,TBM_SETPOS,TRUE,high);
+  RedrawWindow(control,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW);PumpUI();
+  for(const bool right:{false,true}){
+    ClickControl(control,r.bottom/2,right?channel.right-1:channel.left+1);
+    CheckUI(SendMessageW(control,TBM_GETPOS,0,0)==(right?high:low),"Real channel clicks retain native page-step input in both directions");
+    // A full offscreen print is the expected current picture; compare it with
+    // the actual visible channel after the native partial invalidation.
+    const auto screen=GetDC(control),expected=CreateCompatibleDC(screen);const auto bitmap=CreateCompatibleBitmap(screen,r.right,r.bottom);const auto old=SelectObject(expected,bitmap);
+    SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(expected),PRF_CLIENT);
+    bool matches=true;for(int x=channel.left+20;x<channel.right-20;++x)if(GetPixel(screen,x,r.bottom/2)!=GetPixel(expected,x,r.bottom/2)){matches=false;break;}
+    SelectObject(expected,old);DeleteObject(bitmap);DeleteDC(expected);ReleaseDC(control,screen);
+    CheckUI(matches,"A channel click repaints the entire value-dependent fill without stale stripes");
+  }
+  SendMessageW(control,TBM_SETPAGESIZE,0,page);SendMessageW(control,TBM_SETPOS,TRUE,saved);
+  SendMessageW(GetParent(control),WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(control));UpdateWindow(control);
+}
+void CheckSliderInteractions(App& app){
+  app.ShowPage(1);app.ScrollPage(0);CheckSliderJump(app.volume);
+  const auto effect=SendMessageW(app.effect,CB_GETCURSEL,0,0);SendMessageW(app.effect,CB_SETCURSEL,2,0);app.UpdateSharpness();
+  app.ShowPage(0);app.ScrollPage(300);CheckSliderJump(app.sharpness);
+  SendMessageW(app.effect,CB_SETCURSEL,effect,0);app.UpdateSharpness();app.ShowPage(3);
+  auto profile=app.settings.adaptive;profile.enabled=true;profile.right.mode=profile.left.mode="weapon";
+  AdaptiveDialog dialog(app.window,app.font,false,app.scale,profile);auto modal=dialog.Create();ShowWindow(modal,SW_SHOW);UpdateWindow(modal);
+  for(int id:{111,112,113,121,122,123})CheckSliderJump(GetDlgItem(modal,id));
+  DestroyWindow(modal);SetForegroundWindow(app.window);app.ShowPage(3);
 }
 void CheckSurface(App& app,HWND control,int x,int y){
   RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),paint=CreateCompatibleDC(target),expected=CreateCompatibleDC(target);
@@ -231,7 +262,7 @@ int wmain(int argc,wchar_t** argv){
     Gdiplus::GdiplusShutdown(token);CoUninitialize();return result;
   }
   try{
-    if(argc!=3)throw std::runtime_error("Usage: launcher_ui_probe GAME_ROOT SCREENSHOT_DIRECTORY (run in an isolated executable folder)");
+    if(argc!=3&&argc!=4)throw std::runtime_error("Usage: launcher_ui_probe GAME_ROOT SCREENSHOT_DIRECTORY [--sliders-only] (run in an isolated executable folder)");
     const auto pictures=fs::path(argv[2]);fs::create_directories(pictures);
     App app;app.scale=1;const auto game=fs::path(argv[1]);
     WNDCLASSW cls{};cls.hInstance=GetModuleHandleW(nullptr);cls.lpfnWndProc=WindowProc;cls.lpszClassName=L"MotoGPLauncherUIProbe";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);RegisterClassW(&cls);
@@ -240,10 +271,15 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
-    CheckUI(!app.Checked(app.debug_overlay)&&app.Checked(app.intro_skip),"Debug overlay defaults off and manual intro skipping defaults on");
-    app.ShowPage(4);ClickControl(app.debug_overlay,app.S(14));ClickControl(app.intro_skip,app.S(14));
-    {auto pending=app.GetControls();CheckUI(pending.debug_overlay_enabled&&!pending.allow_intro_skip,"Actual Advanced checkboxes update managed settings");toml::table saved;pending.Store(saved);auto loaded=Settings::Load(saved);app.SetControls(loaded);CheckUI(app.Checked(app.debug_overlay)&&!app.Checked(app.intro_skip),"Diagnostic options survive a launcher settings round trip");}
-    app.SetCheck(app.debug_overlay,false);app.SetCheck(app.intro_skip,true);app.ShowPage(3);
+    CheckSliderInteractions(app);
+    if(argc==4){CheckUI(std::wstring_view(argv[3])==L"--sliders-only","Known targeted regression mode");DestroyWindow(window);std::cout<<ui_checks<<" slider channel-click checks passed\n";Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;}
+    CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
+    CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");
+    app.ShowPage(4);CheckUI(IsWindowVisible(app.crash_diagnostics),"Extended crash diagnostics appears in Advanced");
+    const bool crash=app.Checked(app.crash_diagnostics);ClickControl(app.crash_diagnostics,app.S(14));CheckUI(app.Checked(app.crash_diagnostics)!=crash,"Relocated crash checkbox retains native mouse input");app.SetCheck(app.crash_diagnostics,crash);
+    ClickControl(app.debug_overlay,app.S(14));
+    {auto pending=app.GetControls();CheckUI(pending.debug_overlay_enabled,"Actual Advanced checkbox updates managed settings");toml::table saved;Put(saved,"allow_intro_skip",false);pending.Store(saved);auto loaded=Settings::Load(saved);app.SetControls(loaded);CheckUI(app.Checked(app.debug_overlay)&&Get(saved,"allow_intro_skip",false),"Debug choice survives a round trip while intro skipping stays enabled");}
+    app.SetCheck(app.debug_overlay,false);app.ShowPage(3);
     CheckTooltipCompatibility(window);
     CheckHelp(app,pictures);app.ShowPage(3);
     {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kBackground,"Caption blends into the artwork instead of a sidebar strip");ReleaseDC(window,dc);}

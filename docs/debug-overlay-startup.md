@@ -6,10 +6,15 @@ localization resources and game/runtime compatibility fixes.
 
 ## Launcher options
 
-Advanced contains **Enable debug overlay** (default off) and **Allow intro
-skipping** (default on). Both are stored in the game TOML and forwarded with
-normal command-line priority. They apply on the next game launch. Launcher
-language and game text language remain independent.
+Advanced contains **Enable debug overlay** (default off) and **Extended crash
+diagnostics**. Debug permission is stored in the game TOML; crash diagnostics
+retain the existing launcher preference and behavior. They apply on the next
+game launch. Launcher language and game text language remain independent.
+
+Manual intro skipping is enabled without a launcher checkbox. Saving or
+launching from the launcher also replaces a stale disabled intro preference
+from the previous development build. The internal runtime switch remains
+available for diagnostic checks.
 
 F3 opens the project overlay only when permission is enabled. The unconditional
 SDK debug binding is replaced before gameplay, preserving its configured key.
@@ -53,7 +58,7 @@ skip race cutscenes or bypass save/profile initialization.
 The final Windows PE/Wine run passed all 27 suite entries using the same DLL
 hashes as the development ZIP: 76 debug option/timing/F3/ImGui checks, 12 GPU
 diagnostic ABI checks, 127 quit/startup/input checks, 99 launcher configuration
-checks and 88,012 actual launcher UI checks. The ZIP was checked for matching
+checks and 87,871 actual launcher UI checks. The ZIP was checked for matching
 runtime hashes and absence of original game data, personal config/logs, readmes,
 checksum files and a separate license folder.
 

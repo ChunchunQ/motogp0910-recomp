@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-debug-intro-fix.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-slider-click-fix.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -37,7 +37,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `f308a309801598c3c486a88a1e01b54804f1b69051cffefc771b8edde714a0e2`.
+Package SHA-256: `e1ce02ccc9dc15d89f594d4db18befa2ab015a112148d0301123a9d291f8aae7`.
 
 ## Current features and evidence
 
@@ -46,12 +46,14 @@ Package SHA-256: `f308a309801598c3c486a88a1e01b54804f1b69051cffefc771b8edde714a0
   display settings, memory and audio/cache diagnostics. The overlay defaults off
   and does not capture gameplay input. Cross/A or Start, Space or Enter can
   request the native intro fade while preserving the final Press Start screen.
+  Intro skipping needs no checkbox; Extended crash diagnostics is in Advanced.
   [Scope and checks](docs/debug-overlay-startup.md).
 - **Racing Lines launcher:** dark/orange MotoGP artwork, horizontal tabs,
   native hover help, file verification, larger achievement list and separate
   Multiplayer Settings dialog. Fixed tab redraw/scroll jumps, closed combo-box
   wheel changes and native Windows tooltip registration. Slider/button painting
-  now suppresses intermediate erase frames while scrolling. The user confirmed
+  now suppresses intermediate erase frames while scrolling and redraws the full
+  slider fill after channel clicks. The user confirmed
   the latest tooltip fix works. [Design and validation](docs/launcher-redesign.md).
 - **Turkish written localization:** 2,102 native message IDs reviewed, five data
   scripts and 50 achievements localized; voices preserved. Four native font

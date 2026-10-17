@@ -2,6 +2,7 @@
 #include "core.h"
 #include "modal_style.h"
 #include "tooltips.h"
+#include "slider_paint.h"
 #include <commctrl.h>
 #include <dwmapi.h>
 namespace launcher {
@@ -46,7 +47,9 @@ class AdaptiveDialog {
   HWND Add(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
     auto child=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y),S(w),S(h),window,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);
-    if(std::wstring_view(cls)==L"COMBOBOX")style_.AttachCombo(child);return child;
+    if(std::wstring_view(cls)==L"COMBOBOX")style_.AttachCombo(child);
+    if(std::wstring_view(cls)==TRACKBAR_CLASSW)AttachSliderPaint(child);
+    return child;
   }
   void UpdateAvailability(){
     const bool enabled=SendDlgItemMessageW(window,100,BM_GETCHECK,0,0)==BST_CHECKED;

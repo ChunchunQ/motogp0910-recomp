@@ -5,6 +5,7 @@
 #include "adaptive_triggers_dialog.h"
 #include "network_dialog.h"
 #include "tooltips.h"
+#include "slider_paint.h"
 #include "hardware.h"
 #include "achievements.h"
 #include "../achievement_preferences.h"
@@ -52,7 +53,7 @@ struct App {
   std::map<HWND,HWND> help_labels;
   std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{},debug_overlay{},intro_skip{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{},debug_overlay{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -108,6 +109,7 @@ struct App {
     if(!c)throw std::runtime_error("Cannot create launcher control");
     if(button||std::wstring_view(cls)==TRACKBAR_CLASSW)
       SetWindowSubclass(c,PaintedControlProc,21,reinterpret_cast<DWORD_PTR>(this));
+    if(std::wstring_view(cls)==TRACKBAR_CLASSW)AttachSliderPaint(c);
     placements.push_back({c,x,y,w,h});
     if(std::wstring_view(cls)==L"STATIC")SetWindowSubclass(c,LabelProc,20,reinterpret_cast<DWORD_PTR>(this));
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
@@ -299,7 +301,7 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
-    SetCheck(debug_overlay,s.debug_overlay_enabled);SetCheck(intro_skip,s.allow_intro_skip);
+    SetCheck(debug_overlay,s.debug_overlay_enabled);
     NetworkDialog::CopyNetwork(settings,s);
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
@@ -343,7 +345,7 @@ struct App {
   }
   Settings GetControls()const{
     Settings s=settings;
-    s.debug_overlay_enabled=Checked(debug_overlay);s.allow_intro_skip=Checked(intro_skip);
+    s.debug_overlay_enabled=Checked(debug_overlay);
     const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);

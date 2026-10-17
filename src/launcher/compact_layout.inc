@@ -195,7 +195,6 @@
     game_language=field(3,L"Game language",L"Oyun dili",kColumnX,128,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
     prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,210,kPromptStyle);
     multiplayer_settings=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kColumnX,234,kColumnWidth,34,kNavMultiplayer);
-    crash_diagnostics=check(3,0,300,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
     render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",kColumnX,0,kRenderResolution);
     size=field(0,L"Output window size",L"Çıkış pencere boyutu",0,68,kSize);
@@ -214,7 +213,7 @@
     for(size_t i=0;i<engine_choices.size();++i)engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(i%2)*kColumnX,(i/2)*82,kEngineBase+i);
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",kColumnX,82,kShadowDistance);
     debug_overlay=check(4,0,186,kFormWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
-    intro_skip=check(4,0,230,kFormWidth,kIntroSkip);labels.push_back({intro_skip,L"Allow intro skipping",L"Açılış videolarını geçmeye izin ver"});
+    crash_diagnostics=check(4,0,230,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(preferences.table,"crash_monitor",true));
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",0,0,kFormWidth-104);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,kFormWidth-80,0,80,22);
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,kFormWidth,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     mute=check(1,0,100,kFormWidth,kMute);

@@ -136,7 +136,7 @@ class Config {
 struct Settings {
   motogp::adaptive::Profile adaptive;
   std::string aspect="auto";
-  bool debug_overlay_enabled=false,allow_intro_skip=true;
+  bool debug_overlay_enabled=false;
   bool lan_enabled=false;
   std::string network_mode="offline",online_server;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
@@ -152,7 +152,7 @@ struct Settings {
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
     Settings s;
-    s.debug_overlay_enabled=Get(t,"debug_overlay_enabled",false);s.allow_intro_skip=Get(t,"allow_intro_skip",true);
+    s.debug_overlay_enabled=Get(t,"debug_overlay_enabled",false);
     s.adaptive.enabled=Get(t,"dualsense_adaptive_triggers",false);
     for(int side=0;side<2;++side){auto& p=side?s.adaptive.left:s.adaptive.right;std::string key=side?"dualsense_lt_":"dualsense_rt_";
       p.mode=Get(t,key+"mode",p.mode);p.start=Get<int64_t>(t,key+"start",p.start);p.end=Get<int64_t>(t,key+"end",p.end);p.strength=Get<int64_t>(t,key+"strength",p.strength);
@@ -256,7 +256,10 @@ struct Settings {
     for(size_t i=0;i<engine_effects.size();++i)Put(t,kEngineEffects[i].key,engine_effects[i]);
     Put(t,"aspect_ratio",aspect);
     Put(t,"engine_shadow_distance",shadow_distance);
-    Put(t,"debug_overlay_enabled",debug_overlay_enabled);Put(t,"allow_intro_skip",allow_intro_skip);
+    Put(t,"debug_overlay_enabled",debug_overlay_enabled);
+    // The removed launcher toggle must not leave older saved builds unable to
+    // skip intros. Keep the runtime's internal diagnostic switch out of the UI.
+    Put(t,"allow_intro_skip",true);
     Put(t, "window_width", width); Put(t, "window_height", height);
     if(guest_width)Put(t,"video_mode_width",guest_width);
     if(guest_height)Put(t,"video_mode_height",guest_height);

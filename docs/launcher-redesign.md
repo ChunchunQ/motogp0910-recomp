@@ -419,3 +419,35 @@ Wine/Xvfb, including the new erase/scroll/input regressions. Actual scroll-frame
 captures were inspected; no white rectangle or missing capture button was
 observed in those checked frames. Native Windows confirmation remains separate.
 The separate launcher configuration/argument-preservation probe passed **97 checks**.
+
+## Channel-click slider repaint and Advanced cleanup — 18 October 2026
+
+Clicking the channel rather than dragging the thumb exposed a separate damage
+region problem. Native trackbars invalidate only the old and new thumb areas;
+the launcher's colored channel also depends on the value. Painting through that
+partial clip left stale fill between the thumb positions. Double buffering alone
+did not expand the invalid region.
+
+All eight launcher trackbars (volume, sharpness and the six DualSense resistance
+controls) now expand an existing paint damage region to the full control before
+`BeginPaint`. The fix stays local to the slider, does not erase its background,
+and retains native mouse, keyboard, capture, page-step and accessibility behavior.
+
+The added regression sends actual mouse input to both ends of every slider's
+channel, verifies the native value change, and compares visible channel pixels
+with a complete current-state offscreen render. The preceding implementation
+fails this check on the first channel click; the corrected implementation passes
+58 targeted checks. The regression is also part of the full launcher UI probe.
+
+Advanced now contains Extended crash diagnostics in place of the removed Allow
+intro skipping checkbox. The crash preference, default and launch behavior are
+unchanged. Manual intro skipping stays enabled; launcher Save/PLAY replaces a
+stale disabled intro preference from the previous package.
+
+Only the launcher executable changes relative to the debug/intro package. Game,
+matching runtime DLLs and resources are byte-identical. Historical ZIPs remain
+available, and the usual development-package exclusions are preserved.
+
+Final checks passed all 27 Windows PE/Wine suite entries, including 87,871
+actual launcher UI assertions and 99 configuration/argument checks. Native
+Windows visual confirmation remains separate from these Wine checks.
