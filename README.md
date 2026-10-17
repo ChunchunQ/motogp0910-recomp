@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-launcher-scroll-paint-fix.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-debug-intro-fix.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -34,13 +34,19 @@ location; default game logs are in `logs/` beside the EXE.
 Development ZIPs omit README files, feature instructions, SHA256SUMS and separate
 license folders. Required third-party notices are embedded in the launcher and
 available through **Alt+Space → Third-party notices**. Source licenses remain.
-Code signing is deferred until the final release. Repository Markdown
+Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `cda46bc9c0f0035dd5f5aafe2e9c0768af4c4f9aab481962c4a48f3b3e5d8b9a`.
+Package SHA-256: `f308a309801598c3c486a88a1e01b54804f1b69051cffefc771b8edde714a0e2`.
 
 ## Current features and evidence
 
+- **Optional debug overlay and startup skipping:** Advanced → Enable debug
+  overlay permits F3 to show guest presentation timing, graphics/runtime counters,
+  display settings, memory and audio/cache diagnostics. The overlay defaults off
+  and does not capture gameplay input. Cross/A or Start, Space or Enter can
+  request the native intro fade while preserving the final Press Start screen.
+  [Scope and checks](docs/debug-overlay-startup.md).
 - **Racing Lines launcher:** dark/orange MotoGP artwork, horizontal tabs,
   native hover help, file verification, larger achievement list and separate
   Multiplayer Settings dialog. Fixed tab redraw/scroll jumps, closed combo-box

@@ -240,6 +240,10 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    CheckUI(!app.Checked(app.debug_overlay)&&app.Checked(app.intro_skip),"Debug overlay defaults off and manual intro skipping defaults on");
+    app.ShowPage(4);ClickControl(app.debug_overlay,app.S(14));ClickControl(app.intro_skip,app.S(14));
+    {auto pending=app.GetControls();CheckUI(pending.debug_overlay_enabled&&!pending.allow_intro_skip,"Actual Advanced checkboxes update managed settings");toml::table saved;pending.Store(saved);auto loaded=Settings::Load(saved);app.SetControls(loaded);CheckUI(app.Checked(app.debug_overlay)&&!app.Checked(app.intro_skip),"Diagnostic options survive a launcher settings round trip");}
+    app.SetCheck(app.debug_overlay,false);app.SetCheck(app.intro_skip,true);app.ShowPage(3);
     CheckTooltipCompatibility(window);
     CheckHelp(app,pictures);app.ShowPage(3);
     {const auto dc=GetDC(window);CheckUI(GetPixel(dc,app.S(4),app.S(4))==kBackground,"Caption blends into the artwork instead of a sidebar strip");ReleaseDC(window,dc);}

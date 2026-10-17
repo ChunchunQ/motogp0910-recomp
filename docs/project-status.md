@@ -1,4 +1,4 @@
-# Project status — 17 October 2026
+# Project status — 18 October 2026
 
 
 **Launcher Racing Lines:** User-selected concept B is implemented as a compact 940 × 578 launcher with horizontal tabs, scrollable settings and title buttons drawn over the artwork. General adds read-only, cancellable SHA-256 game-file verification. See [scope and validation](launcher-redesign.md).
@@ -19,6 +19,14 @@ requirements; while awaiting answers continue only independent authorized work.
 Don't publish original game data, personal logs or preview screenshots.
 
 ## Current evidence
+
+The latest [debug overlay and startup package](debug-overlay-startup.md) passed
+all 27 Windows PE/Wine suite entries with its matching custom Release DLLs.
+Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
+the native transition with Cross/A or Start, Space or Enter. Final checks include
+76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
+quit/startup/input checks and 88,012 launcher UI assertions. Native Windows
+D3D12 overlay/gameplay and physical controller validation remain separate.
 
 | Area | Implemented / checked | Native Windows evidence / limit |
 |---|---|---|

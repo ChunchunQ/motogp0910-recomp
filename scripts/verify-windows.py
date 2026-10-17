@@ -25,6 +25,7 @@ PROBES = {
     'launcher_probe': 'game', 'launcher_layout_probe': 'ui',
     'achievement_ui_probe': 'achievements', 'quit_menu_probe': 'quit',
     'in_game_settings_probe': 'settings', 'adaptive_triggers_probe': '',
+    'debug_overlay_probe': 'debug', 'gpu_diagnostics_bridge_probe': 'gpu',
 }
 
 def main():
@@ -94,6 +95,8 @@ def main():
             extra = [target(game), target(build / 'resources/localization/tr/overlay')]
         if kind == 'achievements':
             extra = [target(build / 'resources/ui/OpenSans-Semibold.ttf'), target(root / 'achievement-preview')]
+        if kind == 'debug':
+            extra = [target(build / 'resources/ui/OpenSans-Semibold.ttf')]
         if kind == 'quit':
             extra = [target(game), target(build / 'resources/ui/OpenSans-Semibold.ttf')]
         if kind == 'settings':

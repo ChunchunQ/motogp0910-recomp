@@ -16,6 +16,7 @@
 #include <rex/system/xex_module.h>
 
 #include <fstream>
+#include <typeinfo>
 #include <vector>
 
 #include "input_defaults.h"
@@ -33,6 +34,7 @@
 #include "localization.h"
 #include "in_game_settings.h"
 #include "frame_pacing.h"
+#include "debug_overlay.h"
 #include <rex/input/input_system.h>
 #include <imgui.h>
 #include <rex/ui/keybinds.h>
@@ -146,6 +148,8 @@ class Motogp0910App : public rex::ReXApp {
           std::string("LAN could not start: ")+error.what()+
           "\n\nThe game will continue in OFFLINE mode. Close it and correct the LAN settings in the launcher before trying multiplayer again.");
     }
+    auto* graphics = runtime()->graphics_system();
+    motogp::debug::Initialize(graphics?typeid(*graphics).name():nullptr);
     motogp::ApplyHostDisplay(window());
     motogp::wide::Start(window());
     motogp::livery::Initialize();
@@ -166,8 +170,17 @@ class Motogp0910App : public rex::ReXApp {
     motogp::prompts::StartInputObserver(window());
     motogp::adaptive::Start(window()->HasFocus());
   }
+  void OnKeyDown(rex::ui::KeyEvent& event) override {
+    if(!event.prev_state()&&!event.is_ctrl_pressed()&&!event.is_alt_pressed()&&!event.is_super_pressed()&&
+       (event.virtual_key()==rex::ui::VirtualKey::kSpace||event.virtual_key()==rex::ui::VirtualKey::kReturn))motogp::quit::RequestIntroSkip();
+    rex::ui::ProcessKeyEvent(event);
+  }
   void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
+    // The SDK has just registered F3; replace it before the game is launched.
+    motogp::debug::RegisterToggle([this]{
+      if(debug_dialog_)debug_dialog_.reset();else debug_dialog_=motogp::debug::Create(imgui_drawer(),window(),achievement_preferences_->turkish);
+    });
     achievement_preferences_->Load(user_data_root(),rex::filesystem::GetExecutableFolder());
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::SetFocused(window()->HasFocus());
@@ -203,6 +216,9 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    motogp::debug::UnregisterToggle();
+    motogp::debug::Shutdown();
+    debug_dialog_.reset();
     motogp::adaptive::Stop();
     motogp::SetFrameObserver(nullptr);
     motogp::settings::SetGuestGate(nullptr);
@@ -233,6 +249,7 @@ class Motogp0910App : public rex::ReXApp {
     }
   }
  private:
+  std::unique_ptr<rex::ui::ImGuiDialog> debug_dialog_;
   std::filesystem::path settings_path_;
   std::shared_ptr<motogp::settings::InputGate> settings_gate_=std::make_shared<motogp::settings::InputGate>();
   std::shared_ptr<motogp::settings::Model> settings_model_;

@@ -48,6 +48,31 @@ int main(int argc,char** argv){try{
  std::memset(base+allocation,0,0x4000);
  const auto write=[&](uint32_t a,uint32_t v){rex::memory::store_and_swap<uint32_t>(base+a,v);};const auto read=[&](uint32_t a){return rex::memory::load_and_swap<uint32_t>(base+a);};
  motogp::quit::Initialize(&runtime);motogp::quit::SetFocused(true);motogp::quit::PollFrontendInput();const auto label=motogp::quit::LabelAddress();
+ { // The original native sequence owns fade and video cleanup. Only its
+   // request byte is changed; final Press Start and unrelated modes reject it.
+   constexpr std::array<uint32_t,6> addresses={0x82942CC0,0x82942CC4,0x82942CB0,0x828DA060,0x82942CBC,0x8288B188};
+   std::array<uint32_t,6> saved{};for(size_t i=0;i<saved.size();++i)saved[i]=read(addresses[i]);
+   write(0x82942CC0,0);write(0x82942CC4,4);write(0x82942CB0,0);write(0x828DA060,11);write(0x82942CBC,30);write(0x8288B188,allocation);
+   Check(motogp::quit::IntroSkipAllowed(base)&&motogp::quit::BeginIntroSkip(base),"Loaded non-final intro accepts a native skip request");
+   Check(base[0x82942CB2]==1&&read(0x82942CC0)==0,"Skip sets only the native fade request, never jumps the index");
+   Check(!motogp::quit::BeginIntroSkip(base),"A pending transition cannot be requested twice");
+   motogp::quit::FinishIntroSkip(base);Check(base[0x82942CB2]==1,"Request persists while native fade is in progress");
+   write(0x82942CC0,1);motogp::quit::FinishIntroSkip(base);Check(!base[0x82942CB2],"Advancing one entry clears the owned request so the next intro cannot be skipped automatically");
+   for(uint32_t index:{3u,4u,0xffffffffu}){write(0x82942CC0,index);Check(!motogp::quit::BeginIntroSkip(base),"Final title and invalid sequence indices cannot be skipped");}
+   write(0x82942CC0,0);write(0x82942CBC,10);Check(!motogp::quit::BeginIntroSkip(base),"Skip waits for the native initial frame guard");write(0x82942CBC,30);
+   write(0x828DA060,15);Check(!motogp::quit::BeginIntroSkip(base),"Frontend/gameplay mode cannot use intro skipping");write(0x828DA060,11);
+   rex::cvar::SetFlagByName("allow_intro_skip","false");Check(!motogp::quit::BeginIntroSkip(base),"Launcher option disables manual intro skipping");rex::cvar::SetFlagByName("allow_intro_skip","true");
+   write(0x82942CC4,33);Check(!motogp::quit::BeginIntroSkip(base),"Corrupt sequence count is rejected");
+   write(0x82942CC4,4);write(0x82942CC0,0);
+   motogp::quit::RequestIntroSkip();motogp::quit::PollIntroInput(base);Check(base[0x82942CB2]==1,"Fresh keyboard request reaches the native intro fade path");
+   write(0x82942CC0,1);motogp::quit::FinishIntroSkip(base);
+   pad->state.gamepad.buttons=X_INPUT_GAMEPAD_A;motogp::quit::PollFrontendInput();motogp::quit::PollIntroInput(base);Check(base[0x82942CB2]==1,"Cross/A from the real input-system path requests intro skipping");
+   X_INPUT_STATE masked{};static_cast<InputSystem*>(runtime.input_system())->GetState(0,&masked);Check(!(masked.gamepad.buttons&X_INPUT_GAMEPAD_A),"The consumed Cross/A is release-masked from the guest");
+   write(0x82942CC0,2);motogp::quit::FinishIntroSkip(base);motogp::quit::PollFrontendInput();motogp::quit::PollIntroInput(base);Check(!base[0x82942CB2],"Holding Cross/A cannot skip the next entry");
+   pad->state.gamepad.buttons=0;motogp::quit::PollFrontendInput();motogp::quit::PollIntroInput(base);
+   motogp::quit::SetFocused(false);motogp::quit::RequestIntroSkip();motogp::quit::PollIntroInput(base);Check(!base[0x82942CB2],"Unfocused startup cannot consume a keyboard request");motogp::quit::SetFocused(true);motogp::quit::PollFrontendInput();
+   for(size_t i=0;i<saved.size();++i)write(addresses[i],saved[i]);
+ }
  const auto iterator=allocation+0x700;write(iterator,label);
  for(unsigned char expected:std::string("QUIT GAME\0",10)){
    PPCContext decode{};decode.r3.u32=iterator;sub_826EC558(decode,base);

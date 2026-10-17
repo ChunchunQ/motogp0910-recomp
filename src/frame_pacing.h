@@ -19,4 +19,5 @@ class FrameSchedule {
 void PaceGameFrame();
 // Optional guest-thread service; UI code must not poll InputSystem devices.
 void SetFrameObserver(void (*observer)());
+void SetFrameTimingObserver(void (*observer)());
 }

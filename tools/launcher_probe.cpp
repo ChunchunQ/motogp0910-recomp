@@ -4,6 +4,7 @@
 #include "../src/audio_settings.h"
 #include "../src/button_prompt_options.h"
 #include "../src/engine_settings_options.h"
+#include "../src/diagnostic_options.h"
 #include <shellapi.h>
 #include <iostream>
 using namespace launcher;
@@ -51,6 +52,7 @@ int wmain(int argc,wchar_t** argv) {
       Settings missing;missing.network_mode="online";bool rejected=false;try{missing.Validate();}catch(const Error&){rejected=true;}Check(rejected,"Online cannot launch without a community endpoint");
     }
     settings.backend="xinput";settings.keyboard=false;settings.mute=true;
+    settings.debug_overlay_enabled=true;settings.allow_intro_skip=false;
     settings.engine_effects={"off","off","off"};settings.shadow_distance=90;
     settings.effect="fsr";settings.scale_x=2;settings.scale_y=3;settings.volume=37;
     settings.fsr_reduction=0.54;settings.anisotropic=5;settings.post_effect="fxaa";settings.adapter=0;
@@ -60,6 +62,7 @@ int wmain(int argc,wchar_t** argv) {
     Check(!actual.fullscreen && actual.vsync && !actual.keyboard && actual.mute && actual.backend=="xinput","Boolean/input round trip");
     Check(actual.effect=="fsr" && actual.scale_x==2 && actual.scale_y==3 && actual.volume==37 && actual.anisotropic==5 && actual.post_effect=="fxaa", "Advanced settings round trip");
     Check(actual.adapter==0,"GPU index round trip");
+    Check(actual.debug_overlay_enabled&&!actual.allow_intro_skip,"Debug and intro options round trip without changing defaults");
     Check(actual.engine_effects==settings.engine_effects && actual.shadow_distance==90,"Engine overrides round trip");
     Check(actual.prompt_style=="playstation","Manual PS prompts preserved with XInput backend");
     Check(std::abs(actual.fsr_reduction-0.54)<0.00001, "FSR strength round trip");
@@ -99,6 +102,7 @@ int wmain(int argc,wchar_t** argv) {
     Check(rex::cvar::Query<std::string>("swap_post_effect")=="fxaa" && rex::cvar::Query<bool>("store_shaders"), "Actual SDK FXAA/cache flags");
     Check(rex::cvar::Query<int32_t>("audio_master_volume")==37, "Game volume cvar loaded");
     for(const auto& effect:kEngineEffects)Check(rex::cvar::Query<std::string>(effect.key)=="off","Actual engine effect cvar loaded from config");
+    Check(rex::cvar::Query<bool>("debug_overlay_enabled")&&!rex::cvar::Query<bool>("allow_intro_skip"),"Actual diagnostic cvars load the saved choices");
     Check(rex::cvar::Query<int32_t>("engine_shadow_distance")==90,"Actual shadow distance cvar loaded from config");
     Write(file,"custom_flag = 77\n"); bool rejected=false;
     try{config.Save();}catch(const Error&){rejected=true;}

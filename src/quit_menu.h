@@ -20,6 +20,11 @@ bool IsTitleMode(uint8_t* base);
 bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha,uint64_t caller=0);
 void PollFrontendInput();
 bool PollTitleInput(uint8_t* base,uint32_t expected_mode);
+void RequestIntroSkip();
+void PollIntroInput(uint8_t* base);
+bool IntroSkipAllowed(uint8_t* base);
+bool BeginIntroSkip(uint8_t* base);
+void FinishIntroSkip(uint8_t* base);
 struct InputDecision {bool accept=false,cancel=false;};
 class Confirmation {
  public:

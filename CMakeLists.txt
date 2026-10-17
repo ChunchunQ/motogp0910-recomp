@@ -72,6 +72,7 @@ rexglue_apply_target_settings(motogp_localization)
 # Sources
 set(MOTOGP0910_SOURCES
     src/main.cpp
+    src/debug_overlay.cpp src/diagnostic_options.cpp
     src/lan/runtime.cpp
     src/button_prompts.cpp src/control_diagram.cpp
     src/ps3_prompt_textures.cpp
@@ -86,6 +87,15 @@ set(MOTOGP0910_SOURCES
     src/quit_menu.cpp
     src/in_game_settings_input.cpp
 )
+
+add_executable(gpu_diagnostics_bridge_probe EXCLUDE_FROM_ALL tools/gpu_diagnostics_bridge_probe.cpp src/gpu_diagnostics_bridge.cpp)
+target_compile_definitions(gpu_diagnostics_bridge_probe PRIVATE REXGLUE_ENABLE_PERF_COUNTERS=1)
+target_link_libraries(gpu_diagnostics_bridge_probe PRIVATE rex::runtime)
+rexglue_apply_target_settings(gpu_diagnostics_bridge_probe)
+
+add_executable(debug_overlay_probe EXCLUDE_FROM_ALL tools/debug_overlay_probe.cpp src/debug_overlay.cpp src/diagnostic_options.cpp src/frame_pacing.cpp)
+target_link_libraries(debug_overlay_probe PRIVATE rex::runtime)
+rexglue_apply_target_settings(debug_overlay_probe)
 
 add_executable(nightly_input_probe EXCLUDE_FROM_ALL tools/nightly_input_probe.cpp)
 target_link_libraries(nightly_input_probe PRIVATE rex::runtime)
@@ -142,7 +152,7 @@ if(WIN32)
     foreach(launcher_asset_target motogp0910-launcher launcher_layout_probe)
         target_sources(${launcher_asset_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/launcher-assets.rc")
     endforeach()
-    add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp src/frame_pacing.cpp src/display_settings.cpp)
+    add_executable(launcher_probe EXCLUDE_FROM_ALL tools/launcher_probe.cpp src/diagnostic_options.cpp src/frame_pacing.cpp src/display_settings.cpp)
     target_link_libraries(launcher_probe PRIVATE rex::runtime shell32 bcrypt)
     add_executable(fsr_provider_probe EXCLUDE_FROM_ALL tools/fsr_provider_probe.cpp)
     target_link_libraries(fsr_provider_probe PRIVATE kernel32)
@@ -233,7 +243,7 @@ if(TARGET motogp0910_recomp)
     target_include_directories(localization_asset_tool PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(localization_asset_tool PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(localization_asset_tool)
-    add_executable(quit_menu_probe EXCLUDE_FROM_ALL tools/quit_menu_probe.cpp src/quit_menu.cpp)
+    add_executable(quit_menu_probe EXCLUDE_FROM_ALL tools/quit_menu_probe.cpp src/quit_menu.cpp src/diagnostic_options.cpp)
     target_include_directories(quit_menu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(quit_menu_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(quit_menu_probe)
@@ -272,7 +282,7 @@ if(TARGET motogp0910_recomp)
     add_executable(button_prompt_window_probe EXCLUDE_FROM_ALL tools/button_prompt_window_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/frame_pacing.cpp)
     target_link_libraries(button_prompt_window_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(button_prompt_window_probe)
-    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp)
+    add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp src/diagnostic_options.cpp src/debug_overlay.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_sources(button_prompt_gpu_probe PRIVATE src/in_game_settings_input.cpp)
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements motogp_settings)

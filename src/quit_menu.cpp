@@ -1,6 +1,7 @@
 #include "quit_menu.h"
 #include "localization.h"
 #include <rex/hook.h>
+#include "diagnostic_options.h"
 #include <rex/memory.h>
 #include <rex/runtime.h>
 #include <rex/graphics/xenos.h>
@@ -25,9 +26,13 @@ REX_EXTERN(__imp__sub_822AE9F8);
 REX_EXTERN(__imp__sub_8229C2C0);
 REX_EXTERN(__imp__sub_8229C178);
 
+
 namespace motogp::quit {
 namespace {
 std::atomic<rex::input::InputSystem*> input{nullptr};
+std::atomic<bool> intro_keyboard{false};
+int32_t intro_pending_index=-1;uint8_t intro_old_request=0;bool intro_held=false;
+constexpr uint32_t kIntroIndex=0x82942CC0,kIntroCount=0x82942CC4,kIntroRequest=0x82942CB2;
 std::atomic<bool> pending{false},focused{false},input_armed{false};
 std::atomic<uint64_t> focus_epoch{0};
 std::atomic<uint16_t> buttons{0};
@@ -70,6 +75,38 @@ void Poll() {
 }
 }
 #include "quit_accent.inc"
+void RequestIntroSkip(){intro_keyboard.store(true,std::memory_order_release);}
+bool IntroSkipAllowed(uint8_t* base){
+  const auto index=Read(base,kIntroIndex),count=Read(base,kIntroCount);
+  // The same native updater also owns final Press Start. Only a loaded,
+  // non-final startup entry may request the original fade/cleanup transition.
+  const auto entries=Read(base,0x8288B188);
+  return REXCVAR_GET(allow_intro_skip)&&Read(base,0x828DA060)==11&&count>1&&count<=32&&index<count-1&&
+      Read(base,0x82942CBC)>10&&entries>=0x10000&&entries<=0xFFFFFBFF;
+}
+bool BeginIntroSkip(uint8_t* base){
+  if(intro_pending_index>=0)return false;
+  if(!IntroSkipAllowed(base)||base[kIntroRequest])return false;
+  intro_pending_index=static_cast<int32_t>(Read(base,kIntroIndex));intro_old_request=base[kIntroRequest];base[kIntroRequest]=1;
+  return true;
+}
+void FinishIntroSkip(uint8_t* base){
+  if(intro_pending_index>=0&&(Read(base,kIntroIndex)!=static_cast<uint32_t>(intro_pending_index)||Read(base,0x828DA060)!=11)){
+    base[kIntroRequest]=intro_old_request;intro_pending_index=-1;
+  }
+}
+void PollIntroInput(uint8_t* base){
+  FinishIntroSkip(base);
+  const bool key=intro_keyboard.exchange(false,std::memory_order_acq_rel);
+  const bool held=(buttons.load()&(rex::input::X_INPUT_GAMEPAD_A|rex::input::X_INPUT_GAMEPAD_START))!=0;
+  const bool fresh=held&&!intro_held;intro_held=held;
+  if(!focused.load()||Pending()||!input_armed.load())return;
+  if((key||fresh)&&BeginIntroSkip(base)){
+    // Use the SDK's held-release mask so the accepting button cannot enter the
+    // next menu or skip another entry until released. Do not rewrite mappings.
+    if(auto* system=input.load()){system->AddUIInputBlocker();system->RemoveUIInputBlocker();}
+  }
+}
 bool AppendItem(uint8_t* base,uint32_t menu,uint32_t label) {
   if(!menu||!label||Read(base,menu)!=kMainMenuVtable)return false;
   constexpr std::array<uint32_t,7> ids={2,0,1,3,4,5,0xFFFFFFFF};
@@ -126,6 +163,7 @@ InputDecision Confirmation::Update(uint16_t current,bool suppress_direction) {
   return {};
 }
 void Initialize(rex::Runtime* runtime) {
+  intro_keyboard=false;intro_pending_index=-1;intro_old_request=0;intro_held=false;
   input=static_cast<rex::input::InputSystem*>(runtime->input_system());
   ResetAccent(runtime->memory());
   const auto address=runtime->memory()->SystemHeapAlloc(32);
@@ -252,7 +290,9 @@ bool PollTitleInput(uint8_t* base,uint32_t expected_mode) {
 }
 REX_HOOK_RAW(sub_8229C2C0) {
   if(motogp::quit::PollTitleInput(base,11))return;
+  motogp::quit::PollIntroInput(base);
   __imp__sub_8229C2C0(ctx,base);
+  motogp::quit::FinishIntroSkip(base);
 }
 REX_HOOK_RAW(sub_822AE9F8) {
   if(motogp::quit::PollTitleInput(base,15))return;

@@ -52,7 +52,7 @@ struct App {
   std::map<HWND,HWND> help_labels;
   std::array<HWND,6> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{},debug_overlay{},intro_skip{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
@@ -299,6 +299,7 @@ struct App {
     value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
   }
   void SetControls(const Settings& s){
+    SetCheck(debug_overlay,s.debug_overlay_enabled);SetCheck(intro_skip,s.allow_intro_skip);
     NetworkDialog::CopyNetwork(settings,s);
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
@@ -342,6 +343,7 @@ struct App {
   }
   Settings GetControls()const{
     Settings s=settings;
+    s.debug_overlay_enabled=Checked(debug_overlay);s.allow_intro_skip=Checked(intro_skip);
     const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);

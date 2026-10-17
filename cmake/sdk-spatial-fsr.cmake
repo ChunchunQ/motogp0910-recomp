@@ -10,9 +10,13 @@ endif()
 # Readback is required only while the game builds CPU-copied career liveries.
 # A C ABI backed by an atomic scope counter avoids changing user GPU flags.
 if(PROJECT_NAME STREQUAL "ReXGlue")
+  # SDK Release normally compiles counter instrumentation out. Keep the
+  # lightweight counters (without Tracy) for the optional diagnostic overlay.
+  add_compile_definitions(REXGLUE_ENABLE_PERF_COUNTERS=1)
+  set(MOTOGP_GPU_DIAGNOSTICS_SOURCE "${CMAKE_CURRENT_LIST_DIR}/../src/gpu_diagnostics_bridge.cpp")
   set(MOTOGP_LIVERY_BRIDGE_SOURCE "${CMAKE_CURRENT_LIST_DIR}/../src/livery_readback_bridge.cpp")
   function(motogp_add_livery_bridge)
-    target_sources(rexgpu-xenos PRIVATE "${MOTOGP_LIVERY_BRIDGE_SOURCE}")
+    target_sources(rexgpu-xenos PRIVATE "${MOTOGP_LIVERY_BRIDGE_SOURCE}" "${MOTOGP_GPU_DIAGNOSTICS_SOURCE}")
   endfunction()
   cmake_language(DEFER CALL motogp_add_livery_bridge)
 endif()

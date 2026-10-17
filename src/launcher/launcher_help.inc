@@ -27,6 +27,8 @@
     Tip(fps_limit,L"Adds a maximum frame rate. This does not remove the game's own limit.",L"En yüksek kare hızına sınır ekler. Oyunun kendi sınırını kaldırmaz.");
     Tip(aspect,L"Auto keeps the original 16:9 view. Wider ratios are experimental.",L"Otomatik, özgün 16:9 görüntüyü korur. Daha geniş oranlar deneyseldir.");
     for(auto control:engine_choices)Tip(control,L"Game default preserves the original effect. Off disables this effect.",L"Oyunun ayarı, özgün efekti korur. Kapalı, bu efekti devre dışı bırakır.");
+    Tip(debug_overlay,L"Enables F3 to show performance, display and runtime diagnostics. Off by default; applies on the next launch.",L"F3 ile performans, görüntü ve çalışma bilgilerini açar. Varsayılan kapalıdır; sonraki açılışta uygulanır.");
+    Tip(intro_skip,L"During startup, press Cross / A, Space or Enter to skip the current intro. Menus and races are unaffected.",L"Açılışta çarpı / A, Space veya Enter ile mevcut videoyu geç. Menüleri ve yarışları etkilemez.");
     Tip(shadow_distance,L"Game default preserves each track's shadow distance. A higher distance can increase GPU load.",L"Oyunun ayarı, her pistin özgün gölge mesafesini korur. Yüksek mesafe GPU yükünü artırabilir.");
     Tip(backend,L"SDL supports native PlayStation and other controllers. DualSense adaptive triggers require SDL.",L"SDL, doğal PlayStation ve diğer kontrolcüleri destekler. DualSense adaptif tetikler için SDL gerekir.");
     Tip(keyboard,L"Enable keyboard input in addition to your controller. Edit individual keys below.",L"Kontrolcünün yanında klavye girişini etkinleştirir. Tuşları aşağıdan düzenleyebilirsin.");
