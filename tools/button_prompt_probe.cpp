@@ -178,7 +178,7 @@ int main(int argc,char** argv) {
         for(unsigned i=0;i<18;++i)if(rex::memory::load_and_swap<uint32_t>(base+labels.r1.u32+0x110+4*i)!=100*preset+(i<9?motogp::controls::kPS3LeftRows[i]:i))throw std::runtime_error("Selected preset action lost its matching DS3 physical input slot");
         labels.lr=0x1234;if(motogp::controls::PrepareLabels(labels,base,motogp::prompts::Style::PlayStation))throw std::runtime_error("Unrelated native label call was modified");++checks;
       }
-      auto keys=motogp::controls::KeyboardRows();if(keys[0]!="Q / I"||keys[3]!="W / S"||keys[4]!="A / D"||keys[15]!="X / Enter")throw std::runtime_error("Keyboard list does not show current alternatives and axes");++checks;
+      auto keys=motogp::controls::KeyboardRows();if(keys[0]!="Q / I"||keys[3]!="F"||keys[4]!="W / A / S / D"||keys[15]!="X / Enter"||keys[16]!="Up / Left / Down / Right"||keys[17]!="K")throw std::runtime_error("Keyboard labels must distinguish native stick-press slots from the full two-axis sticks");++checks;
       rex::cvar::SetFlagByName("keybind_left_trigger","Ctrl+J,K");if(motogp::controls::KeyboardRows()[0]!="Ctrl+J / K")throw std::runtime_error("Keyboard control list did not follow live remapping");++checks;
       rex::cvar::SetFlagByName("keybind_left_trigger","");if(motogp::controls::KeyboardRows()[0]!="Unbound")throw std::runtime_error("Unbound keyboard control not shown");++checks;
       rex::cvar::SetFlagByName("keybind_left_trigger","Q,I");keys=motogp::controls::KeyboardRows();

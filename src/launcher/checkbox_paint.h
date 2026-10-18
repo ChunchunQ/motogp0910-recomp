@@ -3,6 +3,7 @@
 #include <objidl.h>
 #include <propidl.h>
 #include <gdiplus.h>
+#include "accent.h"
 
 namespace launcher {
 inline void PaintCheckbox(HDC dc,const RECT& bounds,bool checked,bool enabled,bool pressed){
@@ -13,7 +14,8 @@ inline void PaintCheckbox(HDC dc,const RECT& bounds,bool checked,bool enabled,bo
   GraphicsPath shape;
   shape.AddArc(x,y,r*2,r*2,180,90);shape.AddArc(x+w-r*2,y,r*2,r*2,270,90);
   shape.AddArc(x+w-r*2,y+h-r*2,r*2,r*2,0,90);shape.AddArc(x,y+h-r*2,r*2,r*2,90,90);shape.CloseFigure();
-  const Color fill=checked?(enabled?(pressed?Color(255,225,139,30):Color(255,255,170,48)):Color(255,100,76,43)):Color(255,24,28,35);
+  const auto accent=enabled?(pressed?kLauncherAccentPressed:kLauncherAccent):kLauncherAccentDisabled;
+  const Color fill=checked?Color(255,GetRValue(accent),GetGValue(accent),GetBValue(accent)):Color(255,24,28,35);
   SolidBrush brush(fill);g.FillPath(&brush,&shape);
   Pen border(checked?fill:Color(255,66,73,85),1.f);g.DrawPath(&border,&shape);
   if(checked){

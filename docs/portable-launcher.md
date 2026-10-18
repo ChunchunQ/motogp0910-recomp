@@ -100,9 +100,39 @@ An incomplete game directory reports `Found N missing files` using only the
 missing-file count; core, changed and unreadable errors remain in the full report.
 The report location and no-files-changed notice are preserved.
 
+## Closing, controls and accent update
+
+During close, the native list now remains layered at zero opacity until the
+hide transaction completes. The passive snapshot retains its current opacity;
+the source never resets to full opacity while still visible. A regression also
+closes during the opening fade and checks the source-to-snapshot handoff.
+Native Windows DWM appearance still requires comparison on the user's machine.
+
+The adaptive-trigger checkbox exclusively uses owner drawing for both native
+focus notifications and ordinary paints, preventing a second themed tick or
+focus rectangle. Its selectors use the same 32-pixel rows as the main launcher.
+Hover help is suspended while a dropdown is open so tooltips cannot cover its
+options; it resumes after closing the list.
+Active buttons, checkboxes, selectors and sliders use a hand cursor; disabled
+controls and text fields retain their native cursors. Pages share General's
+upper padding, preserving the existing Achievements layout.
+
+All launcher accents share `#ff6a13`, including PLAY, the logo suffix, selected
+tabs, popup text, sliders, checkboxes and adaptive-trigger controls. Pressed and
+disabled states derive darker colors from the same orange palette. The upscaler
+list orders CAS before FSR 1; displayed order does not change saved mode IDs or
+their separate sharpness values.
+
+The 25 keyboard rows name actual Default game actions with compact controller
+equivalents. A/Confirm defaults to Space and B/Back defaults to Backspace. Exact
+old shipped pairs (`Semicolon,Space` and `Quote,Backspace`) upgrade when loaded
+from configuration. Other custom combinations, unbound choices and explicit
+SDK command-line/environment/runtime overrides are preserved. Reset uses the
+new single-key defaults. See [native action mapping](pc-menu-cleanup.md).
+
 ## Validation
 
-The Windows PE/Wine suite passed 29/29 entries, including 70,109 production
+The Windows PE/Wine suite passed 31/31 entries, including 70,809 production
 launcher UI assertions, 346 live-settings checks and 22 JSON/migration/native
 SDK-priority checks. The full UI run covers all eight sliders, focus, rapid
 checkbox input, popup opening/closing, pointer selection and the inline network

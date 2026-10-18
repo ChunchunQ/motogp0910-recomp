@@ -5,6 +5,7 @@
 #include <string>
 #include "buffered_paint.h"
 #include "popup_scroll.h"
+#include "accent.h"
 
 namespace launcher {
 inline constexpr COLORREF kPopupBackground=RGB(32,36,45);
@@ -23,7 +24,7 @@ inline void DrawPopupItemContents(const DRAWITEMSTRUCT& item,HFONT font,double s
     SelectObject(dc,old_pen);SelectObject(dc,old_brush);DeleteObject(brush);
   }
   SetBkMode(dc,TRANSPARENT);SelectObject(dc,font);
-  SetTextColor(dc,disabled?RGB(117,125,138):selected?RGB(255,170,48):RGB(242,244,247));
+  SetTextColor(dc,disabled?RGB(117,125,138):selected?kLauncherAccent:RGB(242,244,247));
   std::wstring text;
   if(item.itemID!=UINT(-1)){
     const auto length=SendMessageW(item.hwndItem,CB_GETLBTEXTLEN,item.itemID,0);

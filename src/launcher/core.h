@@ -199,8 +199,10 @@ struct Settings {
     s.adapter = Get<int64_t>(t, "d3d12_adapter", -1);
     s.fsr_reduction = Get(t, "present_fsr_sharpness_reduction", 0.2);
     s.cas_sharpness = Get(t, "present_cas_additional_sharpness", 0.0);
-    for(size_t i=0;i<s.bindings.size();++i)
+    for(size_t i=0;i<s.bindings.size();++i){
       s.bindings[i]=Get(t,kBindings[i].key,std::string(kBindings[i].defaults));
+      if(IsLegacyDefaultBinding(static_cast<unsigned>(i),s.bindings[i]))s.bindings[i]=kBindings[i].defaults;
+    }
     for(size_t i=0;i<s.engine_effects.size();++i)s.engine_effects[i]=Get(t,kEngineEffects[i].key,std::string("game"));
     s.shadow_distance=Get<int64_t>(t,"engine_shadow_distance",0);
     return s;

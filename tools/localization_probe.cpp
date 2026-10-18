@@ -3,6 +3,7 @@
 #include "motogp0910_init.h"
 #include "../src/localization.h"
 #include "../src/options_menu.h"
+#include "../src/keyboard_binding_specs.h"
 #include <rex/cvar.h>
 #include <rex/kernel/init.h>
 #include <rex/runtime.h>
@@ -23,6 +24,7 @@ REX_EXTERN(sub_826EC558);
 REX_EXTERN(sub_822D7A70);
 REX_EXTERN(sub_8227F318);
 REX_EXTERN(sub_8227D3E8);
+REX_EXTERN(sub_822F0AD0);
 namespace {
 int checks=0;
 void Check(bool ok,const char* what){if(!ok)throw std::runtime_error(what);++checks;}
@@ -119,6 +121,32 @@ int main(int argc,char** argv){try{
  auto move=[&](int index,int delta){write(screen+24,index);PPCContext c{};c.r1.u32=stack;c.lr=0x12345678;c.r30.u64=0x1122334455667788;c.r31.u64=0x8877665544332211;c.r3.u32=menu+60;c.r4.u32=screen+24;c.r5.s64=delta;c.r6.u32=0;sub_8227F318(c,base);Check(c.r1.u32==stack&&c.lr==0x12345678&&c.r30.u64==0x1122334455667788&&c.r31.u64==0x8877665544332211,"Native navigation ABI unchanged");return read(screen+24);};
  Check(move(3,1)==4&&move(4,1)==0&&move(0,-1)==4,"Native navigation visits five functional Options rows and wraps");
  write(menu,0);Check(!motogp::options::RemoveMarketplace(base,menu,screen),"Unrelated menus unchanged");
+ // Exercise the real Default layout constructor, independently of launcher labels.
+ PPCContext defaults{};defaults.r3.u32=menu;sub_822F0AD0(defaults,base);
+ constexpr std::array<uint32_t,24> default_actions{7,8,0,0,6,5,21,4,14,3,0,0,10,9,23,24,22,5,2,26,0,0,0,0};
+ for(unsigned i=0;i<default_actions.size();++i)Check(read(menu+4*i)==default_actions[i],"Default native physical slots match the documented action table");
+ Check(std::wstring_view(launcher::kBindings[0].english).starts_with(L"Gear up")&&std::wstring_view(launcher::kBindings[1].english).starts_with(L"Gear down"),"Launcher A/B descriptions agree with Default rather than Alternative A");
+ motogp::options::Initialize(&runtime);write(motogp::options::kOnlineHandle,731);
+ PPCContext online{};online.r3.u32=motogp::options::kOnlineHandle;sub_826EDB38(online,base);
+ Check(online.r3.u32==motogp::options::OnlineLabel()&&std::strcmp(reinterpret_cast<char*>(base+online.r3.u32),"Online")==0,"Only the native multiplayer Online label is replaced, without rewriting original message files");
+ for(auto [vtable,renderer]:{std::pair{motogp::options::kGameSettingsVtable,0x8223B120u},std::pair{motogp::options::kMultiplayerVtable,0x822483E0u},std::pair{motogp::options::kCreateVtable,0x82240570u},std::pair{motogp::options::kCustomVtable,0x822409F0u},std::pair{motogp::options::kOnlineCreateVtable,0x8224EEF8u}})
+   Check(read(vtable+4)==renderer,"Actual title vtables match each guarded PC menu cleanup hook");
+ const auto setup_menu=[&](uint32_t vtable,std::initializer_list<uint32_t> ids,unsigned selected){
+   std::memset(base+menu,0,0x600);write(menu,vtable);unsigned i=0;for(auto id:ids)write(menu+32+4*i++,id);write(menu+32+4*i,UINT32_MAX);write(screen+24,selected);
+ };
+ setup_menu(motogp::options::kMultiplayerVtable,{0,1,2,3},2);
+ Check(motogp::options::RemoveParty(base,menu,screen)&&read(menu+32)==0&&read(menu+36)==2&&read(menu+40)==3&&read(menu+44)==UINT32_MAX&&read(screen+24)==1,"Party removal compacts the list while retaining Splitscreen focus and original action IDs");
+ Check(motogp::options::RemoveParty(base,menu,screen)&&read(screen+24)==1,"Party removal is idempotent");
+ setup_menu(motogp::options::kGameSettingsVtable,{0,1,2,3,4,5},5);
+ Check(motogp::options::RemoveStorage(base,menu,screen)&&read(menu+52)==UINT32_MAX&&read(menu+24)==6&&read(screen+24)==4,"Storage selector removal updates the dynamic native count and clamps old focus");
+ for(auto vtable:{motogp::options::kCreateVtable,motogp::options::kCustomVtable,motogp::options::kOnlineCreateVtable}){
+   setup_menu(vtable,{0,1,2,3,7,6,8},5);
+   Check(motogp::options::RemovePremium(base,menu,screen)&&read(menu+48)==6&&read(menu+52)==8&&read(menu+56)==UINT32_MAX&&read(screen+24)==4,"Premium removal retains AI/private-slot IDs and moves their existing focus to the compacted row");
+   for(unsigned i=0;i<7;++i){const auto row=menu+152+i*40;write(row+4,1);write(row+16,i<6?1:0);write(row+28,i<6?bank+U32(translated.data()+4+4*i)+4:0);}
+   write(screen+24,5);PPCContext navigate{};navigate.r1.u32=stack;navigate.r3.u32=menu+152;navigate.r4.u32=screen+24;navigate.r5.s64=1;navigate.r6.u32=0;sub_8227F318(navigate,base);
+   Check(read(screen+24)==0,"Real native navigation wraps past the removed Premium row without leaving a blank selectable slot");
+ }
+ setup_menu(0,{0,1,2,3,7,6,8},4);Check(!motogp::options::RemovePremium(base,menu,screen)&&read(menu+48)==7,"Unrelated menus retain all original rows");
  const auto font_table=fixture+0x1400,zone_table=fixture+0x1410,zone=fixture+0x1420,font_data=fixture+0x1440,texture=fixture+0x1460,client_font=fixture+0x1480;
  constexpr uint32_t fonts_slot=0x8292CD18,zones_slot=0x8292CD14;
  const auto saved_fonts=read(fonts_slot),saved_zones=read(zones_slot);

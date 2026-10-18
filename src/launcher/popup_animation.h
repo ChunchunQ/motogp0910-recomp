@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <new>
 #include "popup_scroll.h"
+#include "cursor_style.h"
 
 namespace launcher {
 // Keep native combo input, accessibility and geometry. Only paint/opacity are
@@ -94,14 +95,21 @@ struct PopupAnimation {
   }
   void Hide(HWND window){
     if(shown&&Enabled()&&IsWindowVisible(window))Closing::Show(window,GetAncestor(combo,GA_ROOT));
-    scroll.dragging=false;shown=false;Stop(window);
+    scroll.dragging=false;shown=false;KillTimer(window,kTimer);active=false;
+    // WM_SHOWWINDOW / WINDOWPOSCHANGING arrive before the native list is
+    // actually hidden. Restoring alpha=255 or removing WS_EX_LAYERED here
+    // briefly reveals the old list underneath its closing snapshot on DWM.
+    // Hand over to the snapshot while retaining the invisible source layer;
+    // restore native styles only after the hide transaction has completed.
+    if(owns_layer)SetLayeredWindowAttributes(window,0,0,LWA_ALPHA);
     InvalidateRect(combo,nullptr,FALSE);
   }
   static LRESULT CALLBACK Proc(HWND window,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
     auto& state=*reinterpret_cast<PopupAnimation*>(data);
+    if(message==WM_SETCURSOR&&SetActionCursor(window,lp))return TRUE;
     if(message==WM_SHOWWINDOW){if(wp&&!state.shown)state.Start(window);else if(!wp)state.Hide(window);}
     if(message==WM_WINDOWPOSCHANGING){auto& pos=*reinterpret_cast<WINDOWPOS*>(lp);if(pos.flags&SWP_SHOWWINDOW){state.Position(window,pos);if(!state.shown)state.Start(window);}else if(pos.flags&SWP_HIDEWINDOW)state.Hide(window);}
-    if(message==WM_WINDOWPOSCHANGED){const auto result=DefSubclassProc(window,message,wp,lp);if(state.shown)state.scroll.HideNative(window);if(state.shown&&!state.rounding){state.rounding=true;Round(window);state.rounding=false;}return result;}
+    if(message==WM_WINDOWPOSCHANGED){const auto result=DefSubclassProc(window,message,wp,lp);if(!IsWindowVisible(window))state.Stop(window);if(state.shown)state.scroll.HideNative(window);if(state.shown&&!state.rounding){state.rounding=true;Round(window);state.rounding=false;}return result;}
     if(state.scroll.Input(window,message,lp))return 0;
     if(message==WM_PAINT||message==WM_PRINTCLIENT){
       state.scroll.HideNative(window);const auto result=DefSubclassProc(window,message,wp,lp);

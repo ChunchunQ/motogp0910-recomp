@@ -74,16 +74,24 @@ void CheckSliderInteractions(App& app){
 }
 void CheckSharpnessPersistence(App& app){
   const auto saved=app.GetControls();
-  for(int mode:{1,3,4}){
+  for(auto [index,name]:{std::pair{1,"cas"},std::pair{2,"fsr"}}){
+    SendMessageW(app.effect,CB_SETCURSEL,index,0);app.Command(kEffect,CBN_SELCHANGE);
+    CheckUI(app.GetControls().effect==name,"CAS and FSR 1 keep their actual runtime identity after swapping display order");
+  }
+  for(int mode:{2,3,4}){
     SendMessageW(app.effect,CB_SETCURSEL,mode,0);app.Command(kEffect,CBN_SELCHANGE);
     const int value=37+mode;SendMessageW(app.sharpness,TBM_SETPOS,TRUE,value);
     SendMessageW(app.window,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(app.sharpness));
     CheckUI(std::abs(app.settings.fsr_reduction-(2.0-value/50.0))<.00001,"Every FSR mode retains the current sharpness edit in pending settings");
-    SendMessageW(app.effect,CB_SETCURSEL,2,0);app.Command(kEffect,CBN_SELCHANGE);
+    SendMessageW(app.effect,CB_SETCURSEL,1,0);app.Command(kEffect,CBN_SELCHANGE);
     SendMessageW(app.effect,CB_SETCURSEL,mode,0);app.Command(kEffect,CBN_SELCHANGE);
     CheckUI(std::abs(SendMessageW(app.sharpness,TBM_GETPOS,0,0)-value)<=1,"Switching between CAS and temporal FSR preserves the FSR sharpness edit");
   }
   app.SetControls(saved);
+  toml::table legacy;Put(legacy,"keybind_a","Semicolon,Space");Put(legacy,"keybind_b","Quote,Backspace");
+  const auto upgraded=Settings::Load(legacy);
+  CheckUI(upgraded.bindings[0]=="Space"&&upgraded.bindings[1]=="Backspace","Only the former shipped confirm/back aliases upgrade to the single-key defaults");
+  Put(legacy,"keybind_a","Ctrl+K,Space");CheckUI(Settings::Load(legacy).bindings[0]=="Ctrl+K,Space","Upgrading old defaults retains a custom multi-key binding");
 }
 std::vector<uint32_t> PrintedControl(HWND control,HWND owner=nullptr,App* combo=nullptr){
   RECT r;GetClientRect(control,&r);const auto dc=GetDC(control),copy=CreateCompatibleDC(dc);
@@ -131,6 +139,28 @@ void CheckPaintCoherence(App& app){
   const bool original=app.Checked(app.vsync);
   for(bool checked:{false,true}){app.SetCheck(app.vsync,checked);CheckUI(PrintedControl(app.vsync)==PrintedControl(app.vsync,app.window),"Synchronous WM_DRAWITEM and WM_PRINTCLIENT both render the complete checkbox label and tick");}
   app.SetCheck(app.vsync,original);
+}
+void CheckAdaptivePainting(App& app){
+  auto profile=app.settings.adaptive;profile.enabled=true;
+  AdaptiveDialog dialog(app.window,app.font,false,app.scale,profile);const auto modal=dialog.Create();ShowWindow(modal,SW_SHOW);UpdateWindow(modal);
+  const auto checkbox=GetDlgItem(modal,100);SetFocus(checkbox);PumpUI();
+  const auto focused=PrintedControl(checkbox);
+  CheckUI(focused==PrintedControl(checkbox,modal),"Adaptive checkbox uses the same complete image for focus-driven native owner draws");
+  SetFocus(modal);PumpUI();CheckUI(focused==PrintedControl(checkbox),"Adaptive checkbox never adds a native focus rectangle or a second native check mark");
+  CheckUI((GetWindowLongPtrW(checkbox,GWL_STYLE)&BS_TYPEMASK)==BS_OWNERDRAW,"Adaptive checkbox delegates native input while retaining exclusive paint ownership");
+  CheckRapidCheckbox(checkbox);
+  CheckUI(IsWindowEnabled(GetDlgItem(modal,110)),"Rapid checkbox toggling restores dependent trigger editing consistently");
+  DestroyWindow(modal);SetForegroundWindow(app.window);
+}
+void CheckActionCursors(App& app){
+  for(auto [page,control]:{std::pair{3,app.navigation[3]},std::pair{3,app.language},std::pair{1,app.mute},std::pair{1,app.volume},std::pair{2,app.binding_buttons[0]}}){
+    app.ShowPage(page);app.ScrollPage(0);SetCursor(LoadCursorW(nullptr,IDC_ARROW));
+    SendMessageW(control,WM_SETCURSOR,reinterpret_cast<WPARAM>(control),MAKELPARAM(HTCLIENT,WM_MOUSEMOVE));
+    CheckUI(GetCursor()==LoadCursorW(nullptr,IDC_HAND),"Actual button, selector, checkbox and slider cursor dispatch shows the hand");
+  }
+  app.ShowPage(3);SetCursor(LoadCursorW(nullptr,IDC_ARROW));
+  CheckUI(!SetActionCursor(app.path,MAKELPARAM(HTCLIENT,WM_MOUSEMOVE)),"Editable paths retain their native text cursor");
+  EnableWindow(app.language,FALSE);CheckUI(!SetActionCursor(app.language,MAKELPARAM(HTCLIENT,WM_MOUSEMOVE)),"Disabled selectors do not show an actionable hand cursor");EnableWindow(app.language,TRUE);
 }
 void CheckLanguageCapacity(App& app){
   app.ShowPage(3);app.ScrollPage(0);SendMessageW(app.game_language,CB_SHOWDROPDOWN,TRUE,0);
@@ -252,6 +282,13 @@ void CheckPopupAnimation(HWND combo){
     CheckUI(!PopupAnimation::closing_popup,"Closing animation frees its snapshot and timer after finishing");
   }
 
+  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
+  if(PopupAnimation::Enabled()){
+    SetLayeredWindowAttributes(info.hwndList,0,96,LWA_ALPHA);state.Hide(info.hwndList);BYTE alpha=255;DWORD flags=0;
+    CheckUI(IsWindowVisible(info.hwndList)&&state.owns_layer&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==0,"Before native hide completes, the source stays layered and invisible instead of flashing opaque");
+    CheckUI(PopupAnimation::closing_popup&&GetLayeredWindowAttributes(PopupAnimation::closing_popup,nullptr,&alpha,&flags)&&alpha==96,"An early close transfers the exact in-progress opacity to its passive snapshot");
+  }
+  SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.owns_layer,"Native layer styles restore only after hiding the source window");PopupAnimation::DismissClosing();
   for(int i=0;i<5;++i){SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.active&&!state.owns_layer,"Rapid reopen/close does not retain an active timer or transparency");}
   PopupAnimation::DismissClosing();
   SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
@@ -315,6 +352,10 @@ void CheckTooltipCompatibility(HWND owner){
     CheckUI(TooltipText(help.window,child)==L"Compatible registration","Compatible registration retains the real nested tooltip text");
     CheckUI(help.Set(child,L"Türkçe yardım"),"Existing tool localization succeeds with the compatible layout");
     CheckUI(policy.last_update_size==Tooltips::kInfoSize&&SendMessageW(help.window,TTM_GETTOOLCOUNT,0,0)==1&&TooltipText(help.window,child)==L"Türkçe yardım","Localization updates one tool without an oversized structure or duplicate");
+    help.Activate(false);SetWindowPos(help.window,HWND_TOPMOST,0,0,200,30,SWP_SHOWWINDOW|SWP_NOACTIVATE);
+    CheckUI(!IsWindowVisible(help.window),"A pending native hover show cannot expose a tooltip while a dropdown suspends help");
+    help.Activate(true);SetWindowPos(help.window,HWND_TOPMOST,0,0,200,30,SWP_SHOWWINDOW|SWP_NOACTIVATE);
+    CheckUI(IsWindowVisible(help.window),"Closing the dropdown restores normal tooltip visibility");
   }
   {
     TooltipCompatibility policy;policy.accepted_size=Tooltips::kLegacyInfoSize;Tooltips help;help.Create(owner,1);SetWindowSubclass(help.window,TooltipCompatibilityProc,902,reinterpret_cast<DWORD_PTR>(&policy));
@@ -479,7 +520,7 @@ int wmain(int argc,wchar_t** argv){
     CheckSharpnessPersistence(app);
     CheckFocusPainting(app);
     app.ShowPage(1);app.ScrollPage(0);CheckRapidCheckbox(app.mute);app.ShowPage(0);app.ScrollPage(0);CheckRapidCheckbox(app.vsync);CheckRapidCheckbox(app.msaa);
-    CheckPaintCoherence(app);CheckPopupAnimation(app.render_resolution);CheckLanguageCapacity(app);CheckAllPopupOptions(app);CheckBindingLabelWidths(app);app.ShowPage(3);
+    CheckPaintCoherence(app);CheckAdaptivePainting(app);CheckActionCursors(app);CheckPopupAnimation(app.render_resolution);CheckLanguageCapacity(app);CheckAllPopupOptions(app);CheckBindingLabelWidths(app);app.ShowPage(3);
     if(argc==4){CheckUI(std::wstring_view(argv[3])==L"--sliders-only","Known targeted regression mode");DestroyWindow(window);std::cout<<ui_checks<<" slider channel-click checks passed\n";Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;}
     CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
     CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");
@@ -738,7 +779,7 @@ int wmain(int argc,wchar_t** argv){
         }
         {auto selector=GetDlgItem(modal,110);const auto mode=SendMessageW(selector,CB_GETCURSEL,0,0);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed DualSense selectors also ignore the mouse wheel");}
         CheckUI(!IsWindowEnabled(GetDlgItem(modal,110))&&!IsWindowEnabled(GetDlgItem(modal,111)),"Disabled master disables resistance editing");
-        SendDlgItemMessageW(modal,100,BM_SETCHECK,BST_CHECKED,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(100,BN_CLICKED),0);
+        SendDlgItemMessageW(modal,100,BM_CLICK,0,0);
         CheckUI(IsWindowEnabled(GetDlgItem(modal,112))&&!IsWindowEnabled(GetDlgItem(modal,122)),"Only a resistance-zone mode enables its end-position slider");
         SendDlgItemMessageW(modal,110,CB_SETCURSEL,1,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(110,CBN_SELCHANGE),0);CheckUI(!IsWindowEnabled(GetDlgItem(modal,112))&&IsWindowEnabled(GetDlgItem(modal,111)),"Constant resistance ignores end position but keeps start available");
         SendDlgItemMessageW(modal,110,CB_SETCURSEL,2,0);SendMessageW(modal,WM_COMMAND,MAKEWPARAM(110,CBN_SELCHANGE),0);

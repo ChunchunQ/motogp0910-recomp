@@ -31,6 +31,7 @@
 #include "crash_report.h"
 #include "achievement_ui.h"
 #include "quit_menu.h"
+#include "options_menu.h"
 #include "localization.h"
 #include "in_game_settings.h"
 #include "frame_pacing.h"
@@ -160,6 +161,7 @@ class Motogp0910App : public rex::ReXApp {
     achievement_preferences_->Load(user_data_root(), motogp::portable::Root(rex::filesystem::GetExecutableFolder()));
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::Initialize(runtime());
+    motogp::options::Initialize(runtime());
     settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
     settings_gate_->SetFocused(window()->HasFocus());
     settings_model_=std::make_shared<motogp::settings::Model>(settings_path_,runtime()->graphics_system()?runtime()->graphics_system()->presenter():nullptr);

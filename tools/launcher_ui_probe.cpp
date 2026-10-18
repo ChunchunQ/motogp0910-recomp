@@ -43,7 +43,7 @@ int main(int argc,char** argv) {
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kNavGraphics+page,BN_CLICKED),0);
   if(!IsWindowVisible(child(page==0?kSize:page==1?kVolume:kBindingBase))) return 1;
  } else if(mode=="configure-advanced") {
-  SendMessageW(child(kEffect),CB_SETCURSEL,1,0); // FSR 1
+  SendMessageW(child(kEffect),CB_SETCURSEL,2,0); // FSR 1
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kEffect,CBN_SELCHANGE),0);
   SendMessageW(child(kSharpness),TBM_SETPOS,TRUE,73);
   SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(kSharpness)));
@@ -65,14 +65,14 @@ int main(int argc,char** argv) {
   SendMessageW(child(kSize),CB_SETCURSEL,3,0);
   SendMessageW(child(kRenderResolution),CB_SETCURSEL,0,0);
 
-  SendMessageW(child(kEffect),CB_SETCURSEL,1,0);
+  SendMessageW(child(kEffect),CB_SETCURSEL,2,0);
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kEffect,CBN_SELCHANGE),0);
   SendMessageW(child(kSharpness),TBM_SETPOS,TRUE,85);
   SendMessageW(w,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(child(kSharpness)));
  } else if(mode=="capture") {
   SendMessageW(w,WM_COMMAND,MAKEWPARAM(kCaptureBase,BN_CLICKED),0);
  } else if(mode=="check-advanced") {
-  if(SendMessageW(child(kEffect),CB_GETCURSEL,0,0)!=1 ||
+  if(SendMessageW(child(kEffect),CB_GETCURSEL,0,0)!=2 ||
      SendMessageW(child(kSharpness),TBM_GETPOS,0,0)!=73 ||
      SendMessageW(child(kRenderResolution),CB_GETCURSEL,0,0)!=1 ||
      SendMessageW(child(kAnisotropic),CB_GETCURSEL,0,0)!=6 ||

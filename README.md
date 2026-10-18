@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-paint-fix.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-pc-menus.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -43,16 +43,18 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `4b02db392a5dd64f0f3b1d9fff0328becf3df6ab424232a106d1c6543310c903`.
+Package SHA-256: `e021741ee60e815cc2e4901db912f2a230942a3fff84e0117ec8d8534217b69a`.
 
 ## Current features and evidence
 
 - **Portable launcher:** the root entry point is `MotoGP09-10Launcher.exe`;
   the UI runs in that process with its library and runtime files in `bin/`,
-  without a second launcher EXE. Checkboxes match the orange accent; the
+  without a second launcher EXE. Interactive accents use `#ff6a13`; the
   achievement list has no tooltip covering its cards. Keyboard bindings use rounded key
   buttons: click to capture, Esc to cancel, right-click to unbind. All 25 actions
-  show compact controller equivalents such as `(A/Cross)` and `(RT/R2)`. Sliders jump
+  show their Default game actions with compact controller equivalents such as
+  `(A/Cross)` and `(RT/R2)`. Confirm/back default to Space/Backspace; the previous
+  shipped aliases migrate while other custom bindings are retained. Sliders jump
   directly to the clicked point and retain dragging. Focus outlines and adapter
   VRAM suffixes are removed. Internal rendering now includes 4x (5120×2880).
   The pinned renderer supports integer scales; fractional 1.5x is not exposed.
@@ -63,8 +65,15 @@ Package SHA-256: `4b02db392a5dd64f0f3b1d9fff0328becf3df6ab424232a106d1c6543310c9
   checkboxes accept rapid clicks, and Window size includes common and reported
   monitor modes that fit the physical display. Long dropdowns have bounded
   height and a visible scrollbar supporting wheel input and thumb dragging.
+  Closing retains an invisible source layer until native hiding finishes, and
+  adaptive-trigger checkboxes share the exclusive owner-draw path. Active
+  controls show a hand cursor. CAS appears before FSR 1 in the upscaler list.
   Verification identifies missing files explicitly and retains the detailed
   read-only report. The ZIP omits empty logs; logging creates that folder on demand.
+- **PC frontend menus:** multiplayer displays Online and omits the unsupported
+  Party entry. Create/Custom Match omit Premium Content; Game Settings omits the
+  dummy storage selector. Remaining native actions, saves and network modes are
+  preserved. See [native menu implementation and evidence](docs/pc-menu-cleanup.md).
 - **Quality audit fixes:** FSR 2/3 sharpness survives switching to CAS and back;
   achievement search handles accented Latin/Turkish case variants; normal window
   close releases adaptive trigger effects before the SDK exits. Invalid trigger

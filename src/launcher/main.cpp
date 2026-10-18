@@ -31,7 +31,7 @@ constexpr int kWidth=1040,kHeight=704,kCaptionHeight=28;
 constexpr UINT kApplyLauncherLanguage=WM_APP+23;
 constexpr COLORREF kBackground=RGB(13,15,20),kSidebar=RGB(19,21,27),kCard=RGB(23,26,33),
     kField=RGB(32,36,45),kText=RGB(242,244,247),kMuted=RGB(157,165,178),
-    kAccent=RGB(255,170,48),kRed=RGB(239,66,47),kBorder=RGB(48,53,64);
+    kAccent=kLauncherAccent,kRed=RGB(239,66,47),kBorder=RGB(48,53,64);
 std::wstring ErrorDetails(const std::exception& error) {
   try {return Wide(error.what());} catch(const std::exception&) {
     std::string text=error.what();
@@ -137,6 +137,7 @@ struct App {
     return DefSubclassProc(control,message,wparam,lparam);
   }
   HWND PageControl(int page,const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
+    if(page!=3&&page!=5)y+=8;
     auto c=Control(cls,text,style,x,y,w,h,id,page_content);pages[page].push_back(c);
     page_extent[page]=std::max(page_extent[page],y+(std::wstring_view(cls)==L"COMBOBOX"?32:h)+8);
     SetWindowSubclass(c,PageChildProc,7,reinterpret_cast<DWORD_PTR>(this));return c;
@@ -268,7 +269,7 @@ struct App {
     FillCombo(post_effect,{T(L"Off",L"Kapalı"),L"FXAA",L"FXAA Extreme"});
     FillCombo(backend,{L"SDL — Xbox / PlayStation",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
     FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
-    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS",L"AMD FSR 2",L"AMD FSR 3"});
+    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD CAS",L"AMD FSR 1",L"AMD FSR 2",L"AMD FSR 3"});
     FillCombo(fsr_quality,{T(L"Auto",L"Otomatik"),T(L"Native AA",L"Yerel AA"),T(L"Quality",L"Kalite"),T(L"Balanced",L"Dengeli"),T(L"Performance",L"Performans"),T(L"Ultra Performance",L"Ultra Performans")});
     FillCombo(aspect,{T(L"Auto / 16:9",L"Otomatik / 16:9"),L"16:9",T(L"21:9 (Experimental)",L"21:9 (Deneysel)"),T(L"32:9 (Experimental)",L"32:9 (Deneysel)")});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
@@ -347,7 +348,7 @@ struct App {
     SendMessageW(game_language,CB_SETCURSEL,s.game_language==4?1:s.game_language==3?2:s.game_language==5?3:s.game_language==6?4:s.game_language==1000?5:0,0);
     SendMessageW(prompt_style,CB_SETCURSEL,s.prompt_style=="playstation"?1:s.prompt_style=="xbox"?2:s.prompt_style=="keyboard"?3:0,0);
     auto preset=MatchingRenderPreset(s);FillRenderPresets(preset<0?static_cast<int>(kRenderPresets.size()):preset);
-    SendMessageW(effect,CB_SETCURSEL,s.effect=="fsr"?1:s.effect=="cas"?2:s.effect=="fsr2"?3:s.effect=="fsr3"?4:0,0);
+    SendMessageW(effect,CB_SETCURSEL,s.effect=="cas"?1:s.effect=="fsr"?2:s.effect=="fsr2"?3:s.effect=="fsr3"?4:0,0);
     constexpr std::array<const char*,6> qualities{"auto","nativeaa","quality","balanced","performance","ultra_performance"};
     auto quality=std::find(qualities.begin(),qualities.end(),s.fsr_quality);
     SendMessageW(fsr_quality,CB_SETCURSEL,quality==qualities.end()?0:std::distance(qualities.begin(),quality),0);
@@ -374,12 +375,12 @@ struct App {
     auto preset=SendMessageW(render_resolution,CB_GETCURSEL,0,0);
     if(preset<0)throw std::runtime_error("Invalid render resolution");
     if(preset<static_cast<LRESULT>(kRenderPresets.size()))ApplyRenderPreset(s,static_cast<int>(preset));
-    auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);s.effect=mode==1?"fsr":mode==2?"cas":mode==3?"fsr2":mode==4?"fsr3":"bilinear";
+    auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);s.effect=mode==1?"cas":mode==2?"fsr":mode==3?"fsr2":mode==4?"fsr3":"bilinear";
     constexpr std::array<const char*,6> qualities{"auto","nativeaa","quality","balanced","performance","ultra_performance"};
     auto quality=SendMessageW(fsr_quality,CB_GETCURSEL,0,0);if(quality<0 || quality>=6)throw std::runtime_error("Invalid FSR quality mode");s.fsr_quality=qualities[quality];
     s.anisotropic=SendMessageW(anisotropic,CB_GETCURSEL,0,0)-1;s.volume=SendMessageW(volume,TBM_GETPOS,0,0);
-    if(mode==1 || mode==3 || mode==4)s.fsr_reduction=2.0-SendMessageW(sharpness,TBM_GETPOS,0,0)/50.0;
-    if(mode==2)s.cas_sharpness=SendMessageW(sharpness,TBM_GETPOS,0,0)/100.0;
+    if(mode==2 || mode==3 || mode==4)s.fsr_reduction=2.0-SendMessageW(sharpness,TBM_GETPOS,0,0)/50.0;
+    if(mode==1)s.cas_sharpness=SendMessageW(sharpness,TBM_GETPOS,0,0)/100.0;
     auto display=SendMessageW(fullscreen,CB_GETCURSEL,0,0);
     if(display<0 || display>2)throw std::runtime_error("Invalid display mode");
     s.display_mode=display==0?"fullscreen":display==1?"borderless":"windowed";s.fullscreen=display!=2;
@@ -430,7 +431,7 @@ struct App {
       if(active){RECT line{r.left+S(4),r.bottom-S(2),r.right-S(4),r.bottom};auto b=CreateSolidBrush(kAccent);FillRect(hdc,&line,b);DeleteObject(b);}
       return;
     }
-    auto fill=primary?(pressed?RGB(227,139,29):kAccent):active?RGB(44,36,30):pressed?RGB(51,55,65):nav?kSidebar:kField;
+    auto fill=primary?(pressed?kLauncherAccentPressed:kAccent):active?RGB(44,29,25):pressed?RGB(51,55,65):nav?kSidebar:kField;
     if(disabled)fill=RGB(40,43,50);
     DrawSurface(hdc,c);
     Rounded(hdc,r,fill,primary?fill:nav?fill:kBorder,10);
@@ -563,6 +564,10 @@ struct App {
   }
   void Command(int id,int event){
     try{
+      if(event==CBN_DROPDOWN||event==CBN_CLOSEUP){
+        const auto control=FindControl(id);wchar_t cls[32]{};GetClassNameW(control,cls,32);
+        if(lstrcmpiW(cls,L"COMBOBOX")==0){help.Activate(event==CBN_CLOSEUP);if(event==CBN_DROPDOWN)return;}
+      }
       if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
       }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
@@ -570,7 +575,7 @@ struct App {
       }else if(id==kLanEnabled && event==CBN_SELCHANGE){UpdateNetworkMode();
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
       }else if(id==kEffect && event==CBN_SELCHANGE){auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);
-        SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==2?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
+        SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==1?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
         auto c=FindControl(id);if(checks.contains(c)){if(id==kAchievementPopup||id==kAchievementSound){SaveAchievementOption(id);return;}SetCheck(c,!Checked(c));return;}
@@ -609,6 +614,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
   if(message==WM_NCCREATE){app=static_cast<App*>(reinterpret_cast<CREATESTRUCTW*>(lparam)->lpCreateParams);app->window=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(app));}
   if(!app)return DefWindowProcW(window,message,wparam,lparam);
   switch(message){
+    case WM_SETCURSOR:if(SetActionCursor(reinterpret_cast<HWND>(wparam),lparam))return TRUE;break;
     case WM_CREATE:try{app->BuildControls();app->SetupCaption();}catch(const std::exception& e){app->ErrorBox(e);return -1;}return 0;
     case WM_SETTEXT:case WM_SETICON:{const auto result=DefWindowProcW(window,message,wparam,lparam);app->PaintCaption();return result;}
     case WM_NCHITTEST:{POINT p{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))};if(const auto hit=app->CaptionHit(p))return hit;break;}
@@ -632,7 +638,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_MOUSEWHEEL:return SendMessageW(app->page_view,message,wparam,lparam);
     case WM_HSCROLL:{if(reinterpret_cast<HWND>(lparam)==app->volume)SetWindowTextW(app->volume_value,(std::to_wstring(SendMessageW(app->volume,TBM_GETPOS,0,0))+L"%").c_str());
       if(reinterpret_cast<HWND>(lparam)==app->sharpness){auto value=SendMessageW(app->sharpness,TBM_GETPOS,0,0),mode=SendMessageW(app->effect,CB_GETCURSEL,0,0);
-        if(mode==1||mode==3||mode==4)app->settings.fsr_reduction=2.0-value/50.0;if(mode==2)app->settings.cas_sharpness=value/100.0;app->UpdateSharpness();}return 0;}
+        if(mode==2||mode==3||mode==4)app->settings.fsr_reduction=2.0-value/50.0;if(mode==1)app->settings.cas_sharpness=value/100.0;app->UpdateSharpness();}return 0;}
     case WM_CTLCOLORLISTBOX:SetTextColor(reinterpret_cast<HDC>(wparam),kText);SetBkColor(reinterpret_cast<HDC>(wparam),kPopupBackground);SetDCBrushColor(reinterpret_cast<HDC>(wparam),kPopupBackground);return reinterpret_cast<LRESULT>(GetStockObject(DC_BRUSH));
     case WM_CTLCOLOREDIT:SetTextColor(reinterpret_cast<HDC>(wparam),kText);SetBkColor(reinterpret_cast<HDC>(wparam),kField);return reinterpret_cast<LRESULT>(app->field);
     case WM_CTLCOLORSTATIC:case WM_CTLCOLORBTN:{auto c=reinterpret_cast<HWND>(lparam);auto bg=app->BackgroundFor(c);SetTextColor(reinterpret_cast<HDC>(wparam),c==app->title?kText:c==app->status&&app->status_positive?RGB(107,205,132):kMuted);

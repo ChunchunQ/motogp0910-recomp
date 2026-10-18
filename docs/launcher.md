@@ -21,7 +21,7 @@ File names stay English. No CMD file is required.
 | FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change the guest video-mode Hz |
 | Internal resolution | 720p (native), 1440p, 2160p or 2880p; exact 1× / 2× / 3× / 4× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
-| AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
+| AMD FSR 1 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
 | AMD FSR 2 / 3 | Experimental D3D12 upscalers with neutral motion/depth inputs and per-frame history reset; six quality modes |
 | Camera aspect | Auto, 16:9, 21:9, 32:9; horizontal-plus wide modes remain Experimental |
 | AMD CAS | Contrast-adaptive sharpening; the SDK also uses CAS when FSR has no enlargement to perform |

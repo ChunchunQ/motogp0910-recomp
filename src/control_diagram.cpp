@@ -25,13 +25,13 @@ std::string Binding(const char* key){
 }
 bool IsDrawing(){return drawing;}
 std::array<std::string,18> KeyboardRows(){
-  auto axis=[](const char* a,const char* b){return Binding(a)+" / "+Binding(b);};
+  auto stick=[](const char* up,const char* left,const char* down,const char* right){return Binding(up)+" / "+Binding(left)+" / "+Binding(down)+" / "+Binding(right);};
   return {Binding("keybind_left_trigger"),Binding("keybind_left_shoulder"),Binding("keybind_back"),
-    axis("keybind_lstick_up","keybind_lstick_down"),axis("keybind_lstick_left","keybind_lstick_right"),
+    Binding("keybind_lstick_press"),stick("keybind_lstick_up","keybind_lstick_left","keybind_lstick_down","keybind_lstick_right"),
     Binding("keybind_dpad_up"),Binding("keybind_dpad_left"),Binding("keybind_dpad_right"),Binding("keybind_dpad_down"),
     Binding("keybind_right_trigger"),Binding("keybind_right_shoulder"),Binding("keybind_y"),Binding("keybind_b"),
     Binding("keybind_x"),Binding("keybind_a"),Binding("keybind_start"),
-    axis("keybind_rstick_left","keybind_rstick_right"),axis("keybind_rstick_up","keybind_rstick_down")};
+    stick("keybind_rstick_up","keybind_rstick_left","keybind_rstick_down","keybind_rstick_right"),Binding("keybind_rstick_press")};
 }
 motogp::prompts::Geometry KeyboardDiagram(const std::array<std::string,18>& labels,uint32_t color){
   using namespace motogp::prompts;Geometry result;result.quads.reserve(8000);const auto alpha=color&0xFF000000;

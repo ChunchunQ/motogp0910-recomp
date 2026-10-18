@@ -15,6 +15,9 @@ int main(int argc, char** argv) {
   rex::cvar::LoadConfig("input-probe.toml");
   const auto backend = rex::cvar::GetFlagByName("input_backend");
   const auto keybind = rex::cvar::GetFlagByName("keybind_a");
+  const auto backbind = rex::cvar::GetFlagByName("keybind_b");
+  const auto upgraded_default=[](unsigned index){const auto key=launcher::kBindings[index].key;const auto source=rex::cvar::GetFlagSource(key);return source==rex::cvar::Source::kDefault||(source==rex::cvar::Source::kConfig&&launcher::IsLegacyDefaultBinding(index,rex::cvar::GetFlagByName(key)));};
+  const bool default_a=upgraded_default(0),default_b=upgraded_default(1);
   ApplyMotogpInputDefaults();
 
   using Source = rex::cvar::Source;
@@ -39,17 +42,19 @@ int main(int argc, char** argv) {
       rex::cvar::Query<bool>("mnk_mode") != expected ||
       rex::cvar::GetFlagSource("mnk_mode") != expected_source ||
       rex::cvar::GetFlagByName("input_backend") != backend ||
-      rex::cvar::GetFlagByName("keybind_a") != keybind) {
+      rex::cvar::GetFlagByName("keybind_a") != (default_a?"Space":keybind) ||
+      rex::cvar::GetFlagByName("keybind_b")!=(default_b?"Backspace":backbind)) {
     std::cerr << "FAIL: " << scenario << '\n';
     return 1;
   }
   // The application must also leave runtime changes alone if invoked again.
   rex::cvar::SetFlagByName("mnk_mode", "false");
+  rex::cvar::SetFlagByName("keybind_a", "Semicolon,Space");
   ApplyMotogpInputDefaults();
-  if (rex::cvar::Query<bool>("mnk_mode")) {
+  if (rex::cvar::Query<bool>("mnk_mode")||rex::cvar::GetFlagByName("keybind_a")!="Semicolon,Space") {
     return 1;
   }
   std::cout << "PASS: " << scenario << "; backend=" << backend
-            << "; keybind_a=" << keybind << '\n';
+            << "; keybind_a=" << rex::cvar::GetFlagByName("keybind_a") << '\n';
   return 0;
 }

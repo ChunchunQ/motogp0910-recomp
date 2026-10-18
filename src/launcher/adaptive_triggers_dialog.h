@@ -45,10 +45,12 @@ class AdaptiveDialog {
   int S(int n)const{return static_cast<int>(n*scale_+.5);}
   const wchar_t* T(const wchar_t* en,const wchar_t* tr)const{return tr_?tr:en;}
   HWND Add(const wchar_t* cls,const wchar_t* text,DWORD style,int x,int y,int w,int h,int id=0){
+    const bool checkbox=std::wstring_view(cls)==L"BUTTON"&&(style&BS_TYPEMASK)==BS_AUTOCHECKBOX;
+    if(checkbox)style=(style&~BS_TYPEMASK)|BS_OWNERDRAW;
     auto child=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y),S(w),S(h),window,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);
     if(std::wstring_view(cls)==L"COMBOBOX")style_.AttachCombo(child);
-    if(std::wstring_view(cls)==L"BUTTON"&&(style&BS_TYPEMASK)==BS_AUTOCHECKBOX)style_.AttachCheckbox(child);
+    if(checkbox)style_.AttachCheckbox(child);
     if(std::wstring_view(cls)==TRACKBAR_CLASSW)AttachSliderPaint(child);
     return child;
   }
@@ -70,7 +72,7 @@ class AdaptiveDialog {
       Add(L"STATIC",side?T(L"LEFT TRIGGER · L2",L"SOL TETİK · L2"):T(L"RIGHT TRIGGER · R2",L"SAĞ TETİK · R2"),0,x,110,300,26);
       auto mode=Add(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,x,144,300,180,id);
       for(auto text:{T(L"Off",L"Kapalı"),T(L"Constant resistance",L"Sabit direnç"),T(L"Resistance zone",L"Direnç aralığı")})SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text));
-      SendMessageW(mode,CB_SETITEMHEIGHT,static_cast<WPARAM>(-1),S(23));SendMessageW(mode,CB_SETITEMHEIGHT,0,S(23));
+      SendMessageW(mode,CB_SETITEMHEIGHT,static_cast<WPARAM>(-1),S(24));SendMessageW(mode,CB_SETITEMHEIGHT,0,S(32));
       help_.Set(mode,T(L"Constant resistance holds a single resistance level. Resistance zone limits it to the selected start and end positions.",L"Sabit direnç, tek bir direnç düzeyi uygular. Direnç aralığı, başlangıç ve bitiş konumları arasına sınırlar."));
       SendMessageW(mode,CB_SETCURSEL,p.mode=="weapon"?2:p.mode=="feedback"?1:0,0);
       const int values[]{p.start,p.end,p.strength};
@@ -91,15 +93,21 @@ class AdaptiveDialog {
     if(msg==WM_NCCREATE){self=static_cast<AdaptiveDialog*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);self->window=hwnd;SetWindowLongPtrW(hwnd,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(self));}
     if(!self)return DefWindowProcW(hwnd,msg,wp,lp);
     switch(msg){
+      case WM_SETCURSOR:if(SetActionCursor(reinterpret_cast<HWND>(wp),lp))return TRUE;break;
       case WM_CREATE:self->Build();return 0;
       case WM_ERASEBKGND:{RECT r;GetClientRect(hwnd,&r);auto dc=reinterpret_cast<HDC>(wp);SetDCBrushColor(dc,RGB(23,26,33));FillRect(dc,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));return 1;}
       case WM_CTLCOLORSTATIC:case WM_CTLCOLORBTN:case WM_CTLCOLORLISTBOX:return self->style_.Color(reinterpret_cast<HDC>(wp),reinterpret_cast<HWND>(lp));
-      case WM_MEASUREITEM:{auto* item=reinterpret_cast<MEASUREITEMSTRUCT*>(lp);if(item->CtlType==ODT_COMBOBOX){item->itemHeight=self->S(23);return TRUE;}break;}
+      case WM_MEASUREITEM:{auto* item=reinterpret_cast<MEASUREITEMSTRUCT*>(lp);if(item->CtlType==ODT_COMBOBOX){item->itemHeight=self->S(32);return TRUE;}break;}
       case WM_DRAWITEM:self->style_.DrawItem(*reinterpret_cast<DRAWITEMSTRUCT*>(lp));return TRUE;
       case WM_NOTIFY:{const auto* header=reinterpret_cast<NMHDR*>(lp);const int id=GetDlgCtrlID(header->hwndFrom);
         if(header->code==NM_CUSTOMDRAW&&((id>=111&&id<=113)||(id>=121&&id<=123)))return self->style_.DrawSlider(*reinterpret_cast<NMCUSTOMDRAW*>(lp));break;}
       case WM_HSCROLL:{auto c=reinterpret_cast<HWND>(lp);const int id=GetDlgCtrlID(c);if((id>=111&&id<=113)||(id>=121&&id<=123))SetDlgItemTextW(hwnd,id+3,std::to_wstring(SendMessageW(c,TBM_GETPOS,0,0)).c_str());return 0;}
-      case WM_COMMAND:if(LOWORD(wp)==100||((LOWORD(wp)==110||LOWORD(wp)==120)&&HIWORD(wp)==CBN_SELCHANGE)){self->UpdateAvailability();return 0;}
+      case WM_COMMAND:if(LOWORD(wp)==110||LOWORD(wp)==120){
+          if(HIWORD(wp)==CBN_DROPDOWN){self->help_.Activate(false);return 0;}
+          if(HIWORD(wp)==CBN_CLOSEUP)self->help_.Activate(true);
+        }
+        if(LOWORD(wp)==100&&HIWORD(wp)==BN_CLICKED){const auto control=GetDlgItem(hwnd,100);SendMessageW(control,BM_SETCHECK,SendMessageW(control,BM_GETCHECK,0,0)==BST_CHECKED?BST_UNCHECKED:BST_CHECKED,0);self->UpdateAvailability();return 0;}
+        if((LOWORD(wp)==110||LOWORD(wp)==120)&&HIWORD(wp)==CBN_SELCHANGE){self->UpdateAvailability();return 0;}
         if(LOWORD(wp)==IDOK){if(self->Commit())DestroyWindow(hwnd);else MessageBoxW(hwnd,self->T(L"Resistance-zone end must be greater than start.",L"Direnç aralığının bitişi başlangıçtan büyük olmalı."),L"DualSense",MB_OK|MB_ICONINFORMATION);return 0;}
         if(LOWORD(wp)==IDCANCEL){DestroyWindow(hwnd);return 0;}break;
       case WM_CLOSE:DestroyWindow(hwnd);return 0;

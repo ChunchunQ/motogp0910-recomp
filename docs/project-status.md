@@ -21,11 +21,11 @@ Don't publish original game data, personal logs or preview screenshots.
 ## Current evidence
 
 The latest [portable launcher package](portable-launcher.md) passed
-all 29 Windows PE/Wine suite entries with its matching custom Release DLLs.
+all 31 Windows PE/Wine suite entries with its matching custom Release DLLs.
 Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
 the native transition with Cross/A or Start, Space or Enter. Final checks include
 76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 70,109 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
+quit/startup/input checks and 70,809 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
 mouse selection and inline network visibility are included in the UI run. Extended crash
 diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
 D3D12 overlay/gameplay and physical controller validation remain separate.
@@ -70,7 +70,7 @@ was removed so it cannot obscure cards.
 
 The [wet Motegi log audit](motegi-rain-qa.md) addresses all recorded error
 categories and the repeated null-descriptor diagnostic. Final checks passed:
-1,768 font geometry/block comparisons, 74,885 native localization checks,
+1,768 font geometry/block comparisons, 74,926 native localization checks,
 2,146 real kernel/VFS checks and 80 exact SDK texture-parser checks; all 25
 Windows PE/Wine suite entries passed. A new native Windows rainy race remains
 required. Experimental FSR 2/3 warnings are retained.

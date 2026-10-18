@@ -124,6 +124,10 @@ def main():
         run('input_defaults_probe', extra, config='mnk_mode=false\n' if scenario == 'config-false' else None,
             environment={'REX_MNK_MODE':'false', 'REXGLUE_MNK_MODE':'false'} if scenario in ('env-false', 'cli-true') else None,
             label='input-' + scenario)
+    run('input_defaults_probe', ['config-false'],
+        config='mnk_mode=false\nkeybind_a="Semicolon,Space"\nkeybind_b="Quote,Backspace"\n', label='input-legacy-confirm')
+    run('input_defaults_probe', ['config-false'],
+        config='mnk_mode=false\nkeybind_a="Ctrl+K,Space"\nkeybind_b="Delete"\n', label='input-custom-confirm')
     print('Evidence:', root)
     return 1 if any(item['exit'] for item in results) else 0
 
