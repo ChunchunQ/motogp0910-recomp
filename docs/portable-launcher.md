@@ -44,7 +44,11 @@ other game settings. Checkboxes use rounded orange boxes with dark ticks and
 handle rapid repeated clicks. Focus no longer draws dotted outlines.
 
 Sliders jump to the clicked position and continue dragging through the native
-trackbar. Native selection popups use 150 ms linear opening and closing fades,
+trackbar. Value-label text changes suppress the native STATIC control's
+synchronous solid-brush repaint, then draw the artwork and new text together
+in a buffer. Audio and sharpness percentages retain the artwork behind them
+while changing; hidden labels keep their visibility state.
+Native selection popups use 150 ms linear opening and closing fades,
 a small separation below the field, rounded panels matching the closed field
 background, a subtle inset highlight and orange selection text.
 The uploaded reference launcher's bundled WPF resources were inspected to verify

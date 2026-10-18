@@ -145,15 +145,29 @@
     auto& app=*reinterpret_cast<App*>(data);
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,LabelProc,id);
     if(control==app.page_view||control==app.page_content)return DefSubclassProc(control,message,wparam,lparam);
+    if(message==WM_SETTEXT){
+      // STATIC can paint synchronously during SetWindowText, bypassing our
+      // WM_PAINT and filling the value label with its solid CTLCOLOR brush.
+      // Update its text without native painting, then redraw the artwork and
+      // new glyphs together. Hidden labels must retain their visibility.
+      const bool visible=IsWindowVisible(control)!=FALSE;
+      if(visible)DefSubclassProc(control,WM_SETREDRAW,FALSE,0);
+      const auto result=DefSubclassProc(control,message,wparam,lparam);
+      if(visible)DefSubclassProc(control,WM_SETREDRAW,TRUE,0);
+      InvalidateRect(control,nullptr,FALSE);if(visible)UpdateWindow(control);
+      return result;
+    }
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT||message==WM_PRINTCLIENT){
-      PAINTSTRUCT ps{};const auto dc=message==WM_PAINT?BeginPaint(control,&ps):reinterpret_cast<HDC>(wparam);const int saved=SaveDC(dc);
+      PAINTSTRUCT ps{};const auto target=message==WM_PAINT?BeginPaint(control,&ps):reinterpret_cast<HDC>(wparam);
+      RECT bounds;GetClientRect(control,&bounds);
+      PaintBuffered(target,bounds,[&](HDC dc,RECT){const int saved=SaveDC(dc);
       app.DrawSurface(dc,control);SetBkMode(dc,TRANSPARENT);
       SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(control,WM_GETFONT,0,0)));
       SetTextColor(dc,control==app.title?kText:control==app.status&&app.status_positive?RGB(107,205,132):kMuted);
       RECT r;GetClientRect(control,&r);const auto text=app.Text(control);const bool right=(GetWindowLongPtrW(control,GWL_STYLE)&SS_TYPEMASK)==SS_RIGHT;
       const bool centered=(GetWindowLongPtrW(control,GWL_STYLE)&SS_CENTERIMAGE)!=0;
-      DrawTextW(dc,text.c_str(),-1,&r,(centered?DT_SINGLELINE|DT_VCENTER:DT_WORDBREAK)|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);
+      DrawTextW(dc,text.c_str(),-1,&r,(centered?DT_SINGLELINE|DT_VCENTER:DT_WORDBREAK)|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);});
       if(message==WM_PAINT)EndPaint(control,&ps);return 0;
     }
     return DefSubclassProc(control,message,wparam,lparam);
