@@ -613,6 +613,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
   auto* app=reinterpret_cast<App*>(GetWindowLongPtrW(window,GWLP_USERDATA));
   if(message==WM_NCCREATE){app=static_cast<App*>(reinterpret_cast<CREATESTRUCTW*>(lparam)->lpCreateParams);app->window=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(app));}
   if(!app)return DefWindowProcW(window,message,wparam,lparam);
+  if(PopupAnimation::RoutePointer(window,message,wparam,lparam))return 0;
   switch(message){
     case WM_SETCURSOR:if(SetActionCursor(reinterpret_cast<HWND>(wparam),lparam))return TRUE;break;
     case WM_CREATE:try{app->BuildControls();app->SetupCaption();}catch(const std::exception& e){app->ErrorBox(e);return -1;}return 0;

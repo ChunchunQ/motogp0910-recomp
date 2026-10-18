@@ -30,6 +30,7 @@ struct ModalStyle {
   }
   static LRESULT CALLBACK ComboProc(HWND control,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
     auto& style=*reinterpret_cast<ModalStyle*>(data);
+    if(PopupAnimation::RoutePointer(control,message,wp,lp))return 0;
     if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0))return 0;
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT){

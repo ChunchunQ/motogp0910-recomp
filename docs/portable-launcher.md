@@ -124,11 +124,15 @@ Active buttons, checkboxes, selectors and sliders use a hand cursor; disabled
 controls and text fields retain their native cursors. Pages share General's
 upper padding, preserving the existing Achievements layout.
 
-The open Window size list explicitly handles wheel input over both the field
-and its popup. It scrolls the viewport without selecting another resolution,
-accumulates partial wheel deltas, follows the Windows scroll-line preference
-and clamps at either end. Closed selectors keep their existing page-scrolling
-behavior; the dedicated handler is enabled only for Window size.
+An open popup receives pointer hit testing and explicitly forwards mouse input
+to its native list, including events delivered to the field by native capture.
+Scrollbar drags remain with that list even outside the popup bounds. Wheel
+input over any scrollable popup moves its viewport without changing the saved
+selection; it accumulates partial deltas, follows the Windows scroll-line
+preference and clamps at either end. Window size also supports wheel input over
+its open field. Popup input cannot fall through to the launcher's page rail.
+Closing visuals become click-through immediately; closed selectors retain
+their existing page-scrolling behavior. This input update was build-only.
 
 All launcher accents share `#ff6a13`, including PLAY, the logo suffix, selected
 tabs, popup text, sliders, checkboxes and adaptive-trigger controls. Pressed and

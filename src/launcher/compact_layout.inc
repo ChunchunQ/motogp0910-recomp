@@ -52,6 +52,7 @@
   }
   static LRESULT CALLBACK PageProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    if(PopupAnimation::RoutePointer(control,message,wparam,lparam))return 0;
     int requested=app.page_scroll[app.current_page];
     if(app.RailInput(control,message,lparam,app.page_extent[app.current_page],kPageHeight,requested,app.page_drag)){
       app.ScrollPage(requested);return 0;
@@ -79,6 +80,7 @@
   }
   static LRESULT CALLBACK ContentProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    if(PopupAnimation::RoutePointer(control,message,wparam,lparam))return 0;
     switch(message){
       case WM_PRINTCLIENT:{app.DrawSurface(reinterpret_cast<HDC>(wparam),control);if(app.current_page==5)app.PaintAchievementSummary(reinterpret_cast<HDC>(wparam));return 0;}
       case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);if(app.current_page==5)app.PaintAchievementSummary(dc);EndPaint(control,&ps);return 0;}
@@ -295,6 +297,7 @@
   }
   static LRESULT CALLBACK ComboFrameProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    if(PopupAnimation::RoutePointer(control,message,wparam,lparam))return 0;
     if(message==WM_MOUSEWHEEL&&PopupAnimation::ScrollWheel(control,wparam))return 0;
     if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0)){
       // A closed selector never changes a saved setting just because the

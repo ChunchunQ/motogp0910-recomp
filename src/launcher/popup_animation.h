@@ -17,6 +17,7 @@ struct PopupAnimation {
   static constexpr UINT kRefresh=WM_APP+0x347;
   static constexpr ULONGLONG kDuration=150;
   static inline HWND visual_popup{},closing_popup{};
+  static inline thread_local bool forwarding_pointer=false;
   bool active=false,owns_layer=false,shown=false,rounding=false,wheel_scroll=false;
   bool rendering=false,refresh_pending=false;
   int wheel_remainder=0;
@@ -24,11 +25,12 @@ struct PopupAnimation {
   struct Surface;
   Surface* surface{};
   bool Wheel(HWND list,WPARAM wp){
-    if(!wheel_scroll||!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0))return false;
+    if(!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0))return false;
+    const auto g=PopupScroll::Measure(list);
+    if(!wheel_scroll&&!g.maximum)return false;
     wheel_remainder+=GET_WHEEL_DELTA_WPARAM(wp);
     const int notches=wheel_remainder/WHEEL_DELTA;wheel_remainder%=WHEEL_DELTA;
     UINT lines=3;SystemParametersInfoW(SPI_GETWHEELSCROLLLINES,0,&lines,0);
-    const auto g=PopupScroll::Measure(list);
     const auto step=lines==WHEEL_PAGESCROLL?g.visible:std::min<UINT>(lines,g.maximum);
     if(notches&&step)PopupScroll::SetTop(list,static_cast<int>(std::clamp<int64_t>(int64_t(g.top)-int64_t(notches)*step,0,g.maximum)));
     return true;
@@ -84,10 +86,12 @@ struct PopupAnimation {
     static LRESULT CALLBACK Proc(HWND window,UINT message,WPARAM wp,LPARAM lp){
       auto* self=reinterpret_cast<Surface*>(GetWindowLongPtrW(window,GWLP_USERDATA));
       if(!self)return DefWindowProcW(window,message,wp,lp);
+      if(RoutePointer(window,message,wp,lp))return 0;
       switch(message){
         case WM_ERASEBKGND:return 1;
-        case WM_NCHITTEST:return HTTRANSPARENT;
+        case WM_NCHITTEST:return self->owner->shown?HTCLIENT:HTTRANSPARENT;
         case WM_MOUSEACTIVATE:return MA_NOACTIVATE;
+        case WM_SETCURSOR:if(self->owner->shown){SetCursor(LoadCursorW(nullptr,IDC_HAND));return TRUE;}break;
         case WM_PAINT:ValidateRect(window,nullptr);return 0;
         case WM_TIMER:if(wp==kTimer){
           if(!self->started)self->started=GetTickCount64();
@@ -104,6 +108,23 @@ struct PopupAnimation {
       return DefWindowProcW(window,message,wp,lp);
     }
   };
+  // The visual popup owns hit testing while open. Native combo capture may
+  // still send drag events to the field, so both paths map to list coordinates.
+  // Never move capture away from ComboLBox: doing so would close its dropdown.
+  static bool RoutePointer(HWND source,UINT message,WPARAM wp,LPARAM lp){
+    if(forwarding_pointer||message<WM_MOUSEFIRST||message>WM_MOUSELAST||!visual_popup)return false;
+    auto* visual=reinterpret_cast<Surface*>(GetWindowLongPtrW(visual_popup,GWLP_USERDATA));
+    if(!visual)return false;auto& state=*visual->owner;
+    if(!state.shown||!IsWindowVisible(state.list))return false;
+    const bool wheel=message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL;
+    POINT point{GET_X_LPARAM(lp),GET_Y_LPARAM(lp)};if(!wheel)ClientToScreen(source,&point);
+    RECT bounds;GetWindowRect(state.list,&bounds);
+    const bool dragging=state.scroll.dragging&&(message==WM_MOUSEMOVE||message==WM_LBUTTONUP);
+    if(!dragging&&!PtInRect(&bounds,point))return false;
+    if(!wheel){ScreenToClient(state.list,&point);lp=MAKELPARAM(point.x,point.y);}
+    forwarding_pointer=true;SendMessageW(state.list,message,wp,lp);forwarding_pointer=false;
+    RequestRefresh(state.combo);return true;
+  }
   static void RequestRefresh(HWND combo){
     COMBOBOXINFO info{sizeof(info)};DWORD_PTR data=0;
     if(!GetComboBoxInfo(combo,&info)||!GetWindowSubclass(info.hwndList,Proc,kSubclass,&data)||!data)return;
@@ -116,7 +137,7 @@ struct PopupAnimation {
     if(visual_popup)DestroyWindow(visual_popup);
     auto* next=new(std::nothrow) Surface;if(!next)return false;next->owner=this;
     WNDCLASSW cls{};cls.lpfnWndProc=Surface::Proc;cls.hInstance=GetModuleHandleW(nullptr);cls.lpszClassName=L"MotoGPPopupSurface";RegisterClassW(&cls);
-    const auto window=CreateWindowExW(WS_EX_LAYERED|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TRANSPARENT,cls.lpszClassName,L"",WS_POPUP,0,0,0,0,GetAncestor(combo,GA_ROOT),nullptr,cls.hInstance,nullptr);
+    const auto window=CreateWindowExW(WS_EX_LAYERED|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW,cls.lpszClassName,L"",WS_POPUP,0,0,0,0,GetAncestor(combo,GA_ROOT),nullptr,cls.hInstance,nullptr);
     if(!window){delete next;return false;}
     next->window=window;surface=next;visual_popup=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(next));return true;
   }
@@ -150,6 +171,7 @@ struct PopupAnimation {
     if(!owns_layer){SetWindowLongPtrW(window,GWL_EXSTYLE,style|WS_EX_LAYERED);owns_layer=(GetWindowLongPtrW(window,GWL_EXSTYLE)&WS_EX_LAYERED)!=0;}
     if(!owns_layer||!SetLayeredWindowAttributes(window,0,0,LWA_ALPHA)){Stop(window);return;}
     if(!EnsureSurface()){Stop(window);return;}
+    SetWindowLongPtrW(surface->window,GWL_EXSTYLE,GetWindowLongPtrW(surface->window,GWL_EXSTYLE)&~WS_EX_TRANSPARENT);
     if(closing_popup==surface->window)closing_popup=nullptr;
     // Capture/show is completed after the native show transaction, when its
     // final row geometry and rounded region are available.
@@ -164,6 +186,7 @@ struct PopupAnimation {
     scroll.dragging=false;refresh_pending=false;
     if(shown&&surface){
       surface->Capture();shown=false;
+      SetWindowLongPtrW(surface->window,GWL_EXSTYLE,GetWindowLongPtrW(surface->window,GWL_EXSTYLE)|WS_EX_TRANSPARENT);
       // Native input/capture closes immediately. The SAME already visible
       // surface fades out; early close/reopen never swaps compositor windows.
       closing_popup=surface->window;surface->Fade(0);
@@ -174,7 +197,8 @@ struct PopupAnimation {
   static LRESULT CALLBACK Proc(HWND window,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
     auto& state=*reinterpret_cast<PopupAnimation*>(data);
     if(message==kRefresh){state.refresh_pending=false;if(state.shown&&state.surface)state.surface->Capture();return 0;}
-    if(message==WM_MOUSEWHEEL&&state.Wheel(window,wp)){RequestRefresh(state.combo);return 0;}
+    if(message==WM_MOUSEWHEEL&&state.shown){state.Wheel(window,wp);RequestRefresh(state.combo);return 0;}
+    if(message==WM_MOUSEHWHEEL&&state.shown)return 0;
     if(message==WM_SETCURSOR&&SetActionCursor(window,lp))return TRUE;
     if(message==WM_SHOWWINDOW){if(wp&&!state.shown)state.Start(window);else if(!wp)state.Hide(window);}
     if(message==WM_WINDOWPOSCHANGING){auto& pos=*reinterpret_cast<WINDOWPOS*>(lp);if(pos.flags&SWP_SHOWWINDOW){state.Position(window,pos);if(!state.shown)state.Start(window);}else if(pos.flags&SWP_HIDEWINDOW)state.Hide(window);}

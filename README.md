@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-reference-popup.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-popup-scroll-fix.zip)
 
 This update was compiled without running runtime or UI tests. Validation from
 the previous published build is recorded in [portable launcher notes](docs/portable-launcher.md#validation).
@@ -46,7 +46,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `8a9fbd0bbb2b3a32d35b631bae8d9551d3c4a3a9039d3839a69bb6eafbe5af7d`.
+Package SHA-256: `ee201fc3726e801c97f378cd6fce165d0f80d29d1e0036c03b8314c5df5e7058`.
 
 ## Current features and evidence
 
