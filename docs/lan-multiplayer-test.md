@@ -43,7 +43,7 @@ For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md)
    and saves; do not mix old EXEs with new runtime DLLs.
 2. Join the same physical or compatible virtual LAN. No specific VPN brand is
    required. Both peers must be reachable on that network.
-3. Select **General > Multiplayer Settings > Connection mode > LAN** on both
+3. Select **Online > Connection mode > LAN** on both
    launchers. Use different names; player names allow at most 15 UTF-8 bytes,
    room names 31. The default Player name gets a per-process suffix.
 4. Initially leave Local IPv4 and Host IPv4 empty. If automatic adapter selection

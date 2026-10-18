@@ -20,7 +20,6 @@
     Tip(game_language,L"Changes game text and subtitles. Original voices are preserved.",L"Oyun metinlerini ve altyazıları değiştirir. Özgün seslendirmeler korunur.");
     Tip(prompt_style,L"Automatic follows your input device. Choose PlayStation, Xbox or keyboard to force the button symbols.",L"Otomatik, giriş aygıtını izler. Tuş simgelerini sabitlemek için PlayStation, Xbox veya klavye seç.");
     Tip(crash_diagnostics,L"Collects an additional local crash report if the game fails. Reports are saved in Logs.",L"Oyun çökerse ek bir yerel çökme raporu toplar. Raporlar Loglar klasörüne kaydedilir.");
-    Tip(multiplayer_settings,L"Choose Offline, LAN or a community Online server. Apply edits here, then Save or PLAY in the launcher.",L"Çevrimdışı, LAN veya topluluk sunucusunu seç. Burada uygula; ardından launcher'da Kaydet veya OYNA'ya bas.");
     Tip(render_resolution,L"Internal drawing resolution. Higher settings sharpen the image and increase GPU load.",L"İç çizim çözünürlüğü. Yüksek ayarlar görüntüyü netleştirir ve GPU yükünü artırır.");
     Tip(size,L"Common and monitor-reported window sizes that fit the selected display. Borderless uses your desktop resolution.",L"Seçili ekrana sığan yaygın ve monitörün bildirdiği pencere boyutları. Kenarlıksız mod masaüstü çözünürlüğünü kullanır.");
     Tip(refresh_rate,L"Exclusive fullscreen only. Borderless and windowed modes use the desktop refresh rate.",L"Yalnızca özel tam ekranda kullanılır. Kenarlıksız ve pencereli modlar masaüstünün yenileme hızını kullanır.");
@@ -36,11 +35,11 @@
     for(size_t i=0;i<binding_buttons.size();++i){
       Tip(binding_buttons[i],L"Click, then press a key or key combination. Esc cancels. Right-click to clear this binding.",L"Tıkla, ardından bir tuşa veya tuş birleşimine bas. Esc iptal eder. Atamayı silmek için sağ tıkla.");
     }
-    Tip(achievement_list,L"Progress is read from your game save. F7 opens achievements during play.",L"İlerleme oyun kaydından okunur. Oyun sırasında başarımlar için F7'ye bas.");
     Tip(save,L"Save launcher settings for the next game launch. During play, F1 opens settings that can change immediately.",L"Launcher ayarlarını sonraki oyun açılışı için kaydeder. Oyun sırasında F1, anında değişen ayarları açar.");
     Tip(defaults,L"Restore launcher settings to their defaults. Game saves and achievements are kept.",L"Launcher ayarlarını varsayılana döndürür. Oyun kayıtları ve başarımlar korunur.");
     Tip(logs,L"Open the local log and crash-report folder.",L"Yerel log ve çökme raporları klasörünü açar.");
     Tip(report,L"Create a local diagnostic report with settings and recent logs. Nothing is uploaded.",L"Ayarlar ve son loglarla yerel bir tanılama raporu oluşturur. Hiçbir şey yüklenmez.");
     Tip(play,L"Save the current launcher settings and start MotoGP 09/10.",L"Geçerli launcher ayarlarını kaydedip MotoGP 09/10'u başlatır.");
+    LocalizeNetworkHelp();
     LocalizeUpscalerHelp();
   }

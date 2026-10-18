@@ -3,10 +3,10 @@
 #include "notices_dialog.h"
 #include "scroll_rail.h"
 #include "adaptive_triggers_dialog.h"
-#include "network_dialog.h"
 #include "tooltips.h"
 #include "slider_paint.h"
 #include "popup_animation.h"
+#include "popup_style.h"
 #include "checkbox_paint.h"
 #include "hardware.h"
 #include "achievements.h"
@@ -51,11 +51,12 @@ struct App {
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},aspect{};
+  HWND network_mode{},network_player{},network_room{},network_adapter{},network_host{},network_server{};
   Tooltips help;
   std::map<HWND,HWND> help_labels;
-  std::array<HWND,6> navigation{};
+  std::array<HWND,7> navigation{};
   std::array<HWND,kEngineEffects.size()> engine_choices{};
-  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{},debug_overlay{};
+  HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},debug_overlay{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
   std::array<HWND,kBindings.size()> binding_buttons{};
   HWND reset_bindings{};
@@ -63,7 +64,7 @@ struct App {
   struct Placement {HWND control;int x,y,w,h;};
   std::vector<Label> labels;
   std::vector<Placement> placements;
-  std::array<std::vector<HWND>,6> pages;
+  std::array<std::vector<HWND>,7> pages;
   std::map<HWND,bool> checks;
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
@@ -182,8 +183,8 @@ struct App {
     edited_bindings[index]=std::move(value);RefreshBinding(index);
   }
   void ShowPage(int page){
-    if(page<0||page>=6||switching_page||(pages_ready&&current_page==page))return;
-    help.Pop();switching_page=true;CancelCapture();
+    if(page<0||page>=static_cast<int>(pages.size())||switching_page||(pages_ready&&current_page==page))return;
+    PopupAnimation::DismissClosing();help.Pop();switching_page=true;CancelCapture();
     // Move focus out of the outgoing page before hiding it. Focus-driven
     // scrolling cannot re-enter the transition or reveal an old field.
     if(IsChild(page_content,GetFocus()))SetFocus(navigation[page]);
@@ -192,6 +193,7 @@ struct App {
     current_page=page;
     ScrollPage(page_scroll[page],true);
     for(auto c:pages[page])ShowWindow(c,SW_SHOW);
+    UpdateNetworkMode();
     pages_ready=true;switching_page=false;SendMessageW(page_view,WM_SETREDRAW,TRUE,0);
     for(auto c:navigation)InvalidateRect(c,nullptr,FALSE);
     RedrawWindow(page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
@@ -238,13 +240,14 @@ struct App {
     SetWindowTextW(window,L"MotoGP 09/10 Launcher");
     if(auto menu=GetSystemMenu(window,FALSE))ModifyMenuW(menu,kNoticesCommand,MF_BYCOMMAND|MF_STRING,kNoticesCommand,T(L"Third-party notices…",L"Üçüncü taraf bildirimleri…"));
     SendMessageW(language,CB_SETCURSEL,turkish?1:0,0);
-    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):current_page==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
+    SetWindowTextW(title,current_page==0?T(L"Graphics",L"Grafik"):current_page==1?T(L"Audio",L"Ses"):current_page==2?T(L"Controls",L"Kontroller"):current_page==3?T(L"General",L"Genel"):current_page==4?T(L"Advanced",L"Gelişmiş"):current_page==6?L"Online":T(L"Achievements",L"Başarımlar"));
     SetWindowTextW(subtitle,current_page==0?T(L"Display, detail and upscaling.",L"Görüntü, detay ve ölçekleme."):
-        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):current_page==4?T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."):T(L"Your milestones. Every race counts.",L"Her yarış, yeni bir hedef."));
+        current_page==1?T(L"Set the sound of your race.",L"Yarışın sesini ayarla."):current_page==2?T(L"Your controller. Your keys.",L"Senin kontrolcün. Senin tuşların."):current_page==3?T(L"Your game preferences.",L"Oyun tercihlerin."):current_page==4?T(L"Fine-tune MotoGP engine effects.",L"MotoGP motor efektlerini ayarla."):current_page==6?L"":T(L"Your milestones. Every race counts.",L"Her yarış, yeni bir hedef."));
     SetWindowTextW(folder_label,T(L"GAME FOLDER",L"OYUN KLASÖRÜ"));SetWindowTextW(browse,T(L"Browse",L"Gözat"));
     for(auto& label:labels)SetWindowTextW(label.control,T(label.en,label.tr));
-    for(int i=0;i<6;++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):T(L"Achievements",L"Başarımlar"));
-    SetWindowTextW(multiplayer_settings,T(L"Multiplayer Settings",L"Çok Oyunculu Ayarları"));
+    for(size_t i=0;i<navigation.size();++i)SetWindowTextW(navigation[i],i==0?T(L"Graphics",L"Grafik"):i==1?T(L"Audio",L"Ses"):i==2?T(L"Controls",L"Kontroller"):i==3?T(L"General",L"Genel"):i==4?T(L"Advanced",L"Gelişmiş"):i==6?L"Online":T(L"Achievements",L"Başarımlar"));
+    FillCombo(network_mode,{T(L"Offline",L"Çevrimdışı"),L"LAN",T(L"Online (Experimental)",L"Çevrimiçi (Deneysel)")});
+    UpdateNetworkMode();
     LayoutNavigation();
     LocalizeHelp();
     LocalizeAchievements();
@@ -318,7 +321,7 @@ struct App {
   }
   void SetControls(const Settings& s){
     SetCheck(debug_overlay,s.debug_overlay_enabled);
-    NetworkDialog::CopyNetwork(settings,s);
+    SetNetworkControls(s);
     SendMessageW(aspect,CB_SETCURSEL,s.aspect=="21:9"?2:s.aspect=="32:9"?3:s.aspect=="16:9"?1:0,0);
     auto found=std::find(dimensions.begin(),dimensions.end(),std::pair{s.width,s.height});
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
@@ -362,6 +365,7 @@ struct App {
   Settings GetControls()const{
     Settings s=settings;
     s.debug_overlay_enabled=Checked(debug_overlay);
+    ReadNetworkControls(s);
     const auto aspect_index=SendMessageW(aspect,CB_GETCURSEL,0,0);if(aspect_index<0 || aspect_index>3)throw std::runtime_error("Invalid aspect ratio selection");s.aspect=std::array{"auto","16:9","21:9","32:9"}[aspect_index];auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     if(index<0 || static_cast<size_t>(index)>=dimensions.size())throw std::runtime_error("Invalid window size selection");
     std::tie(s.width,s.height)=dimensions[index];auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);
@@ -399,6 +403,7 @@ struct App {
   void ReadyStatus(){try{Validate(exe,GameRoot());Status(L"Ready to play · Title update 0.0.1.1",L"Başlatmaya hazır · Title update 0.0.1.1",true);}
     catch(const Error& e){Status(e.english,e.turkish);}catch(const std::exception& e){Status(L"Check game folder: "+ErrorDetails(e),L"Oyun klasörünü kontrol et: "+ErrorDetails(e));}}
   #include "compact_layout.inc"
+  #include "network_page.inc"
   #include "launcher_help.inc"
   COLORREF BackgroundFor(HWND)const{return kBackground;}
   void Rounded(HDC dc,RECT r,COLORREF fill,COLORREF border,int radius=8){
@@ -434,13 +439,7 @@ struct App {
     auto text=Text(c);if(nav)r.left+=S(18);
     DrawTextW(hdc,text.c_str(),-1,&r,(nav?DT_LEFT:DT_CENTER)|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS);
   }
-  void DrawCombo(const DRAWITEMSTRUCT& item){
-    RECT r=item.rcItem;auto b=CreateSolidBrush((item.itemState&ODS_SELECTED)?RGB(57,47,35):kField);FillRect(item.hDC,&r,b);DeleteObject(b);
-    SetBkMode(item.hDC,TRANSPARENT);SetTextColor(item.hDC,(item.itemState&ODS_DISABLED)?kMuted:kText);SelectObject(item.hDC,font);r.left+=S(8);
-    std::wstring text;if(item.itemID!=UINT(-1)){auto len=SendMessageW(item.hwndItem,CB_GETLBTEXTLEN,item.itemID,0);
-      if(len!=CB_ERR){text.resize(len+1);SendMessageW(item.hwndItem,CB_GETLBTEXT,item.itemID,reinterpret_cast<LPARAM>(text.data()));text.resize(len);}}
-    DrawTextW(item.hDC,text.c_str(),-1,&r,DT_LEFT|DT_SINGLELINE|DT_VCENTER|DT_END_ELLIPSIS);
-  }
+  void DrawCombo(const DRAWITEMSTRUCT& item){DrawPopupItem(item,font,scale);}
   LRESULT DrawSlider(NMCUSTOMDRAW& draw){
     if(draw.dwDrawStage!=CDDS_PREPAINT)return CDRF_DODEFAULT;
     auto c=draw.hdr.hwndFrom;RECT r;GetClientRect(c,&r);DrawSurface(draw.hdc,c);
@@ -560,7 +559,7 @@ struct App {
     CancelCapture();
     for(auto control:{path,browse,save,defaults,play}) EnableWindow(control,!value);
     for(size_t i=0;i<pages.size();++i) for(auto control:pages[i]) EnableWindow(control,i==5||!value);
-    EnableWindow(multiplayer_settings,!value);Localize();
+    Localize();
   }
   void Command(int id,int event){
     try{
@@ -568,16 +567,16 @@ struct App {
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
       }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
         if(!language_pending){language_pending=true;PostMessageW(window,kApplyLauncherLanguage,0,0);}
+      }else if(id==kLanEnabled && event==CBN_SELCHANGE){UpdateNetworkMode();
       }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
       }else if(id==kEffect && event==CBN_SELCHANGE){auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);
         SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==2?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
         auto c=FindControl(id);if(checks.contains(c)){if(id==kAchievementPopup||id==kAchievementSound){SaveAchievementOption(id);return;}SetCheck(c,!Checked(c));return;}
-        if(id>=kNavGraphics && id<=kNavAchievements){ShowPage(id-kNavGraphics);return;}
+        if(id>=kNavGraphics && id<=kNavMultiplayer){ShowPage(id-kNavGraphics);return;}
         if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){CancelCapture();binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
-          case kNavMultiplayer:NetworkDialog(window,font,turkish,scale,settings).Show();break;
           case kAdaptiveTriggers:AdaptiveDialog(window,font,turkish,scale,settings.adaptive).Show();break;
           case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);RefreshBinding(binding_index);
             break;
@@ -627,14 +626,15 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     case WM_CONTEXTMENU:app->BindingMenu(reinterpret_cast<HWND>(wparam),{static_cast<short>(LOWORD(lparam)),static_cast<short>(HIWORD(lparam))});return 0;
     case WM_TIMER:if(wparam==2)app->PollAchievements();else if(wparam==3)app->PollVerification();else app->Poll();return 0;
     case WM_DRAWITEM:{auto& draw=*reinterpret_cast<DRAWITEMSTRUCT*>(lparam);if(draw.CtlType==ODT_BUTTON)app->DrawButton(draw);else if(draw.CtlType==ODT_COMBOBOX)app->DrawCombo(draw);return TRUE;}
-    case WM_MEASUREITEM:reinterpret_cast<MEASUREITEMSTRUCT*>(lparam)->itemHeight=app->S(22);return TRUE;
+    case WM_MEASUREITEM:reinterpret_cast<MEASUREITEMSTRUCT*>(lparam)->itemHeight=app->S(32);return TRUE;
     case WM_NOTIFY:{auto* n=reinterpret_cast<NMHDR*>(lparam);if(n->code==NM_CUSTOMDRAW && (n->hwndFrom==app->sharpness || n->hwndFrom==app->volume))return app->DrawSlider(*reinterpret_cast<NMCUSTOMDRAW*>(lparam));return 0;}
     case WM_VSCROLL:if(app->achievement_list && (!lparam||reinterpret_cast<HWND>(lparam)==app->achievement_list))return SendMessageW(app->achievement_list,WM_VSCROLL,wparam,lparam);break;
     case WM_MOUSEWHEEL:return SendMessageW(app->page_view,message,wparam,lparam);
     case WM_HSCROLL:{if(reinterpret_cast<HWND>(lparam)==app->volume)SetWindowTextW(app->volume_value,(std::to_wstring(SendMessageW(app->volume,TBM_GETPOS,0,0))+L"%").c_str());
       if(reinterpret_cast<HWND>(lparam)==app->sharpness){auto value=SendMessageW(app->sharpness,TBM_GETPOS,0,0),mode=SendMessageW(app->effect,CB_GETCURSEL,0,0);
         if(mode==1||mode==3||mode==4)app->settings.fsr_reduction=2.0-value/50.0;if(mode==2)app->settings.cas_sharpness=value/100.0;app->UpdateSharpness();}return 0;}
-    case WM_CTLCOLOREDIT:case WM_CTLCOLORLISTBOX:SetTextColor(reinterpret_cast<HDC>(wparam),kText);SetBkColor(reinterpret_cast<HDC>(wparam),kField);return reinterpret_cast<LRESULT>(app->field);
+    case WM_CTLCOLORLISTBOX:SetTextColor(reinterpret_cast<HDC>(wparam),kText);SetBkColor(reinterpret_cast<HDC>(wparam),kPopupBackground);SetDCBrushColor(reinterpret_cast<HDC>(wparam),kPopupBackground);return reinterpret_cast<LRESULT>(GetStockObject(DC_BRUSH));
+    case WM_CTLCOLOREDIT:SetTextColor(reinterpret_cast<HDC>(wparam),kText);SetBkColor(reinterpret_cast<HDC>(wparam),kField);return reinterpret_cast<LRESULT>(app->field);
     case WM_CTLCOLORSTATIC:case WM_CTLCOLORBTN:{auto c=reinterpret_cast<HWND>(lparam);auto bg=app->BackgroundFor(c);SetTextColor(reinterpret_cast<HDC>(wparam),c==app->title?kText:c==app->status&&app->status_positive?RGB(107,205,132):kMuted);
       SetBkColor(reinterpret_cast<HDC>(wparam),bg);return reinterpret_cast<LRESULT>(bg==kCard?app->card:app->background);}
     case WM_ERASEBKGND:return 1;
@@ -652,7 +652,11 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
   }return DefWindowProcW(window,message,wparam,lparam);
 }
 }
+#ifdef MOTOGP_LAUNCHER_DLL
+extern "C" __declspec(dllexport) int WINAPI MotoGPLauncherMain(HINSTANCE instance,HINSTANCE,PWSTR,int show){
+#else
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int show){
+#endif
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
   Gdiplus::GdiplusStartupInput gdip;ULONG_PTR gdip_token{};Gdiplus::GdiplusStartup(&gdip_token,&gdip,nullptr);
   INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_STANDARD_CLASSES|ICC_BAR_CLASSES};InitCommonControlsEx(&controls);
@@ -675,5 +679,5 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int show){
     while(GetMessageW(&message,nullptr,0,0)>0){if(app.CaptureKey(message))continue;if(!IsDialogMessageW(window,&message)){TranslateMessage(&message);DispatchMessageW(&message);}}
     CloseHandle(mutex);
   }catch(const std::exception& e){MessageBoxW(nullptr,(L"Cannot open launcher / Launcher açılamadı:\n"+ErrorDetails(e)).c_str(),L"MotoGP 09/10",MB_OK|MB_ICONERROR);result=1;}
-  Gdiplus::GdiplusShutdown(gdip_token);CoUninitialize();return result;
+  PopupAnimation::DismissClosing();Gdiplus::GdiplusShutdown(gdip_token);CoUninitialize();return result;
 }

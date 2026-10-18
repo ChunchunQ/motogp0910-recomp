@@ -123,11 +123,30 @@ void CheckPopupAnimation(HWND combo){
     const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
     CheckUI(!state.active&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==255,"Non-blocking timer completes the fade and stops while idle");
   }else CheckUI(!state.active,"Windows reduced-motion preference disables the fade");
+  RECT field,popup;GetWindowRect(combo,&field);GetWindowRect(info.hwndList,&popup);
+  CheckUI(popup.left==field.left&&(popup.top>=field.bottom+2||popup.bottom<=field.top-2),"Popup retains field alignment with a small reference-style separation");
+  const auto region=CreateRectRgn(0,0,0,0);CheckUI(GetWindowRgn(info.hwndList,region)!=ERROR&&!PtInRegion(region,0,0),"Popup clips its panel to rounded corners");DeleteObject(region);
   SendMessageW(combo,WM_KEYDOWN,VK_DOWN,0);SendMessageW(combo,WM_KEYUP,VK_DOWN,0);
   CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)!=original,"Native keyboard selection works after the popup fade");
   SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);
   CheckUI(!state.active&&!state.owns_layer&&!IsWindowVisible(info.hwndList),"Closing removes animation state and restores native popup styles");
+  if(PopupAnimation::Enabled()){
+    CheckUI(PopupAnimation::closing_popup&&IsWindowVisible(PopupAnimation::closing_popup),"Native close leaves a passive visual for the reference-style closing fade");
+    const auto styles=GetWindowLongPtrW(PopupAnimation::closing_popup,GWL_EXSTYLE);
+    CheckUI((styles&(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT))==(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT),"Closing fade cannot activate or consume mouse input");
+    const auto deadline=GetTickCount64()+1000;while(PopupAnimation::closing_popup&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
+    CheckUI(!PopupAnimation::closing_popup,"Closing animation frees its snapshot and timer after finishing");
+  }
+
   for(int i=0;i<5;++i){SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.active&&!state.owns_layer,"Rapid reopen/close does not retain an active timer or transparency");}
+  PopupAnimation::DismissClosing();
+  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
+  const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
+  RECT row;const auto count=SendMessageW(combo,CB_GETCOUNT,0,0);const int target=(original+2)%count;
+  CheckUI(SendMessageW(info.hwndList,LB_GETITEMRECT,target,reinterpret_cast<LPARAM>(&row))!=LB_ERR,"Native popup exposes the real pointer hit-test row");
+  ClickControl(info.hwndList,(row.top+row.bottom)/2,(row.left+row.right)/2);
+  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)==target&&!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Actual mouse selection commits the clicked row after popup styling and positioning");
+  PopupAnimation::DismissClosing();
   SendMessageW(combo,CB_SETCURSEL,original,0);
 }
 void CheckSurface(App& app,HWND control,int x,int y){
@@ -248,18 +267,18 @@ void CheckPolish(App& app){
   CheckUI(GetGlyphIndicesW(dc,turkish,std::size(turkish)-1,glyphs,GGI_MARK_NONEXISTING_GLYPHS)!=GDI_ERROR,"Embedded font can be queried for Turkish coverage");
   for(auto glyph:glyphs)CheckUI(glyph!=0xFFFF,"All Turkish letters have real glyphs in the launcher font");
   SelectObject(dc,app.bold);int previous_end=-1,first_gap=-1;RECT first{},last{};
-  for(int i:{3,0,4,1,2,5}){
+  for(int i:{3,0,4,1,2,6,5}){
     RECT r;GetWindowRect(app.navigation[i],&r);MapWindowPoints(nullptr,app.window,reinterpret_cast<POINT*>(&r),2);
     SIZE extent{};const auto text=app.Text(app.navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);
     CheckUI(extent.cx+app.S(8)<=r.right-r.left,"Every tab fits its real font without truncation");
     const int text_start=r.left+(r.right-r.left-extent.cx)/2;
-    if(previous_end>=0){const int gap=text_start-previous_end;if(first_gap<0)first_gap=gap;CheckUI(std::abs(gap-first_gap)<=1,"Visible tab text has equal spacing, including Controls / Achievements");}
+    if(previous_end>=0){const int gap=text_start-previous_end;if(first_gap<0)first_gap=gap;CheckUI(std::abs(gap-first_gap)<=1,"Visible tab text has equal spacing, including Controls / Online / Achievements");}
     else first=r;
     previous_end=text_start+extent.cx;last=r;
   }
-  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The six tabs stay within their content column");
+  CheckUI(first.left>=app.S(App::kPageX)&&last.right<=app.S(App::kPageX+App::kPageWidth),"The seven tabs stay within their content column");
   CheckUI(std::abs(first.left+last.right-app.S(App::kPageX)*2-app.S(App::kPageWidth))<=1,"Navigation is centered as one group");
-  const std::array<int,6> order{3,0,4,1,2,5};
+  const std::array<int,7> order{3,0,4,1,2,6,5};
   for(size_t i=0;i+1<order.size();++i)CheckUI(GetNextDlgTabItem(app.window,app.navigation[order[i]],FALSE)==app.navigation[order[i+1]],"Keyboard tab order follows the visible navigation order");
   SelectObject(dc,old);
 
@@ -468,7 +487,7 @@ int wmain(int argc,wchar_t** argv){
       SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);
       for(bool tr:{false,true}){
         app.turkish=tr;app.Localize();CheckPolish(app);
-        for(int page=0;page<6;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.multiplayer_settings))==(page==3),"Multiplayer Settings button appears only on General");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
+        for(int page=0;page<7;++page){app.ShowPage(page);CheckUI(bool(IsWindowVisible(app.path))==(page==3) && bool(IsWindowVisible(app.browse))==(page==3),"Game folder appears only on General");CheckUI(bool(IsWindowVisible(app.network_mode))==(page==6),"Network controls appear only on Online");CheckUI(bool(IsWindowVisible(app.language))==(page==3),"Launcher language appears only on General");RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);
           for(int offset=160;offset<app.PageMaximum()+160;offset+=160){app.ScrollPage(offset);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);LayoutCheck(app);}
           app.ScrollPage(0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);
           CheckSurface(app,app.page_view,app.S(App::kPageWidth)-1,app.S(App::kPageHeight)-1);
@@ -476,7 +495,7 @@ int wmain(int argc,wchar_t** argv){
           if(page==0)CheckSurface(app,app.sharp_value,app.S(35),app.S(22)-1);
           if(page==5){RECT list;GetClientRect(app.achievement_list,&list);CheckUI(list.bottom>=4*app.S(76)+3*app.S(6),"Achievement viewport fits at least four complete compact cards");}
           if(scale==1. || (scale==.75 && tr && page==2)){
-            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":L"achievements";
+            const auto tab=page==0?L"graphics":page==1?L"audio":page==2?L"controls":page==3?L"general":page==4?L"advanced":page==6?L"online":L"achievements";
             auto file=std::wstring(L"launcher-")+tab+(tr?L"-turkish":L"-english")+(scale==.75?L"-compact":L"")+L".bmp";Screenshot(window,pictures/file);if(scale==1.&&page==5&&!tr)Screenshot(window,pictures/L"launcher-achievements-full-window.bmp",true);
             if(scale==1.&&page==3&&!tr){app.caption_hover=HTCLOSE;app.PaintCaption();Screenshot(window,pictures/L"launcher-caption-hover.bmp");app.caption_hover=0;app.PaintCaption();}
           }
@@ -487,7 +506,7 @@ int wmain(int argc,wchar_t** argv){
       // selectors / enumerate monitor modes or modify pending game settings.
       const auto generation=app.localization_generation;toml::table before;app.GetControls().Store(before);std::ostringstream original;original<<toml::toml_formatter{before};
       const auto begin=GetTickCount64();uint64_t slowest=0;
-      for(int i=0;i<120;++i){const auto start=GetTickCount64();app.ShowPage(i%6);RedrawWindow(app.page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);slowest=std::max<uint64_t>(slowest,GetTickCount64()-start);CheckUI(app.current_page==i%6,"Rapid switching leaves the requested tab selected");}
+      for(int i=0;i<120;++i){const auto start=GetTickCount64();app.ShowPage(i%7);RedrawWindow(app.page_view,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW|RDW_ALLCHILDREN);slowest=std::max<uint64_t>(slowest,GetTickCount64()-start);CheckUI(app.current_page==i%7,"Rapid switching leaves the requested tab selected");}
       CheckUI(app.localization_generation==generation,"Rapid tabs never rebuild selectors or query refresh modes");
       toml::table after;app.GetControls().Store(after);std::ostringstream current;current<<toml::toml_formatter{after};CheckUI(original.str()==current.str(),"Rapid switching preserves all unsaved settings");
       std::cout<<"120 painted tab switches: "<<GetTickCount64()-begin<<" ms total; slowest "<<slowest<<" ms\n";
@@ -613,38 +632,37 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(!dialog.window&&app.settings.adaptive==initial,"Cancel preserves all pending trigger values");
     }
     app.SetControls(Settings{});CheckUI(!IsWindowEnabled(app.fsr_quality),"Bilinear disables FSR quality selector");
-    { // Multiplayer is an owned editor opened from General.
-      const auto initial=app.settings;const int page=app.current_page;
+    { // Multiplayer edits live inside Online and share normal Save/PLAY state.
+      const auto initial=app.GetControls();
       for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
-        const auto dialog_font=CreateFontW(-static_cast<int>(14*scale+.5),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Open Sans");
-        struct FontCleanup{HFONT font;~FontCleanup(){DeleteObject(font);}} font_cleanup{dialog_font};
-        NetworkDialog dialog(window,dialog_font,tr,scale,app.settings);const auto modal=dialog.Create();ShowWindow(modal,SW_SHOWNOACTIVATE);UpdateWindow(modal);
-        CheckUI(modal&&GetWindow(modal,GW_OWNER)==window,"Multiplayer creates an owned separate window");
-        RECT client;GetClientRect(modal,&client);
-        for(int id:std::array<int,8>{kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer,IDOK,IDCANCEL}){if(!IsWindowVisible(GetDlgItem(modal,id)))continue;RECT r;GetWindowRect(GetDlgItem(modal,id),&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Multiplayer fields fit the modal at each DPI");}
+        app.Rescale(scale);RECT size{0,0,app.S(kWidth),app.S(kHeight+kCaptionHeight)};AdjustWindowRectEx(&size,style,FALSE,0);SetWindowPos(window,nullptr,20,20,size.right-size.left,size.bottom-size.top,SWP_NOZORDER);app.turkish=tr;app.Localize();app.ShowPage(6);app.ScrollPage(0);
+        CheckUI(GetParent(app.network_mode)==app.page_content&&!FindWindowW(L"MotoGPNetworkSettings",nullptr),"Online controls are children of the launcher without a network modal");
+        CheckUI(GetNextDlgTabItem(window,app.navigation[2],FALSE)==app.navigation[6]&&GetNextDlgTabItem(window,app.navigation[6],FALSE)==app.navigation[5],"Online navigation is between Controls and Achievements");
+        SetWindowTextW(app.network_player,L"Rider");SetWindowTextW(app.network_room,L"Test room");
+        SetWindowTextW(app.network_adapter,L"192.168.1.2");SetWindowTextW(app.network_host,L"192.168.1.3");SetWindowTextW(app.network_server,L"https://play.example.com");
         for(int mode=0;mode<3;++mode){
-          SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,mode,0);dialog.UpdateMode();SetDlgItemTextW(modal,kOnlineServer,L"https://play.example.com");
-          const auto selector=GetDlgItem(modal,kLanEnabled);SendMessageW(selector,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);CheckUI(SendMessageW(selector,CB_GETCURSEL,0,0)==mode,"Closed multiplayer selector ignores the mouse wheel");
-          CheckUI(bool(IsWindowEnabled(GetDlgItem(modal,kOnlineServer)))==(mode==2)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanAdapter)))==(mode==1)&&bool(IsWindowEnabled(GetDlgItem(modal,kLanHost)))==(mode==1),"Each connection mode enables only its relevant fields");
-          for(int id:{kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kOnlineServer})CheckUI(bool(IsWindowVisible(GetDlgItem(modal,id)))==(id==kOnlineServer?mode==2:(id==kLanAdapter||id==kLanHost)?mode==1:mode>0),"Only fields relevant to the selected connection mode are visible");
-          GetClientRect(modal,&client);CheckUI(client.bottom==static_cast<int>((mode?316:158)*scale+.5),"Offline has a compact dialog without empty parameter rows");
-          for(auto child=GetWindow(modal,GW_CHILD);child;child=GetWindow(child,GW_HWNDNEXT)){if(!IsWindowVisible(child))continue;RECT r;GetWindowRect(child,&r);MapWindowPoints(nullptr,modal,reinterpret_cast<POINT*>(&r),2);CheckUI(r.left>=0&&r.top>=0&&r.right<=client.right&&r.bottom<=client.bottom,"Visible modal labels and controls fit each mode at each DPI");}
-          CheckUI(dialog.Commit()&&app.GetControls().network_mode==std::array{"offline","lan","online"}[mode],"Multiplayer Apply preserves all three real connection modes");
+          SendMessageW(app.network_mode,CB_SETCURSEL,mode,0);app.Command(kLanEnabled,CBN_SELCHANGE);
+          SendMessageW(app.network_mode,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);
+          CheckUI(SendMessageW(app.network_mode,CB_GETCURSEL,0,0)==mode,"Closed Online connection selector ignores the mouse wheel");
+          for(auto control:{app.network_player,app.network_room,app.network_adapter,app.network_host,app.network_server}){
+            const bool relevant=control==app.network_server?mode==2:(control==app.network_adapter||control==app.network_host)?mode==1:mode>0;
+            CheckUI(bool(IsWindowVisible(control))==relevant&&bool(IsWindowVisible(app.help_labels.at(control)))==relevant&&bool(IsWindowEnabled(control))==relevant,"Each mode shows and enables only its relevant fields and labels");
+          }
+          LayoutCheck(app);
           const auto current=app.GetControls();toml::table saved;current.Store(saved);const auto loaded=Settings::Load(saved);
-          CheckUI(loaded.network_mode==current.network_mode&&loaded.online_server==current.online_server,"Applied multiplayer values survive normal launcher serialization");
-          const auto arguments=Arguments(game,current,saved);CheckUI(std::count(arguments.begin(),arguments.end(),L"--network_mode="+Wide(current.network_mode))==1,"Applied multiplayer mode is forwarded to the game once");
-          if(scale==1.){const auto prefix=mode==0?L"multiplayer-offline":mode==1?L"multiplayer":L"multiplayer-online";Screenshot(modal,pictures/(std::wstring(prefix)+(tr?L"-turkish.bmp":L"-english.bmp")));}
+          CheckUI(current.network_mode==std::array{"offline","lan","online"}[mode]&&loaded.network_mode==current.network_mode&&loaded.online_server==current.online_server,"Inline network settings survive normal launcher serialization");
+          CheckUI(current.bindings==initial.bindings&&current.volume==initial.volume&&current.effect==initial.effect,"Inline network changes preserve unsaved input, audio and graphics values");
+          const auto arguments=Arguments(game,current,saved);CheckUI(std::count(arguments.begin(),arguments.end(),L"--network_mode="+Wide(current.network_mode))==1,"Inline network mode is forwarded to the game once");
+          app.ShowPage(3);CheckUI(!IsWindowVisible(app.network_mode)&&!IsWindowVisible(app.network_player),"Leaving Online hides all network controls");
+          app.ShowPage(6);CheckUI(app.Text(app.network_player)==L"Rider"&&app.Text(app.network_host)==L"192.168.1.3"&&app.Text(app.network_server)==L"https://play.example.com","Mode and tab changes preserve LAN and Online details");
+          if(scale==1.){RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);const auto prefix=mode==0?L"online-offline":mode==1?L"online-lan":L"online-server";Screenshot(window,pictures/(std::wstring(prefix)+(tr?L"-turkish.bmp":L"-english.bmp")));}
         }
-        SetDlgItemTextW(modal,kOnlineServer,L"invalid server");const auto before=app.GetControls().online_server;CheckUI(!dialog.Commit()&&app.GetControls().online_server==before,"Invalid server cannot partially replace accepted network settings");
-        SendDlgItemMessageW(modal,kLanEnabled,CB_SETCURSEL,1,0);SetDlgItemTextW(modal,kLanHost,L"999.1.1.1");CheckUI(!dialog.Commit(),"Invalid LAN IPv4 is rejected by existing validation");
-        SendMessageW(modal,WM_COMMAND,IDCANCEL,0);CheckUI(!dialog.window&&app.current_page==page,"Cancelling the network dialog preserves the current launcher page");app.settings=initial;
+        SetWindowTextW(app.network_server,L"invalid server");bool rejected=false;try{app.GetControls();}catch(const Error&){rejected=true;}CheckUI(rejected,"Invalid inline Online server is rejected without modifying accepted settings");
+        SendMessageW(app.network_mode,CB_SETCURSEL,1,0);app.Command(kLanEnabled,CBN_SELCHANGE);SetWindowTextW(app.network_host,L"999.1.1.1");rejected=false;try{app.GetControls();}catch(const Error&){rejected=true;}CheckUI(rejected,"Invalid inline LAN IPv4 is rejected by existing validation");
+        app.SetControls(initial);
       }
-      NetworkDialog dialog(window,app.font,false,1,app.settings);auto modal=dialog.Create();SetDlgItemTextW(modal,kLanPlayer,L"Not applied");SendMessageW(modal,WM_COMMAND,IDCANCEL,0);CheckUI(app.settings.lan_player_name==initial.lan_player_name,"Cancel leaves pending network edits untouched");
-      CheckUI(!GetDlgItem(window,kLanEnabled)&&!GetDlgItem(app.page_content,kLanEnabled),"Multiplayer controls no longer occupy General");
-      std::atomic<bool> found=false;
-      std::thread dismiss([&]{for(int i=0;i<500;++i){if(auto dialog=FindWindowW(L"MotoGPNetworkSettings",nullptr)){found=true;PostMessageW(dialog,WM_COMMAND,IDCANCEL,0);return;}Sleep(10);}});
-      app.ShowPage(3);SendMessageW(app.multiplayer_settings,BM_CLICK,0,0);dismiss.join();
-      CheckUI(found&&IsWindowEnabled(window)&&app.current_page==3&&!FindWindowW(L"MotoGPNetworkSettings",nullptr),"The General Multiplayer Settings button opens and closes its owned modal without changing the current page");
+      app.Rescale(1);SetWindowPos(window,nullptr,20,20,kWidth,kHeight+kCaptionHeight,SWP_NOZORDER);app.SetControls(initial);app.ShowPage(3);
+      CheckUI(TooltipText(app.help.window,app.achievement_list).empty(),"Achievement cards have no hover tooltip covering their text");
     }
     const auto saved_maximum=app.display_maximum;
     app.display_maximum={1920,1080};app.dimensions=WindowSizesFor(app.display_maximum);app.Localize();
@@ -756,7 +774,7 @@ int wmain(int argc,wchar_t** argv){
       std::wstring command=Quote((ExecutableFolder()/L"launcher_layout_probe.exe").wstring())+L" --fixture-child";
       STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION child{};
       CheckUI(CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&startup,&child),"Start actual launcher child fixture");
-      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);CheckUI(!IsWindowEnabled(app.multiplayer_settings),"Multiplayer launch-time options are disabled while a game runs");
+      CloseHandle(child.hThread);app.process=child.hProcess;app.Running(true);CheckUI(!IsWindowEnabled(app.network_mode),"Multiplayer launch-time options are disabled while a game runs");
       Config external(app.config.path);Put(external.table,"audio_master_volume",58);Put(external.table,"fps_limit",165);Put(external.table,"keybind_a",std::string("Ctrl+J"));external.Save();
       CheckUI(WaitForSingleObject(app.process,10000)==WAIT_OBJECT_0,"Child fixture exited");app.Poll();
       CheckUI(!app.process&&app.GetControls().volume==58&&app.GetControls().fps_limit==165&&app.GetControls().bindings[0]=="Ctrl+J","Child exit reloads live values into actual launcher controls");

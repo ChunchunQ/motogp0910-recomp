@@ -42,7 +42,7 @@ def main():
     for name, expected in manifest["dll_sha256"].items():
         if hashlib.sha256((BUILD / name).read_bytes()).hexdigest() != expected:
             raise SystemExit(f"Runtime mismatch: {name}; stage the spatial FSR pair first")
-    for name in ("motogp0910.exe", "motogp0910-launcher.exe", "motogp0910-crash-monitor.exe", "motogp0910.map", *RUNTIME):
+    for name in ("motogp0910.exe", "motogp0910-ui.dll", "motogp0910-crash-monitor.exe", "motogp0910.map", *RUNTIME):
         source = BUILD / name
         if not source.is_file():
             raise SystemExit(f"Missing build output: {name}")
@@ -89,7 +89,7 @@ def main():
         milestone="Experimental LAN multiplayer" if args.lan_preview else "Stability update"
         preview_notes=(
             "EXPERIMENTAL LAN: Guest XNet/session and UDP/VDP socket integration is included.\n"
-            "General > Multiplayer Settings > Connection mode > LAN; automatic rooms, optional host IPv4 fallback.\n"
+            "Online > Connection mode > LAN; automatic rooms, optional host IPv4 fallback.\n"
             "Use the same package on both PCs and unranked Player Match on a local or virtual LAN.\n"
             "No Xbox Live login or dedicated server. Offline remains the default.\n"
             "LAN startup fix: 17 targeted actual-SDK Windows/Wine checks passed.\n"
@@ -104,7 +104,7 @@ def main():
         if args.online_preview:
             milestone="Experimental community Online / LAN / Offline"
             preview_notes=(
-                "COMMUNITY ONLINE: General > Multiplayer Settings > Connection mode > Online. Enter the community HTTPS server.\n"
+                "COMMUNITY ONLINE: Online > Connection mode > Online. Enter the community HTTPS server.\n"
                 "The VDS provides room discovery, authenticated UDP relay and persistent native leaderboards.\n"
                 "No virtual LAN or player router forwarding is required for Online. LAN remains separate.\n"
                 "The race simulation stays on a player's PC. Use Player Match; official Xbox Live ranked/friends/voice are not restored.\n"
@@ -284,7 +284,7 @@ def main():
     # distribute a separate licenses folder, and reject stale launchers or
     # newly added dependencies whose notices have not been incorporated.
     notices = (ROOT / "resources/launcher/third-party-notices.txt").read_text(encoding="utf-8")
-    if notices.encode("utf-8") not in (BUILD / "motogp0910-launcher.exe").read_bytes():
+    if notices.encode("utf-8") not in (BUILD / "MotoGP09-10Launcher.exe").read_bytes():
         raise SystemExit("Rebuild the launcher with the embedded third-party notices before packaging")
     for notice in (STAGE / "licenses").rglob("*"):
         if notice.is_file() and notice.read_text(encoding="utf-8-sig") not in notices:
@@ -299,6 +299,8 @@ def main():
             package.write(file, file.relative_to(STAGE))
     with zipfile.ZipFile(archive) as package:
         assert package.testzip() is None
+        assert "bin/motogp0910-launcher.exe" not in package.namelist()
+        assert "bin/motogp0910-ui.dll" in package.namelist()
         assert not any(p.endswith((".xex", ".xexp")) or p.startswith("assets/")
                        for p in package.namelist())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

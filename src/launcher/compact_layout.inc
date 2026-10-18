@@ -1,7 +1,7 @@
   // Fixed outer window, scrollable child content. Settings and native keyboard
   // traversal stay accessible without shrinking text to fit every page at once.
   HWND page_view{},page_content{},verify_files{};
-  std::array<int,6> page_scroll{},page_extent{};
+  std::array<int,7> page_scroll{},page_extent{};
   static constexpr int kPageX=28,kPageY=136,kPageWidth=610,kPageHeight=480;
   static constexpr int kFormWidth=kPageWidth-26,kColumnWidth=(kFormWidth-22)/2,kColumnX=kColumnWidth+22;
   static constexpr int kActionsY=kPageY+kPageHeight+8,kStatusY=kHeight-40;
@@ -158,12 +158,12 @@
   }
   void LayoutNavigation(){
     const auto dc=GetDC(window);const auto previous=SelectObject(dc,bold);
-    constexpr std::array<int,6> order{3,0,4,1,2,5};
-    std::array<int,6> widths{};int total=0;
+    constexpr std::array<int,7> order{3,0,4,1,2,6,5};
+    std::array<int,7> widths{};int total=0;
     for(int i:order){SIZE extent{};const auto text=Text(navigation[i]);GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);widths[i]=extent.cx+S(8);total+=widths[i];}
     SelectObject(dc,previous);ReleaseDC(window,dc);
-    const int available=S(kPageWidth),gap=std::clamp((available-total)/5,0,S(12));
-    int x=S(kPageX)+(available-total-5*gap)/2;
+    const int available=S(kPageWidth),gap=std::clamp((available-total)/6,0,S(12));
+    int x=S(kPageX)+(available-total-6*gap)/2;
     // Position in device pixels so fractional DPI rounding cannot accumulate
     // into different gaps. Keep logical placements only for generic rescaling.
     for(int i:order){SetWindowPos(navigation[i],nullptr,x,S(94+kCaptionHeight),widths[i],S(32),SWP_NOZORDER|SWP_NOACTIVATE);x+=widths[i]+gap;}
@@ -173,7 +173,7 @@
     title=Control(L"STATIC",L"",0,28,68,1,1);subtitle=Control(L"STATIC",L"",0,30,70,1,1);
     ShowWindow(title,SW_HIDE);ShowWindow(subtitle,SW_HIDE);
     // Creation order matches visual and keyboard tab order.
-    for(int i:{3,0,4,1,2,5})navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
+    for(int i:{3,0,4,1,2,6,5})navigation[i]=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,94,1,32,kNavGraphics+i);
     page_view=Control(L"STATIC",L"",WS_CLIPCHILDREN,kPageX,kPageY,kPageWidth,kPageHeight);
     // Each painted control owns its buffer. Ancestor WS_EX_COMPOSITED can
     // defer native child updates and expose stale/blank frames while scrolling.
@@ -192,9 +192,8 @@
     verify_files=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,74,184,32,kVerifyFiles);
     language=field(3,L"Launcher language",L"Launcher dili",0,128,kLanguage);
     SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));
-    game_language=field(3,L"Game language",L"Oyun dili",kColumnX,128,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
-    prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,210,kPromptStyle);
-    multiplayer_settings=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kColumnX,234,kColumnWidth,34,kNavMultiplayer);
+    game_language=field(3,L"Game language",L"Oyun dili",0,210,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
+    prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,292,kPromptStyle);
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
     render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",kColumnX,0,kRenderResolution);
     size=field(0,L"Window size",L"Pencere boyutu",0,68,kSize);
@@ -225,6 +224,7 @@
       SetWindowSubclass(binding_buttons[i],BindingProc,1,reinterpret_cast<DWORD_PTR>(this));
     }
     reset_bindings=PageControl(2,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,136+static_cast<int>(kBindings.size())*38,270,32,kResetBindings);
+    BuildNetworkPage();
     BuildAchievements();
     status=Control(L"STATIC",L"",0,44,kStatusY,kPageWidth-16,30);SendMessageW(status,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,kActionsY,116,32,kSave);
@@ -291,12 +291,13 @@
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT){
       PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);
-      app.Rounded(dc,r,kField,kBorder,6);
+      const bool open=SendMessageW(control,CB_GETDROPPEDSTATE,0,0)!=0;
+      app.Rounded(dc,r,kField,open?kAccent:kBorder,6);
       DRAWITEMSTRUCT item{};item.CtlType=ODT_COMBOBOX;item.hwndItem=control;item.hDC=dc;item.rcItem=r;item.rcItem.left+=app.S(1);item.rcItem.top+=app.S(1);item.rcItem.right-=app.S(27);item.rcItem.bottom-=app.S(1);
-      item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));if(!IsWindowEnabled(control))item.itemState=ODS_DISABLED;
+      item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));item.itemState=ODS_COMBOBOXEDIT;if(!IsWindowEnabled(control))item.itemState|=ODS_DISABLED;
       app.DrawCombo(item);
       const auto pen=CreatePen(PS_SOLID,std::max(1,app.S(1)),IsWindowEnabled(control)?kMuted:kBorder);const auto old=SelectObject(dc,pen);
-      const int x=r.right-app.S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-app.S(4),y-app.S(2),nullptr);LineTo(dc,x,y+app.S(2));LineTo(dc,x+app.S(4),y-app.S(2));SelectObject(dc,old);DeleteObject(pen);
+      const int x=r.right-app.S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-app.S(4),y+(open?app.S(2):-app.S(2)),nullptr);LineTo(dc,x,y+(open?-app.S(2):app.S(2)));LineTo(dc,x+app.S(4),y+(open?app.S(2):-app.S(2)));SelectObject(dc,old);DeleteObject(pen);
       EndPaint(control,&ps);return 0;
     }
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,ComboFrameProc,id);

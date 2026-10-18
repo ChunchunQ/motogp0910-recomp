@@ -168,15 +168,15 @@ int wmain(int argc,wchar_t** argv) {
     process=Start(mock,args);Check(WaitForSingleObject(process,15000)==WAIT_OBJECT_0,"Bin child starts with all runtime DLLs confined to bin");
     GetExitCodeProcess(process,&exit);CloseHandle(process);
     Check(exit==17 && ReadFile(mock/L"launch-arguments.txt")==expected && ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Bin game retains Unicode arguments and root working directory");
-    fs::copy_file(self,bin/L"motogp0910-launcher.exe");
+    fs::copy_file(program/L"launcher_entry_probe.dll",bin/L"motogp0910-ui.dll",fs::copy_options::overwrite_existing);
     fs::copy_file(motogp::portable::Root(program)/L"MotoGP09-10Launcher.exe",mock/L"MotoGP09-10Launcher.exe");
     fs::remove(mock/L"launch-arguments.txt");fs::remove(mock/L"launch-cwd.txt");
     command=Quote((mock/L"MotoGP09-10Launcher.exe").wstring());for(const auto& arg:args)command+=L" "+Quote(arg);
     STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION bootstrap{};
     Check(CreateProcessW((mock/L"MotoGP09-10Launcher.exe").c_str(),command.data(),nullptr,nullptr,FALSE,0,nullptr,base.c_str(),&startup,&bootstrap),"CRT-independent public launcher starts from an unrelated working directory");
-    CloseHandle(bootstrap.hThread);Check(WaitForSingleObject(bootstrap.hProcess,15000)==WAIT_OBJECT_0,"Public launcher waits for its private UI process");
+    CloseHandle(bootstrap.hThread);Check(WaitForSingleObject(bootstrap.hProcess,15000)==WAIT_OBJECT_0,"Public launcher completes its in-process UI entry point");
     GetExitCodeProcess(bootstrap.hProcess,&exit);CloseHandle(bootstrap.hProcess);
-    Check(exit==17 && ReadFile(mock/L"launch-arguments.txt")==expected && ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Public launcher forwards exit status, Unicode arguments and root working directory without root DLLs");
+    Check(exit==17 && ReadFile(mock/L"launch-arguments.txt")==expected && ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Public launcher preserves UI return status, Unicode arguments and root working directory without root DLLs");
     std::cout<<checks<<" launcher checks passed\n";return 0;
   }catch(const std::exception& e){std::cerr<<"FAIL after "<<checks<<" checks: "<<e.what()<<'\n';return 1;}
 }

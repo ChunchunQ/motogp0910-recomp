@@ -1,11 +1,12 @@
 # MotoGP 09/10 Launcher
 
-Open `motogp0910-launcher.exe`, select the game directory and press **PLAY**.
+Open `MotoGP09-10Launcher.exe`, select the game directory and press **PLAY**.
 The current [Racing Lines redesign](launcher-redesign.md) uses a compact horizontal-tab layout, charcoal fields, amber/red cover-inspired art and a scrollable settings area. Minimize/close sit directly over the art. General includes cancellable, read-only game-file verification.
 PLAY is anchored at the lower right; Save / Defaults / Logs / Report sit above the status line. Context help uses standard Windows hover tooltips instead of permanent explanation paragraphs.
-**General → Multiplayer Settings** opens a separate editor: Offline hides all parameters, LAN shows only local/virtual-network fields, and Online shows the community server fields. Switching modes preserves the entered values.
+**Online → Connection mode** edits network settings inside the launcher: Offline hides all parameters, LAN shows only local/virtual-network fields, and Online shows the community server fields. Switching modes or tabs preserves entered values. Save / PLAY applies them;
+Online sits between Controls and Achievements.
 The launcher opens on **General** every time. The default language is English; **General → Launcher language → Türkçe** switches the whole
-interface immediately and retains the choice in `motogp0910-launcher.toml`.
+interface immediately and retains the choice in the shared root `config.json`.
 File names stay English. No CMD file is required.
 
 ## Graphics
@@ -14,11 +15,11 @@ File names stay English. No CMD file is required.
 | --- | --- |
 | GPU selection | Automatic or a named DXGI hardware adapter; original adapter indices are retained |
 | Native 2× MSAA | Existing SDK native MSAA toggle, enabled by default |
-| Output window size | Automatic or common sizes limited by the monitor native dimensions; borderless uses desktop size |
+| Window size | Automatic or common sizes limited by the monitor native dimensions; borderless uses desktop size |
 | Display mode | Fullscreen with a selected monitor mode, desktop borderless, or windowed |
 | Refresh rate | Actual host Hz for fullscreen; desktop Hz in borderless/windowed |
 | FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change the guest video-mode Hz |
-| Internal resolution | 720p (native), 1440p / 2K, or 4K; exact 1× / 2× / 3× integer scales of the 1280×720 source |
+| Internal resolution | 720p (native), 1440p, 2160p or 2880p; exact 1× / 2× / 3× / 4× integer scales of the 1280×720 source |
 | Bilinear | Original default presentation path |
 | AMD FSR 1.0 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
 | AMD FSR 2 / 3 | Experimental D3D12 upscalers with neutral motion/depth inputs and per-frame history reset; six quality modes |
@@ -34,13 +35,13 @@ The current package includes a matched modified **ReXGlue Nightly 0.10.0.24-dev.
 bundled FSR 1 / CAS shader bytecode enabled. Keep both included runtime DLLs;
 using the old official DLL makes the FSR setting unavailable. See
 [the pinned runtime and reproduction instructions](../third_party/rexglue-runtime/readme.md).
-FSR 2/3 and quality modes are available as Experimental options. Frame generation remains excluded. See [sources and limitations](experimental-rendering.md).
+FSR 2/3 labels omit Experimental; their temporal limitations remain. Frame generation remains excluded. See [sources and limitations](experimental-rendering.md).
 
 FSR 1 is a final-image upscaler; it does not add temporal anti-aliasing or invent
 extra detail. For example, 1× native rendering to a 1920×1080 window allows
 720p-to-1080p upscaling. At a higher internal rendering scale, there may be
 nothing left to upscale. Explicit custom guest video modes in an existing
-configuration remain respected. Direct `motogp0910.exe` launch also reads saved
+configuration remain respected. Direct `bin/motogp0910.exe` launch also reads saved
 settings and maintains the native source mode when FSR is selected.
 
 A single internal resolution selector replaces the independent X/Y controls.
@@ -60,32 +61,25 @@ on the next game launch.
 
 ## Keyboard and controllers
 
-All 25 SDK controller actions appear as directly editable rows in one scrollable list.
-Type a binding in its field or click the adjacent **…** to capture a key/chord.
-Escape cancels capture. Right-click a field for **Capture key**, **Unbind** and
-**Restore action default**. **Restore defaults** resets all launcher-managed
-settings. Alternatives remain supported; existing bindings are not silently
-rewritten to simpler defaults.
-
-Examples: `Space`, `Return`, `Ctrl+K`, `Shift+Up`, `Q,I` (alternative keys).
-Names are case-sensitive, as in the SDK. Unknown names and bare modifiers
-that cannot activate in the SDK are rejected before saving. Shared bindings
-are allowed intentionally. Mouse button names `LMB`, `RMB`, `MMB` can be entered
-as text; keyboard capture records keyboard keys.
+All 25 SDK controller actions appear as rounded key buttons in a scrollable list.
+Click a button, then press a key or chord. Escape cancels capture; right-click
+clears the binding. Reset keys restores only keyboard mappings, while Defaults
+resets all launcher-managed settings. Existing alternative key lists remain
+supported and are preserved until that action is rebound.
 
 SDL supports Xbox, PlayStation and other mapped USB/Bluetooth controllers.
-The included `gamecontrollerdb.txt` stays next to the EXE, outside `game/`.
+The included `gamecontrollerdb.txt` stays in `bin/`, outside `game/`.
 XInput can be selected separately. The game now replaces registered button
 glyphs for PlayStation and actual keyboard bindings; see [controller prompts](controller-prompts.md)
 for automatic switching and forced-style testing.
 
 ## Existing settings and data
 
-`motogp0910.toml` is the actual game configuration. Unknown keys, tables and
-custom save/cache roots are retained. Existing keyboard bindings are loaded
-into the editor. The original pre-launcher file is backed up once as
-`motogp0910.toml.bak`; external edits made while the launcher is open are
-protected from accidental overwrite. Settings use atomic replacement.
+The launcher and game use one root `config.json`. Unknown supported keys,
+nested tables and custom save/cache roots are retained. Existing game/launcher
+TOMLs migrate automatically and remain as exact `.legacy.bak` backups. F1 saves
+the same JSON. External edits are protected from accidental overwrite; saves
+use atomic replacement. See [portable settings and validation](portable-launcher.md).
 
 The standard game layout remains `game/default.xex`, `game/xenondata/` and the
 other original disk files. The supported title update is **0.0.1.1**.

@@ -5,9 +5,10 @@ sit directly over the background artwork, without a persistent title-bar tile.
 The original compact layout used a **940 × 578 logical-pixel** window. The
 current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
 
-- General, Graphics, Advanced, Audio, Controls and Achievements are regular pages.
-  General includes a Multiplayer Settings button opening a separate owned
-  dialog. General remains the startup page.
+- General, Graphics, Advanced, Audio, Controls, Online and Achievements are regular
+  pages. Online sits between Controls and Achievements and contains the complete
+  network editor; it no longer opens a separate window. General remains the
+  startup page.
 - The supplied cover inspired a separate Racing Lines background embedded in the
   launcher, rather than an external image that can disappear from the package.
   The left edge stays opaque for legibility and blends into artwork inside
@@ -16,7 +17,7 @@ current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monit
 - Scrollable child content preserves every existing setting, all 25 keyboard
   bindings, connection modes and the independent achievement scrollbar.
   Keyboard focus reveals off-screen fields. Action buttons and status remain
-  pinned below the content. Settings and existing saves retain their formats.
+  pinned below the content. Settings use the shared root `config.json`; existing saves retain their formats.
 - Closed dropdowns and client-drawn scrollbar rails use the charcoal palette. There is no native nonclient scrollbar underneath the rails. Mouse dragging, keyboard navigation and page scrolling are retained. A wheel over a closed selector scrolls its surrounding page without changing the selection; explicit open-list selection remains supported.
 - The background is cached by window size, so hovering title buttons does not
   repeatedly resample the original artwork.

@@ -25,8 +25,8 @@ all 29 Windows PE/Wine suite entries with its matching custom Release DLLs.
 Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
 the native transition with Cross/A or Start, Space or Enter. Final checks include
 76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 60,512 launcher UI assertions. All eight sliders
-are included in 207 targeted slider, focus, rapid-checkbox and popup-animation checks. Extended crash
+quit/startup/input checks and 69,426 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
+mouse selection and inline network visibility are included in the UI run. Extended crash
 diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
 D3D12 overlay/gameplay and physical controller validation remain separate.
 
@@ -39,9 +39,12 @@ coverage or a measured native Windows frame-rate improvement.
 
 Launcher and game settings now share root `config.json`, including live F1 saves.
 Twenty-two format/migration/SDK-priority checks and 346 live-settings checks
-passed. The public launcher loads private binaries from `bin/`; root resources,
+passed. The single public launcher loads its UI library in process from `bin/`; root resources,
 configuration and logs were verified separately from the unchanged save/cache
 location. Nine crash scenarios also passed with the bin layout and JSON evidence.
+The launcher now has a single public EXE, orange rounded checkboxes and an inline
+Online tab between Controls and Achievements. The achievement-list hover tooltip
+was removed so it cannot obscure cards.
 
 | Area | Implemented / checked | Native Windows evidence / limit |
 |---|---|---|
