@@ -50,9 +50,10 @@ background, a subtle inset highlight and orange selection text.
 The uploaded reference launcher's bundled WPF resources were inspected to verify
 its Fade behavior, bottom placement and popup spacing; reference art/binaries
 are not distributed. The implementation preserves native combo input.
-Native close immediately ends input capture; a passive, nonactivating snapshot
-finishes the closing fade and frees its timer/bitmap. Reopening dismisses the
-previous snapshot. Windows reduced-motion settings disable both transitions.
+Native close immediately ends input capture. One nonactivating visual surface
+handles opening, closing and rapid direction changes; it is destroyed after
+fade-out. Reopening during fade-out reuses that window and its visible opacity.
+Windows reduced-motion settings disable both transitions.
 
 Window size combines common aspect ratios, monitor-reported modes and native
 dimensions, excluding sizes larger than the physical display. Internal rendering
@@ -102,11 +103,17 @@ The report location and no-files-changed notice are preserved.
 
 ## Closing, controls and accent update
 
-During close, the native list now remains layered at zero opacity until the
-hide transaction completes. The passive snapshot retains its current opacity;
-the source never resets to full opacity while still visible. A regression also
-closes during the opening fade and checks the source-to-snapshot handoff.
-Native Windows DWM appearance still requires comparison on the user's machine.
+The reference resources select WPF `PopupAnimation.Fade`, transparent popup
+rendering, bottom placement, a four-pixel gap and a bounded scroll viewport.
+The corresponding .NET 8 popup implementation animates one visual root for
+150 ms and delays destruction until closing finishes. The C++ implementation
+uses the same lifetime model with a dedicated layered visual surface. Native
+ComboLBox retains keyboard/mouse selection and accessibility behind it. Native
+owner drawing is printed into the visual surface; hover/scroll changes request
+coalesced redraws. The native input window never becomes a second visible copy.
+Interrupted transitions start from the current visible opacity and reuse the
+same visual HWND. This revision was compiled without runtime/UI tests; native
+Windows visual validation remains pending.
 
 The adaptive-trigger checkbox exclusively uses owner drawing for both native
 focus notifications and ordinary paints, preventing a second themed tick or
@@ -116,6 +123,12 @@ options; it resumes after closing the list.
 Active buttons, checkboxes, selectors and sliders use a hand cursor; disabled
 controls and text fields retain their native cursors. Pages share General's
 upper padding, preserving the existing Achievements layout.
+
+The open Window size list explicitly handles wheel input over both the field
+and its popup. It scrolls the viewport without selecting another resolution,
+accumulates partial wheel deltas, follows the Windows scroll-line preference
+and clamps at either end. Closed selectors keep their existing page-scrolling
+behavior; the dedicated handler is enabled only for Window size.
 
 All launcher accents share `#ff6a13`, including PLAY, the logo suffix, selected
 tabs, popup text, sliders, checkboxes and adaptive-trigger controls. Pressed and
@@ -132,7 +145,8 @@ new single-key defaults. See [native action mapping](pc-menu-cleanup.md).
 
 ## Validation
 
-The Windows PE/Wine suite passed 31/31 entries, including 70,809 production
+The previously published build (`69fb8ed`) passed the Windows PE/Wine suite's
+31/31 entries, including 70,809 production
 launcher UI assertions, 346 live-settings checks and 22 JSON/migration/native
 SDK-priority checks. The full UI run covers all eight sliders, focus, rapid
 checkbox input, popup opening/closing, pointer selection and the inline network

@@ -48,7 +48,7 @@ bool Filter(uint8_t* base,uint32_t menu,uint32_t screen,unsigned capacity,unsign
 }
 void Initialize(rex::Runtime* runtime){
   const auto address=runtime->memory()->SystemHeapAlloc(8);if(!address)throw std::runtime_error("Could not allocate the PC Online label");
-  std::memcpy(runtime->virtual_membase()+address,"Online",7);online_label.store(address,std::memory_order_release);
+  std::memcpy(runtime->virtual_membase()+address,"ONLINE",7);online_label.store(address,std::memory_order_release);
 }
 uint32_t OnlineLabel(){return online_label.load(std::memory_order_acquire);}
 bool RemoveStorage(uint8_t* base,uint32_t menu,uint32_t screen){return menu&&Read(base,menu)==kGameSettingsVtable&&Filter(base,menu,screen,7,5,5,true);}

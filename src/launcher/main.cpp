@@ -119,7 +119,7 @@ struct App {
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
     SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
     if(std::wstring_view(cls)==L"EDIT")SetWindowTheme(c,L"",L"");
-    if(std::wstring_view(cls)==L"COMBOBOX"){PopupAnimation::Attach(c);SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));SendMessageW(c,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}
+    if(std::wstring_view(cls)==L"COMBOBOX"){PopupAnimation::Attach(c,id==kSize);SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));SendMessageW(c,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}
     return c;
   }
   static LRESULT CALLBACK CheckProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
@@ -440,7 +440,7 @@ struct App {
     auto text=Text(c);if(nav)r.left+=S(18);
     DrawTextW(hdc,text.c_str(),-1,&r,(nav?DT_LEFT:DT_CENTER)|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS);
   }
-  void DrawCombo(const DRAWITEMSTRUCT& item){DrawPopupItem(item,font,scale);}
+  void DrawCombo(const DRAWITEMSTRUCT& item){DrawPopupItem(item,font,scale);PopupAnimation::RequestRefresh(item.hwndItem);}
   LRESULT DrawSlider(NMCUSTOMDRAW& draw){
     if(draw.dwDrawStage!=CDDS_PREPAINT)return CDRF_DODEFAULT;
     auto c=draw.hdr.hwndFrom;RECT r;GetClientRect(c,&r);DrawSurface(draw.hdc,c);

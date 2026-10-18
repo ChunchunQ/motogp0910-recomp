@@ -295,6 +295,7 @@
   }
   static LRESULT CALLBACK ComboFrameProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    if(message==WM_MOUSEWHEEL&&PopupAnimation::ScrollWheel(control,wparam))return 0;
     if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0)){
       // A closed selector never changes a saved setting just because the
       // pointer happens to be over it. Scroll the surrounding page instead.

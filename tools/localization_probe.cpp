@@ -128,7 +128,7 @@ int main(int argc,char** argv){try{
  Check(std::wstring_view(launcher::kBindings[0].english).starts_with(L"Gear up")&&std::wstring_view(launcher::kBindings[1].english).starts_with(L"Gear down"),"Launcher A/B descriptions agree with Default rather than Alternative A");
  motogp::options::Initialize(&runtime);write(motogp::options::kOnlineHandle,731);
  PPCContext online{};online.r3.u32=motogp::options::kOnlineHandle;sub_826EDB38(online,base);
- Check(online.r3.u32==motogp::options::OnlineLabel()&&std::strcmp(reinterpret_cast<char*>(base+online.r3.u32),"Online")==0,"Only the native multiplayer Online label is replaced, without rewriting original message files");
+ Check(online.r3.u32==motogp::options::OnlineLabel()&&std::strcmp(reinterpret_cast<char*>(base+online.r3.u32),"ONLINE")==0,"Only the native multiplayer ONLINE label is replaced, without rewriting original message files");
  for(auto [vtable,renderer]:{std::pair{motogp::options::kGameSettingsVtable,0x8223B120u},std::pair{motogp::options::kMultiplayerVtable,0x822483E0u},std::pair{motogp::options::kCreateVtable,0x82240570u},std::pair{motogp::options::kCustomVtable,0x822409F0u},std::pair{motogp::options::kOnlineCreateVtable,0x8224EEF8u}})
    Check(read(vtable+4)==renderer,"Actual title vtables match each guarded PC menu cleanup hook");
  const auto setup_menu=[&](uint32_t vtable,std::initializer_list<uint32_t> ids,unsigned selected){

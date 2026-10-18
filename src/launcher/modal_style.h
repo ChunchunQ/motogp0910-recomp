@@ -83,7 +83,7 @@ struct ModalStyle {
   }
   void DrawItem(const DRAWITEMSTRUCT& item)const{
     if(checks.contains(item.hwndItem)){PaintCheckboxControl(item.hDC,item.hwndItem);return;}
-    if(item.CtlType==ODT_COMBOBOX){DrawPopupItem(item,font,scale);return;}
+    if(item.CtlType==ODT_COMBOBOX){DrawPopupItem(item,font,scale);PopupAnimation::RequestRefresh(item.hwndItem);return;}
     PaintBuffered(item.hDC,item.rcItem,[&](HDC dc,RECT area){auto buffered=item;buffered.hDC=dc;buffered.rcItem=area;DrawItemContents(buffered);});
   }
   void DrawItemContents(const DRAWITEMSTRUCT& item)const{

@@ -208,6 +208,18 @@ void CheckPopupOptions(HWND combo){
     CheckUI(g.top==0&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)&&SendMessageW(combo,CB_GETCURSEL,0,0)==before,"Real thumb dragging reaches the first options and retains native popup capture");
     SendMessageW(info.hwndList,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);PumpUI();g=PopupScroll::Measure(info.hwndList);
     CheckUI(g.top>0&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Mouse wheel scrolling reveals more rows in the same open dropdown");
+    if(GetDlgCtrlID(combo)==kSize){
+      PopupScroll::SetTop(info.hwndList,0);
+      SendMessageW(combo,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);PumpUI();
+      CheckUI(PopupScroll::Measure(info.hwndList).top>0&&SendMessageW(combo,CB_GETCURSEL,0,0)==before&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Wheel over the open Window size field scrolls its viewport without changing the configured resolution");
+      PopupScroll::SetTop(info.hwndList,0);
+      SendMessageW(info.hwndList,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA/2)),0);
+      CheckUI(PopupScroll::Measure(info.hwndList).top==0,"Window size retains a partial high-resolution wheel notch");
+      SendMessageW(info.hwndList,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA/2)),0);
+      CheckUI(PopupScroll::Measure(info.hwndList).top>0&&SendMessageW(combo,CB_GETCURSEL,0,0)==before,"Window size accumulates precise wheel deltas without committing a different option");
+      SendMessageW(info.hwndList,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(WHEEL_DELTA*100)),0);
+      CheckUI(PopupScroll::Measure(info.hwndList).top==0,"Window size wheel scrolling clamps at the beginning of the list");
+    }
   }
   PopupScroll::SetTop(info.hwndList,std::max<LRESULT>(0,count-g.visible));UpdateWindow(info.hwndList);
   RECT last{},client{};GetClientRect(info.hwndList,&client);
@@ -254,51 +266,44 @@ void CheckBindingLabelWidths(App& app){
 }
 void CheckPopupAnimation(HWND combo){
   COMBOBOXINFO info{sizeof(info)};CheckUI(GetComboBoxInfo(combo,&info),"Native combo popup is available");
-  DWORD_PTR data=0;CheckUI(GetWindowSubclass(info.hwndList,PopupAnimation::Proc,PopupAnimation::kSubclass,&data)&&data,"Native list has its own animation lifetime");
+  DWORD_PTR data=0;CheckUI(GetWindowSubclass(info.hwndList,PopupAnimation::Proc,PopupAnimation::kSubclass,&data)&&data,"Native list owns its presentation lifetime");
   auto& state=*reinterpret_cast<PopupAnimation*>(data);const auto original=SendMessageW(combo,CB_GETCURSEL,0,0);
+  auto finish=[&]{const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}};
   SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
-  CheckUI(IsWindowVisible(info.hwndList)&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Animated list remains a visible native selection popup");
-  if(PopupAnimation::Enabled()){
-    BYTE alpha=255;DWORD flags=0;const auto layered=GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags);
-    if(!state.active||!layered||alpha==255)std::cerr<<"Popup fade: active="<<state.active<<" owns_layer="<<state.owns_layer<<" started="<<state.started<<" elapsed="<<(state.started?GetTickCount64()-state.started:0)<<" layered="<<layered<<" alpha="<<int(alpha)<<" styles="<<GetWindowLongPtrW(info.hwndList,GWL_EXSTYLE)<<'\n';
-    CheckUI(state.active&&layered&&alpha<255,"Opening begins with real popup opacity below 255");
-    state.Start(info.hwndList);Sleep(220);SendMessageW(info.hwndList,WM_TIMER,PopupAnimation::kTimer,0);
-    CheckUI(GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha<64&&state.active,"A blocked native show transaction cannot consume the opening fade before its first rendered frame");
-    const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
-    CheckUI(!state.active&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==255,"Non-blocking timer completes the fade and stops while idle");
-  }else CheckUI(!state.active,"Windows reduced-motion preference disables the fade");
+  CheckUI(IsWindowVisible(info.hwndList)&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)&&state.surface&&IsWindowVisible(state.surface->window),"Native selection and the dedicated visual popup open together");
+  const auto visual=state.surface->window;BYTE source_alpha=255;DWORD flags=0;
+  CheckUI(GetLayeredWindowAttributes(info.hwndList,nullptr,&source_alpha,&flags)&&source_alpha==0,"Only one compositor surface draws the popup; its native input window stays transparent");
+  if(PopupAnimation::Enabled())CheckUI(state.active&&state.surface->alpha<255,"The single visual surface starts the reference-style opening fade");
+  else CheckUI(!state.active&&state.surface->alpha==255,"Reduced motion displays the popup immediately");
+  finish();CheckUI(state.surface&&state.surface->window==visual&&state.surface->alpha==255&&!state.active,"Opening finishes on the same surface without a visual handoff");
   RECT field,popup;GetWindowRect(combo,&field);GetWindowRect(info.hwndList,&popup);
-  CheckUI(popup.left==field.left&&(popup.top>=field.bottom+2||popup.bottom<=field.top-2),"Popup retains field alignment with a small reference-style separation");
-  const auto region=CreateRectRgn(0,0,0,0);CheckUI(GetWindowRgn(info.hwndList,region)!=ERROR&&!PtInRegion(region,0,0),"Popup clips its panel to rounded corners");DeleteObject(region);
+  CheckUI(popup.left==field.left&&(popup.top>=field.bottom+2||popup.bottom<=field.top-2),"Popup retains reference-style field alignment and separation");
   SendMessageW(combo,WM_KEYDOWN,VK_DOWN,0);SendMessageW(combo,WM_KEYUP,VK_DOWN,0);
-  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)!=original,"Native keyboard selection works after the popup fade");
+  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)!=original,"Native keyboard selection remains active behind the visual surface");
   SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);
-  CheckUI(!state.active&&!state.owns_layer&&!IsWindowVisible(info.hwndList),"Closing removes animation state and restores native popup styles");
+  CheckUI(!state.owns_layer&&!IsWindowVisible(info.hwndList),"Native close immediately releases input and restores its hidden styles");
   if(PopupAnimation::Enabled()){
-    CheckUI(PopupAnimation::closing_popup&&IsWindowVisible(PopupAnimation::closing_popup),"Native close leaves a passive visual for the reference-style closing fade");
-    const auto styles=GetWindowLongPtrW(PopupAnimation::closing_popup,GWL_EXSTYLE);
-    CheckUI((styles&(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT))==(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT),"Closing fade cannot activate or consume mouse input");
-    const auto deadline=GetTickCount64()+1000;while(PopupAnimation::closing_popup&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
-    CheckUI(!PopupAnimation::closing_popup,"Closing animation frees its snapshot and timer after finishing");
+    CheckUI(state.surface&&state.surface->window==visual&&PopupAnimation::closing_popup==visual,"Closing fades the existing visual instead of making a second overlapping copy");
+    const auto styles=GetWindowLongPtrW(visual,GWL_EXSTYLE);
+    CheckUI((styles&(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT))==(WS_EX_NOACTIVATE|WS_EX_TRANSPARENT),"The closing visual cannot activate or consume input");
+    finish();CheckUI(!state.surface&&!PopupAnimation::closing_popup,"Closing releases its surface, timer and bitmap");
+    SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
+    const auto interrupted=state.surface->window;KillTimer(interrupted,PopupAnimation::kTimer);state.surface->alpha=96;state.surface->Upload();
+    SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);KillTimer(interrupted,PopupAnimation::kTimer);
+    CheckUI(state.surface&&state.surface->window==interrupted&&state.surface->alpha==96&&state.surface->target==0,"An early close reverses opacity on the same already-painted surface");
+    for(int i=0;i<5;++i){
+      SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
+      CheckUI(state.surface&&state.surface->window==interrupted&&state.surface->alpha==96&&state.surface->target==255,"Rapid reopening preserves both the visual window and its current opacity");
+      SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);KillTimer(interrupted,PopupAnimation::kTimer);
+    }
+    PopupAnimation::DismissClosing();
   }
-
-  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
-  if(PopupAnimation::Enabled()){
-    SetLayeredWindowAttributes(info.hwndList,0,96,LWA_ALPHA);state.Hide(info.hwndList);BYTE alpha=255;DWORD flags=0;
-    CheckUI(IsWindowVisible(info.hwndList)&&state.owns_layer&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==0,"Before native hide completes, the source stays layered and invisible instead of flashing opaque");
-    CheckUI(PopupAnimation::closing_popup&&GetLayeredWindowAttributes(PopupAnimation::closing_popup,nullptr,&alpha,&flags)&&alpha==96,"An early close transfers the exact in-progress opacity to its passive snapshot");
-  }
-  SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.owns_layer,"Native layer styles restore only after hiding the source window");PopupAnimation::DismissClosing();
-  for(int i=0;i<5;++i){SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.active&&!state.owns_layer,"Rapid reopen/close does not retain an active timer or transparency");}
-  PopupAnimation::DismissClosing();
-  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
-  const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
+  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);finish();
   RECT row;const auto count=SendMessageW(combo,CB_GETCOUNT,0,0);const int target=(original+2)%count;
-  CheckUI(SendMessageW(info.hwndList,LB_GETITEMRECT,target,reinterpret_cast<LPARAM>(&row))!=LB_ERR,"Native popup exposes the real pointer hit-test row");
+  CheckUI(SendMessageW(info.hwndList,LB_GETITEMRECT,target,reinterpret_cast<LPARAM>(&row))!=LB_ERR,"The native list retains its real pointer hit-test geometry");
   ClickControl(info.hwndList,(row.top+row.bottom)/2,(row.left+row.right)/2);
-  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)==target&&!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Actual mouse selection commits the clicked row after popup styling and positioning");
-  PopupAnimation::DismissClosing();
-  SendMessageW(combo,CB_SETCURSEL,original,0);
+  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)==target&&!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Actual pointer selection still commits the selected native row");
+  PopupAnimation::DismissClosing();SendMessageW(combo,CB_SETCURSEL,original,0);
 }
 void CheckSurface(App& app,HWND control,int x,int y){
   RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),paint=CreateCompatibleDC(target),expected=CreateCompatibleDC(target);

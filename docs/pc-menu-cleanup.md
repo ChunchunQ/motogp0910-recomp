@@ -1,6 +1,6 @@
 # PC frontend menu cleanup
 
-The native multiplayer mode selector displays **Online** and omits Xbox LIVE
+The native multiplayer mode selector displays **ONLINE** and omits Xbox LIVE
 Party. Splitscreen and Leaderboards retain their original action IDs. The pinned
 SDK's Party UI returns a failure; no community party implementation replaces it.
 The Game Settings storage selector is omitted because the SDK always returns
