@@ -55,10 +55,10 @@ skip race cutscenes or bypass save/profile initialization.
 
 ## Validation
 
-The final Windows PE/Wine run passed all 28 suite entries using the same DLL
+The final Windows PE/Wine run passed all 29 suite entries using the same DLL
 hashes as the development ZIP: 76 debug option/timing/F3/ImGui checks, 12 GPU
 diagnostic ABI checks, 127 quit/startup/input checks, 99 launcher configuration
-checks and 87,877 actual launcher UI checks. The ZIP was checked for matching
+checks and 60,512 actual launcher UI checks. The ZIP was checked for matching
 runtime hashes and absence of original game data, personal config/logs, readmes,
 checksum files and a separate license folder.
 

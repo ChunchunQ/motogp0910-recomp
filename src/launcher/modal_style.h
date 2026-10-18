@@ -1,5 +1,8 @@
 #pragma once
 #include "core.h"
+#include "popup_animation.h"
+#include "checkbox_paint.h"
+#include "slider_paint.h"
 #include <commctrl.h>
 #include <uxtheme.h>
 namespace launcher {
@@ -14,7 +17,7 @@ struct ModalStyle {
     if(message==WM_PAINT){
       PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);
       SetDCBrushColor(dc,RGB(32,36,45));FillRect(dc,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-      const auto pen=CreatePen(PS_SOLID,1,GetFocus()==control?RGB(255,170,48):RGB(62,68,80));const auto old_pen=SelectObject(dc,pen);const auto old_brush=SelectObject(dc,GetStockObject(NULL_BRUSH));Rectangle(dc,0,0,r.right,r.bottom);
+      const auto pen=CreatePen(PS_SOLID,1,RGB(62,68,80));const auto old_pen=SelectObject(dc,pen);const auto old_brush=SelectObject(dc,GetStockObject(NULL_BRUSH));Rectangle(dc,0,0,r.right,r.bottom);
       SelectObject(dc,old_brush);SelectObject(dc,old_pen);DeleteObject(pen);
       const auto previous=SelectObject(dc,style.font);SetBkMode(dc,TRANSPARENT);SetTextColor(dc,IsWindowEnabled(control)?RGB(242,244,247):RGB(117,125,138));
       const int length=GetWindowTextLengthW(control);std::wstring text(length+1,L'\0');text.resize(GetWindowTextW(control,text.data(),static_cast<int>(text.size())));
@@ -26,17 +29,35 @@ struct ModalStyle {
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,ComboProc,id);
     return DefSubclassProc(control,message,wp,lp);
   }
-  void AttachCombo(HWND control){SetWindowSubclass(control,ComboProc,19,reinterpret_cast<DWORD_PTR>(this));}
+  void AttachCombo(HWND control){PopupAnimation::Attach(control);SetWindowSubclass(control,ComboProc,19,reinterpret_cast<DWORD_PTR>(this));}
+  static LRESULT CALLBACK CheckboxProc(HWND control,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
+    auto& style=*reinterpret_cast<ModalStyle*>(data);
+    if(message==WM_LBUTTONDBLCLK)return DefSubclassProc(control,WM_LBUTTONDOWN,wp,lp);
+    if(message==WM_ERASEBKGND)return 1;
+    if(message==WM_PAINT||message==WM_PRINTCLIENT){
+      PAINTSTRUCT paint{};const auto dc=message==WM_PAINT?BeginPaint(control,&paint):reinterpret_cast<HDC>(wp);const int saved=SaveDC(dc);
+      RECT r;GetClientRect(control,&r);SetDCBrushColor(dc,RGB(23,26,33));FillRect(dc,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+      RECT box{style.S(1),(r.bottom-style.S(18))/2,style.S(19),(r.bottom+style.S(18))/2};
+      PaintCheckbox(dc,box,SendMessageW(control,BM_GETCHECK,0,0)==BST_CHECKED,IsWindowEnabled(control),bool(SendMessageW(control,BM_GETSTATE,0,0)&BST_PUSHED));
+      std::wstring text(GetWindowTextLengthW(control)+1,L'\0');text.resize(GetWindowTextW(control,text.data(),static_cast<int>(text.size())));
+      SelectObject(dc,style.font);SetBkMode(dc,TRANSPARENT);SetTextColor(dc,IsWindowEnabled(control)?RGB(242,244,247):RGB(117,125,138));r.left+=style.S(29);
+      DrawTextW(dc,text.c_str(),-1,&r,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
+      RestoreDC(dc,saved);if(message==WM_PAINT)EndPaint(control,&paint);return 0;
+    }
+    if(message==WM_NCDESTROY)RemoveWindowSubclass(control,CheckboxProc,id);
+    return DefSubclassProc(control,message,wp,lp);
+  }
+  void AttachCheckbox(HWND control){SetWindowSubclass(control,CheckboxProc,26,reinterpret_cast<DWORD_PTR>(this));}
   LRESULT DrawSlider(NMCUSTOMDRAW& draw)const{
     if(draw.dwDrawStage!=CDDS_PREPAINT)return CDRF_DODEFAULT;
-    const int saved=SaveDC(draw.hdc);RECT r,channel{},thumb{};GetClientRect(draw.hdr.hwndFrom,&r);
+    const int saved=SaveDC(draw.hdc);RECT r,thumb{};const auto channel=SliderTrack(draw.hdr.hwndFrom);GetClientRect(draw.hdr.hwndFrom,&r);
     SetDCBrushColor(draw.hdc,RGB(23,26,33));FillRect(draw.hdc,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-    SendMessageW(draw.hdr.hwndFrom,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));SendMessageW(draw.hdr.hwndFrom,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
+    SendMessageW(draw.hdr.hwndFrom,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
     const int cy=r.bottom/2,cx=(thumb.left+thumb.right)/2;const bool enabled=IsWindowEnabled(draw.hdr.hwndFrom);
     RECT track{channel.left,cy-S(2),channel.right,cy+S(2)};SetDCBrushColor(draw.hdc,RGB(48,53,64));FillRect(draw.hdc,&track,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
     const auto color=enabled?RGB(255,170,48):RGB(85,93,107);track.right=cx;SetDCBrushColor(draw.hdc,color);FillRect(draw.hdc,&track,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
     SelectObject(draw.hdc,GetStockObject(DC_BRUSH));SelectObject(draw.hdc,GetStockObject(NULL_PEN));Ellipse(draw.hdc,cx-S(5),cy-S(5),cx+S(5),cy+S(5));
-    if(GetFocus()==draw.hdr.hwndFrom){InflateRect(&r,-S(2),-S(2));DrawFocusRect(draw.hdc,&r);}RestoreDC(draw.hdc,saved);return CDRF_SKIPDEFAULT;
+    RestoreDC(draw.hdc,saved);return CDRF_SKIPDEFAULT;
   }
   LRESULT Color(HDC dc,HWND control)const{
     wchar_t cls[32]{};GetClassNameW(control,cls,32);const bool field=std::wstring_view(cls)==L"EDIT";
@@ -50,7 +71,7 @@ struct ModalStyle {
     if(item.CtlType==ODT_COMBOBOX&&item.itemID!=UINT(-1)){const auto length=SendMessageW(item.hwndItem,CB_GETLBTEXTLEN,item.itemID,0);if(length>=0){text.resize(length+1);SendMessageW(item.hwndItem,CB_GETLBTEXT,item.itemID,reinterpret_cast<LPARAM>(text.data()));text.resize(length);}}
     else if(button){text.resize(GetWindowTextLengthW(item.hwndItem)+1);text.resize(GetWindowTextW(item.hwndItem,text.data(),static_cast<int>(text.size())));}
     r.left+=S(8);r.right-=S(8);DrawTextW(dc,text.c_str(),-1,&r,DT_SINGLELINE|DT_VCENTER|DT_END_ELLIPSIS|DT_NOPREFIX|(button?DT_CENTER:DT_LEFT));
-    if(item.itemState&ODS_FOCUS){auto focus=item.rcItem;InflateRect(&focus,-S(3),-S(3));DrawFocusRect(dc,&focus);}RestoreDC(dc,saved);
+    RestoreDC(dc,saved);
   }
 };
 }

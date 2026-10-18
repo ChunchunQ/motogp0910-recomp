@@ -35,6 +35,8 @@
 #include "in_game_settings.h"
 #include "frame_pacing.h"
 #include "debug_overlay.h"
+#include "portable_paths.h"
+#include "config_file.h"
 #include <rex/input/input_system.h>
 #include <imgui.h>
 #include <rex/ui/keybinds.h>
@@ -52,7 +54,9 @@ class Motogp0910App : public rex::ReXApp {
   // Override virtual hooks for customization:
   // void OnPostInitLogging() override {}
   bool SetupEnvironment() override {
-    if (!rex::ReXApp::SetupEnvironment()) {
+    const bool ready=rex::ReXApp::SetupEnvironment();
+    sdk_config_.Clear();
+    if (!ready) {
       return false;
     }
     const auto root = game_data_root();
@@ -135,7 +139,7 @@ class Motogp0910App : public rex::ReXApp {
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
     motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
-    motogp::localization::Install(runtime(),rex::filesystem::GetExecutableFolder()/"resources/localization/tr/overlay");
+    motogp::localization::Install(runtime(),motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/localization/tr/overlay");
     // The title opens its image volume by the Xbox device name during startup.
     if(auto* root=runtime()->file_system()->ResolvePath("game:\\"))
       runtime()->file_system()->RegisterSymbolicLink("\\Device\\Image",root->absolute_path());
@@ -153,7 +157,7 @@ class Motogp0910App : public rex::ReXApp {
     motogp::ApplyHostDisplay(window());
     motogp::wide::Start(window());
     motogp::livery::Initialize();
-    achievement_preferences_->Load(user_data_root(), rex::filesystem::GetExecutableFolder());
+    achievement_preferences_->Load(user_data_root(), motogp::portable::Root(rex::filesystem::GetExecutableFolder()));
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::Initialize(runtime());
     settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
@@ -165,8 +169,8 @@ class Motogp0910App : public rex::ReXApp {
     motogp::SetFrameObserver(motogp::settings::PollGuestInput);
     motogp::quit::SetOtherMenuCheck(motogp::settings::GuestInputBlocked);
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
-        rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-prompts.bin");
-    motogp::prompts::LoadPS3ControlArtwork(runtime()->memory(),rex::filesystem::GetExecutableFolder()/"resources/controller/ps3-controls.bin");
+        motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/controller/ps3-prompts.bin");
+    motogp::prompts::LoadPS3ControlArtwork(runtime()->memory(),motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/controller/ps3-controls.bin");
     motogp::prompts::StartInputObserver(window());
     motogp::adaptive::Start(window()->HasFocus());
   }
@@ -187,7 +191,7 @@ class Motogp0910App : public rex::ReXApp {
     motogp::debug::RegisterToggle([this]{
       if(debug_dialog_)debug_dialog_.reset();else debug_dialog_=motogp::debug::Create(imgui_drawer(),window(),achievement_preferences_->turkish);
     });
-    achievement_preferences_->Load(user_data_root(),rex::filesystem::GetExecutableFolder());
+    achievement_preferences_->Load(user_data_root(),motogp::portable::Root(rex::filesystem::GetExecutableFolder()));
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::SetFocused(window()->HasFocus());
     quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
@@ -200,10 +204,11 @@ class Motogp0910App : public rex::ReXApp {
   }
   void OnConfigureFonts(ImFontAtlas* atlas) override {
     static const ImWchar ranges[] = {0x20, 0x1ff, 0};
-    const auto path = rex::filesystem::GetExecutableFolder()/"resources/ui/OpenSans-Semibold.ttf";
+    const auto path = motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/ui/OpenSans-Semibold.ttf";
     if(std::filesystem::is_regular_file(path)) {
-      achievement_font_ = atlas->AddFontFromFileTTF(path.string().c_str(),17.f,nullptr,ranges);
-      achievement_heading_font_ = atlas->AddFontFromFileTTF(path.string().c_str(),30.f,nullptr,ranges);
+      const auto utf8_path=rex::path_to_utf8(path);
+      achievement_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),17.f,nullptr,ranges);
+      achievement_heading_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),30.f,nullptr,ranges);
     }
     else REXLOG_WARN("Achievement font is missing; extract the complete build including resources/ui");
   }
@@ -239,22 +244,49 @@ class Motogp0910App : public rex::ReXApp {
     motogp::prompts::StopPS3Artwork();
   }
   void OnConfigurePaths(rex::PathConfig& paths) override {
-    settings_path_=paths.config_path;
+    const auto executable_directory = rex::filesystem::GetExecutableFolder();
+    const auto root=motogp::portable::Root(executable_directory);
+    settings_path_=motogp::config::Ensure(root);
+    const auto settings=motogp::config::Load(settings_path_);
+    paths.config_path=sdk_config_.Prepare(settings);
+    // Relative portable paths share the public installation root, including
+    // direct game starts from Explorer or a different working directory.
+    if(root!=executable_directory)std::filesystem::current_path(root);
+    const auto configured=[&](const char* key,std::filesystem::path& path){
+      if(rex::cvar::GetFlagSource(key)>rex::cvar::Source::kConfig)return false;
+      const auto* node=motogp::config::Find(settings,key);if(!node)return false;
+      const auto value=node->value<std::string>();if(!value||value->empty())return false;
+      auto selected=rex::to_path(*value);path=selected.is_absolute()?selected:root/selected;return true;
+    };
+    configured("game_data_root",paths.game_data_root);
+    const bool user_root_changed=configured("user_data_root",paths.user_data_root);
+    if(!configured("cache_root",paths.cache_root)&&user_root_changed&&rex::cvar::GetFlagSource("cache_root")<=rex::cvar::Source::kConfig)paths.cache_root=paths.user_data_root/"cache";
+    configured("update_data_root",paths.update_data_root);configured("metadata_root",paths.metadata_root);
     if (!paths.game_data_root.empty()) {
       return;
     }
-    const auto executable_directory = rex::filesystem::GetExecutableFolder();
     // Standard portable layout: executable/DLLs above the complete "game"
     // directory. Prefer it when both layouts exist; explicit roots still win.
     // Keep the original flat layout as a fallback for existing installations.
-    for (const auto& candidate : {executable_directory / "game", executable_directory}) {
+    for (const auto& candidate : {root / "game", root}) {
       if (std::filesystem::is_regular_file(candidate / "default.xex")) {
         paths.game_data_root = candidate;
         return;
       }
     }
   }
+  void OnConfigureLogging(rex::LogConfig& config) override {
+    config.log_dir=motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"logs";
+  }
+  void OnPostInitLogging() override {
+    // Resolve the default after TOML loading too, including old explicit
+    // defaults. An ASCII relative path works with both native filesystem APIs
+    // and SDL UTF-8 even when the installation directory contains Turkish text.
+    if(rex::filesystem::GetExecutableFolder().filename()=="bin"&&rex::cvar::Query<std::string>("hid_mappings_file")=="gamecontrollerdb.txt")
+      rex::cvar::SetFlagByName("hid_mappings_file","bin/gamecontrollerdb.txt");
+  }
  private:
+  motogp::config::SdkBridge sdk_config_;
   std::unique_ptr<rex::ui::ImGuiDialog> debug_dialog_;
   std::filesystem::path settings_path_;
   std::shared_ptr<motogp::settings::InputGate> settings_gate_=std::make_shared<motogp::settings::InputGate>();

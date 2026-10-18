@@ -27,6 +27,7 @@ PROBES = {
     'in_game_settings_probe': 'settings', 'adaptive_triggers_probe': '',
     'debug_overlay_probe': 'debug', 'gpu_diagnostics_bridge_probe': 'gpu',
     'relay_crypto_probe': '',
+    'config_file_probe': '',
 }
 
 def main():
@@ -61,17 +62,23 @@ def main():
         label = label or name
         fixture = root / label
         fixture.mkdir()
+        # Exercise launcher configuration/resources in the public root while
+        # loading every private binary and runtime DLL from bin.
+        binaries=fixture/'bin' if name in ('launcher_probe','launcher_layout_probe') else fixture
+        binaries.mkdir(exist_ok=True)
         for file in build.glob('*.dll'):
-            shutil.copy2(file, fixture / file.name)
-        shutil.copy2(build / (name + '.exe'), fixture / (name + '.exe'))
+            shutil.copy2(file, binaries / file.name)
+        shutil.copy2(build / (name + '.exe'), binaries / (name + '.exe'))
         # Launcher validation requires the real game EXE beside the probe.
         if name in ('launcher_probe', 'launcher_layout_probe'):
-            shutil.copy2(build / 'motogp0910.exe', fixture / 'motogp0910.exe')
+            shutil.copy2(build / 'motogp0910.exe', binaries / 'motogp0910.exe')
+        if name == 'launcher_probe':
+            shutil.copy2(build / 'MotoGP09-10Launcher.exe', fixture / 'MotoGP09-10Launcher.exe')
         if (build / 'resources').is_dir():
             shutil.copytree(build / 'resources', fixture / 'resources')
         if config is not None:
             (fixture / 'input-probe.toml').write_text(config, encoding='utf-8')
-        command = ([str(args.wine.resolve())] if args.wine else []) + [target(fixture / (name + '.exe')), *(extra or [])]
+        command = ([str(args.wine.resolve())] if args.wine else []) + [target(binaries / (name + '.exe')), *(extra or [])]
         env = os.environ.copy()
         if args.wine:
             # Exercise the Microsoft CRT shipped with the application. Wine's

@@ -33,11 +33,11 @@ void CheckSliderJump(HWND control){
   RECT r,channel{};GetClientRect(control,&r);SendMessageW(control,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));
   const auto saved=SendMessageW(control,TBM_GETPOS,0,0),page=SendMessageW(control,TBM_GETPAGESIZE,0,0);
   const auto low=SendMessageW(control,TBM_GETRANGEMIN,0,0),high=SendMessageW(control,TBM_GETRANGEMAX,0,0);
-  SetFocus(control);SendMessageW(control,TBM_SETPAGESIZE,0,high-low);SendMessageW(control,TBM_SETPOS,TRUE,high);
+  SetFocus(control);SendMessageW(control,TBM_SETPAGESIZE,0,1);SendMessageW(control,TBM_SETPOS,TRUE,high);
   RedrawWindow(control,nullptr,nullptr,RDW_INVALIDATE|RDW_UPDATENOW);PumpUI();
   for(const bool right:{false,true}){
     ClickControl(control,r.bottom/2,right?channel.right-1:channel.left+1);
-    CheckUI(SendMessageW(control,TBM_GETPOS,0,0)==(right?high:low),"Real channel clicks retain native page-step input in both directions");
+    CheckUI(SendMessageW(control,TBM_GETPOS,0,0)==(right?high:low),"Channel clicks jump directly to either end regardless of native page-step size");
     // A full offscreen print is the expected current picture; compare it with
     // the actual visible channel after the native partial invalidation.
     const auto screen=GetDC(control),expected=CreateCompatibleDC(screen);const auto bitmap=CreateCompatibleBitmap(screen,r.right,r.bottom);const auto old=SelectObject(expected,bitmap);
@@ -46,6 +46,19 @@ void CheckSliderJump(HWND control){
     SelectObject(expected,old);DeleteObject(bitmap);DeleteDC(expected);ReleaseDC(control,screen);
     CheckUI(matches,"A channel click repaints the entire value-dependent fill without stale stripes");
   }
+  for(int percent:{21,56,83}){
+    const auto x=channel.left+MulDiv(channel.right-channel.left,percent,100);
+    ClickControl(control,r.bottom/2,x);const auto value=SendMessageW(control,TBM_GETPOS,0,0);
+    CheckUI(std::abs(value-(low+MulDiv(high-low,percent,100)))<=1,"Real intermediate clicks follow the pointer instead of stopping one page away");
+    RECT thumb{};SendMessageW(control,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
+    if(std::abs((thumb.left+thumb.right)/2-x)>(channel.right-channel.left)/(2*std::max<LRESULT>(1,high-low))+3)std::cerr<<"Slider geometry id="<<GetDlgCtrlID(control)<<" range="<<low<<'-'<<high<<" click="<<x<<" value="<<value<<" thumb="<<thumb.left<<','<<thumb.right<<" channel="<<channel.left<<','<<channel.right<<'\n';
+    CheckUI(std::abs((thumb.left+thumb.right)/2-x)<=(channel.right-channel.left)/(2*std::max<LRESULT>(1,high-low))+3,"Thumb center reaches the clicked point within one discrete step of pixel rounding");
+  }
+  std::atomic<bool> done=false,delivered=true;POINT begin{channel.left+MulDiv(channel.right-channel.left,21,100),r.bottom/2},end{channel.left+MulDiv(channel.right-channel.left,77,100),r.bottom/2};
+  ClientToScreen(control,&begin);ClientToScreen(control,&end);
+  std::thread drag([&]{SetCursorPos(begin.x,begin.y);Sleep(25);INPUT input{};input.type=INPUT_MOUSE;input.mi.dwFlags=MOUSEEVENTF_LEFTDOWN;if(SendInput(1,&input,sizeof(input))!=1)delivered=false;Sleep(50);SetCursorPos(end.x,end.y);Sleep(50);input.mi.dwFlags=MOUSEEVENTF_LEFTUP;if(SendInput(1,&input,sizeof(input))!=1)delivered=false;done=true;});
+  while(!done){PumpUI();Sleep(2);}drag.join();PumpUI();
+  CheckUI(delivered&&std::abs(SendMessageW(control,TBM_GETPOS,0,0)-(low+MulDiv(high-low,77,100)))<=1,"A direct channel jump retains native mouse capture and subsequent dragging");
   SendMessageW(control,TBM_SETPAGESIZE,0,page);SendMessageW(control,TBM_SETPOS,TRUE,saved);
   SendMessageW(GetParent(control),WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(control));UpdateWindow(control);
 }
@@ -71,6 +84,51 @@ void CheckSharpnessPersistence(App& app){
     CheckUI(std::abs(SendMessageW(app.sharpness,TBM_GETPOS,0,0)-value)<=1,"Switching between CAS and temporal FSR preserves the FSR sharpness edit");
   }
   app.SetControls(saved);
+}
+std::vector<uint32_t> PrintedControl(HWND control){
+  RECT r;GetClientRect(control,&r);const auto dc=GetDC(control),copy=CreateCompatibleDC(dc);
+  BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=r.right;info.bmiHeader.biHeight=-r.bottom;
+  info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
+  void* pixels=nullptr;const auto bitmap=CreateDIBSection(dc,&info,DIB_RGB_COLORS,&pixels,nullptr,0);
+  CheckUI(bitmap&&pixels,"Focus regression has a real offscreen control surface");
+  const auto old=SelectObject(copy,bitmap);SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(copy),PRF_CLIENT);
+  const auto first=static_cast<uint32_t*>(pixels);std::vector<uint32_t> result(first,first+r.right*r.bottom);
+  SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(control,dc);return result;
+}
+void CheckFocusPainting(App& app){
+  for(auto [page,control]:{std::pair{3,app.navigation[3]},std::pair{1,app.volume},std::pair{1,app.mute},std::pair{2,app.binding_buttons[0]}}){
+    app.ShowPage(page);app.ScrollPage(0);SetFocus(control);PumpUI();const auto focused=PrintedControl(control);
+    SetFocus(app.window);PumpUI();CheckUI(focused==PrintedControl(control),"Native focus preserves keyboard input without drawing an outline or dotted rectangle");
+  }
+  app.ShowPage(3);
+}
+void CheckRapidCheckbox(HWND control){
+  const auto original=SendMessageW(control,BM_GETCHECK,0,0);
+  for(int i=0;i<6;++i){
+    const auto before=SendMessageW(control,BM_GETCHECK,0,0);ClickControl(control,14,8);
+    CheckUI(SendMessageW(control,BM_GETCHECK,0,0)!=(before),"Every rapid physical checkbox click toggles immediately, including double-click sequences");
+  }
+  CheckUI(SendMessageW(control,BM_GETCHECK,0,0)==original,"An even rapid click sequence restores the original checkbox state");
+}
+void CheckPopupAnimation(HWND combo){
+  COMBOBOXINFO info{sizeof(info)};CheckUI(GetComboBoxInfo(combo,&info),"Native combo popup is available");
+  DWORD_PTR data=0;CheckUI(GetWindowSubclass(info.hwndList,PopupAnimation::Proc,PopupAnimation::kSubclass,&data)&&data,"Native list has its own animation lifetime");
+  auto& state=*reinterpret_cast<PopupAnimation*>(data);const auto original=SendMessageW(combo,CB_GETCURSEL,0,0);
+  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);
+  CheckUI(IsWindowVisible(info.hwndList)&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Animated list remains a visible native selection popup");
+  if(PopupAnimation::Enabled()){
+    BYTE alpha=255;DWORD flags=0;const auto layered=GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags);
+    if(!state.active||!layered||alpha==255)std::cerr<<"Popup fade: active="<<state.active<<" owns_layer="<<state.owns_layer<<" started="<<state.started<<" elapsed="<<(state.started?GetTickCount64()-state.started:0)<<" layered="<<layered<<" alpha="<<int(alpha)<<" styles="<<GetWindowLongPtrW(info.hwndList,GWL_EXSTYLE)<<'\n';
+    CheckUI(state.active&&layered&&alpha<255,"Opening begins with real popup opacity below 255");
+    const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
+    CheckUI(!state.active&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==255,"Non-blocking timer completes the fade and stops while idle");
+  }else CheckUI(!state.active,"Windows reduced-motion preference disables the fade");
+  SendMessageW(combo,WM_KEYDOWN,VK_DOWN,0);SendMessageW(combo,WM_KEYUP,VK_DOWN,0);
+  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)!=original,"Native keyboard selection works after the popup fade");
+  SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);
+  CheckUI(!state.active&&!state.owns_layer&&!IsWindowVisible(info.hwndList),"Closing removes animation state and restores native popup styles");
+  for(int i=0;i<5;++i){SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(combo,CB_SHOWDROPDOWN,FALSE,0);CheckUI(!state.active&&!state.owns_layer,"Rapid reopen/close does not retain an active timer or transparency");}
+  SendMessageW(combo,CB_SETCURSEL,original,0);
 }
 void CheckSurface(App& app,HWND control,int x,int y){
   RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),paint=CreateCompatibleDC(target),expected=CreateCompatibleDC(target);
@@ -286,6 +344,9 @@ int wmain(int argc,wchar_t** argv){
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
     CheckSliderInteractions(app);
     CheckSharpnessPersistence(app);
+    CheckFocusPainting(app);
+    app.ShowPage(1);app.ScrollPage(0);CheckRapidCheckbox(app.mute);app.ShowPage(0);app.ScrollPage(0);CheckRapidCheckbox(app.vsync);CheckRapidCheckbox(app.msaa);
+    CheckPopupAnimation(app.render_resolution);app.ShowPage(3);
     if(argc==4){CheckUI(std::wstring_view(argv[3])==L"--sliders-only","Known targeted regression mode");DestroyWindow(window);std::cout<<ui_checks<<" slider channel-click checks passed\n";Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;}
     CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
     CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");
@@ -507,6 +568,10 @@ int wmain(int argc,wchar_t** argv){
       for(auto size:sizes)CheckUI(WindowSizeFits(size,maximum),"Output size never exceeds physical monitor");
       if(maximum==std::pair{1920,1080})CheckUI(std::find(sizes.begin(),sizes.end(),std::pair{2560,1440})==sizes.end() && std::find(sizes.begin(),sizes.end(),std::pair{3840,2160})==sizes.end(),"1080p monitor hides 1440p and 4K output");
     }
+    {const auto sizes=WindowSizesFor({2560,1600},{{1728,972},{1728,972},{4096,2160},{-1,900}});
+      for(auto size:{std::pair{640,480},std::pair{1024,768},std::pair{1280,800},std::pair{1680,1050},std::pair{1920,1200},std::pair{2560,1440},std::pair{2560,1600},std::pair{1728,972}})
+        CheckUI(std::count(sizes.begin(),sizes.end(),size)==1,"Common aspect ratios and monitor-reported dimensions appear once");
+      CheckUI(std::none_of(sizes.begin(),sizes.end(),[](auto value){return !WindowSizeFits(value,{2560,1600});}),"Invalid or oversized advertised modes are filtered too");}
     for(const auto* mode:{"fsr2","fsr3"})for(const auto* quality:{"auto","nativeaa","quality","balanced","performance","ultra_performance"})for(const auto* aspect:{"auto","16:9","21:9","32:9"}){
       Settings requested;requested.effect=mode;requested.fsr_quality=quality;requested.aspect=aspect;
       app.SetControls(requested);const auto actual=app.GetControls();
@@ -652,16 +717,28 @@ int wmain(int argc,wchar_t** argv){
     }
     auto custom=Settings{};custom.scale_x=2;custom.scale_y=3;custom.guest_width=1600;custom.guest_height=900;
     app.settings=custom;app.SetControls(custom);
-    CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==3,"Custom asymmetric rendering retained");
+    CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==static_cast<LRESULT>(kRenderPresets.size()),"Custom asymmetric rendering retained");
     auto kept=app.GetControls();CheckUI(kept.scale_x==2 && kept.scale_y==3 && kept.guest_width==1600 && kept.guest_height==900,"Custom mode not silently changed");
     app.turkish=true;app.Localize();CheckUI(app.GetControls().guest_width==1600,"Language change preserves custom rendering");
     app.Command(kDefaults,BN_CLICKED);app.ShowPage(2);
-    for(size_t i=0;i<kBindings.size();++i){SetWindowTextW(app.binding_fields[i],L"Ctrl+K");CheckUI(app.GetControls().bindings[i]=="Ctrl+K","Every direct binding field updates its actual setting");}
+    for(size_t i=0;i<kBindings.size();++i){
+      SendMessageW(app.binding_buttons[i],BM_CLICK,0,0);
+      CheckUI(app.capturing&&app.binding_index==static_cast<int>(i)&&app.Text(app.binding_buttons[i])==app.T(L"Press a key…",L"Bir tuşa bas…"),"Each full-width key button enters localized capture mode");
+      MSG pressed{};pressed.message=WM_KEYDOWN;pressed.wParam='K';
+      CheckUI(app.CaptureKey(pressed)&&app.GetControls().bindings[i]=="K"&&app.Text(app.binding_buttons[i])==L"K","Captured key replaces the label and pending binding");
+      SendMessageW(app.binding_buttons[i],WM_RBUTTONUP,0,0);
+      CheckUI(app.GetControls().bindings[i].empty()&&!app.capturing&&app.Text(app.binding_buttons[i])==app.T(L"Unbound",L"Atanmamış"),"Right-click clears the selected binding directly without a popup");
+      app.SetBinding(i,"Ctrl+K");
+    }
+    app.Command(kCaptureBase,BN_CLICKED);app.Command(kCaptureBase+1,BN_CLICKED);
+    CheckUI(app.Text(app.binding_buttons[0])==L"Ctrl+K"&&app.capturing&&app.binding_index==1,"Switching capture targets restores the previous key label");app.CancelCapture();
     app.Command(kCaptureBase,BN_CLICKED);MSG key{};key.message=WM_KEYDOWN;key.wParam=VK_RETURN;
     CheckUI(app.CaptureKey(key) && app.GetControls().bindings[0]=="Return","Inline key capture updates field");
     app.Command(kCaptureBase,BN_CLICKED);key.wParam=VK_ESCAPE;
     CheckUI(app.CaptureKey(key) && app.GetControls().bindings[0]=="Return" && !app.capturing,"Escape cancels capture without changing field");
     app.Command(kResetBinding,BN_CLICKED);CheckUI(app.GetControls().bindings[0]==kBindings[0].defaults,"Action reset restores only selected binding");
+    const auto before_reset=app.GetControls();SendMessageW(app.reset_bindings,BM_CLICK,0,0);
+    CheckUI(app.GetControls().bindings==Settings{}.bindings&&app.GetControls().volume==before_reset.volume&&app.GetControls().effect==before_reset.effect,"Keyboard-only reset preserves unrelated audio and graphics settings");
     app.Command(kClearBinding,BN_CLICKED);CheckUI(app.GetControls().bindings[0].empty(),"Individual action can be unbound");
     app.Command(kMsaa,BN_CLICKED);CheckUI(!app.GetControls().msaa,"Owner-drawn checkbox toggles setting");app.Command(kMsaa,BN_CLICKED);
     app.ShowPage(0);SendMessageW(app.render_resolution,CB_SETCURSEL,2,0);SendMessageW(app.volume,TBM_SETPOS,TRUE,31);
@@ -672,7 +749,7 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(Get(saved.table,"custom_note",std::string{})=="keep me","Unrelated settings preserved");
     SendMessageW(app.language,CB_SETCURSEL,1,0);app.Command(kLanguage,CBN_SELCHANGE);
     PumpUI();
-    Config preferences(app.preferences.path);CheckUI(Get(preferences.table,"language",std::string{})=="tr","UI language selection saved");
+    Config preferences(app.config.path);CheckUI(Get(preferences.table,"launcher_language",std::string{})=="tr","UI language selection is saved in the shared JSON config");
     {
       // Simulate a real child process saving live values while launcher fields
       // are disabled. Its exit must refresh both controls and config baseline.

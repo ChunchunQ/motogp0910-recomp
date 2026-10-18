@@ -20,13 +20,13 @@ Don't publish original game data, personal logs or preview screenshots.
 
 ## Current evidence
 
-The latest [launcher package](launcher-redesign.md) passed
-all 28 Windows PE/Wine suite entries with its matching custom Release DLLs.
+The latest [portable launcher package](portable-launcher.md) passed
+all 29 Windows PE/Wine suite entries with its matching custom Release DLLs.
 Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
 the native transition with Cross/A or Start, Space or Enter. Final checks include
 76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 87,877 launcher UI assertions. All eight sliders
-also pass 64 targeted slider repaint and cross-mode persistence checks. Extended crash
+quit/startup/input checks and 60,512 launcher UI assertions. All eight sliders
+are included in 207 targeted slider, focus, rapid-checkbox and popup-animation checks. Extended crash
 diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
 D3D12 overlay/gameplay and physical controller validation remain separate.
 
@@ -36,6 +36,12 @@ window close. Additional validation passed 56 community-server tests, 96
 sanitized LAN protocol/session checks, 73 relay authentication checks and nine
 native crash-monitor scenarios. These checks do not establish all-track gameplay
 coverage or a measured native Windows frame-rate improvement.
+
+Launcher and game settings now share root `config.json`, including live F1 saves.
+Twenty-two format/migration/SDK-priority checks and 346 live-settings checks
+passed. The public launcher loads private binaries from `bin/`; root resources,
+configuration and logs were verified separately from the unchanged save/cache
+location. Nine crash scenarios also passed with the bin layout and JSON evidence.
 
 | Area | Implemented / checked | Native Windows evidence / limit |
 |---|---|---|

@@ -6,6 +6,8 @@
 #include "network_dialog.h"
 #include "tooltips.h"
 #include "slider_paint.h"
+#include "popup_animation.h"
+#include "checkbox_paint.h"
 #include "hardware.h"
 #include "achievements.h"
 #include "../achievement_preferences.h"
@@ -41,10 +43,10 @@ std::wstring ErrorDetails(const std::exception& error) {
 }
 
 struct App {
-  fs::path exe=ExecutableFolder();
-  Config config{exe/"motogp0910.toml"},preferences{exe/"motogp0910-launcher.toml"};
+  fs::path exe=motogp::portable::Root(ExecutableFolder());
+  Config config{motogp::config::Ensure(exe)};
   Settings settings=Settings::Load(config.table);
-  bool turkish=Get(preferences.table,"language",std::string("en"))=="tr";
+  bool turkish=Get(config.table,"launcher_language",std::string("en"))=="tr";
   HWND window{},path{},size{},backend{},language{},status{},title{},subtitle{},folder_label{},
        fullscreen{},vsync{},keyboard{},mute{},browse{},save{},defaults{},logs{},report{},play{},
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
@@ -55,7 +57,8 @@ struct App {
   std::array<HWND,kEngineEffects.size()> engine_choices{};
   HWND adaptive_triggers{},crash_diagnostics{},shadow_distance{},multiplayer_settings{},debug_overlay{};
   std::vector<int> shadow_distances{kShadowDistances.begin(),kShadowDistances.end()};
-  std::array<HWND,kBindings.size()> binding_fields{},binding_buttons{};
+  std::array<HWND,kBindings.size()> binding_buttons{};
+  HWND reset_bindings{};
   struct Label {HWND control;const wchar_t* en;const wchar_t* tr;};
   struct Placement {HWND control;int x,y,w,h;};
   std::vector<Label> labels;
@@ -65,14 +68,14 @@ struct App {
   std::array<std::string,kBindings.size()> edited_bindings=settings.bindings;
   std::vector<Adapter> adapters=HardwareAdapters();
   std::pair<int,int> display_maximum=HardwareDisplayMaximum(Get<int64_t>(config.table,"monitor",0));
-  std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum);
+  std::vector<std::pair<int,int>> dimensions=WindowSizesFor(display_maximum,HardwareDisplayModes(Get<int64_t>(config.table,"monitor",0)));
   std::vector<int> refresh_rates{0},fps_limits{0,30,60,90,120,144,165,180,240};
   int current_page=3,binding_index=0;
   bool pages_ready=false,switching_page=false;
   bool language_pending=false;
   HWND pointer_focus{};
   unsigned localization_generation=0;
-  bool filling_binding=false,capturing=false;
+  bool capturing=false;
   HFONT font{},heading{},small_font{},bold{},logo{},play_font{};
   std::array<HANDLE,3> private_fonts{};
   HBRUSH background=CreateSolidBrush(kBackground),card=CreateSolidBrush(kCard),field=CreateSolidBrush(kField);
@@ -115,17 +118,19 @@ struct App {
     if(checkbox){checks.emplace(c,false);SetWindowSubclass(c,CheckProc,1,reinterpret_cast<DWORD_PTR>(this));}
     SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
     if(std::wstring_view(cls)==L"EDIT")SetWindowTheme(c,L"",L"");
-    if(std::wstring_view(cls)==L"COMBOBOX"){SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));SendMessageW(c,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}
+    if(std::wstring_view(cls)==L"COMBOBOX"){PopupAnimation::Attach(c);SetWindowSubclass(c,ComboFrameProc,8,reinterpret_cast<DWORD_PTR>(this));SendMessageW(c,CB_SETITEMHEIGHT,WPARAM(-1),S(24));}
     return c;
   }
   static LRESULT CALLBACK CheckProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
+    if(message==WM_LBUTTONDBLCLK)return DefSubclassProc(control,WM_LBUTTONDOWN,wparam,lparam);
     if(message==BM_GETCHECK)return app.Checked(control)?BST_CHECKED:BST_UNCHECKED;
     if(message==BM_SETCHECK){app.SetCheck(control,wparam==BST_CHECKED);return 0;}
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,CheckProc,id);
     return DefSubclassProc(control,message,wparam,lparam);
   }
   static LRESULT CALLBACK BindingProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
+    if(message==WM_RBUTTONUP)return SendMessageW(reinterpret_cast<App*>(data)->window,WM_CONTEXTMENU,reinterpret_cast<WPARAM>(control),lparam);
     if(message==WM_CONTEXTMENU)return SendMessageW(reinterpret_cast<App*>(data)->window,message,reinterpret_cast<WPARAM>(control),lparam);
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,BindingProc,id);
     return DefSubclassProc(control,message,wparam,lparam);
@@ -166,7 +171,15 @@ struct App {
   }
   void CancelCapture(){
     if(!capturing)return;
-    capturing=false;if(binding_buttons[binding_index])SetWindowTextW(binding_buttons[binding_index],L"…");
+    capturing=false;RefreshBinding(binding_index);
+  }
+  void RefreshBinding(size_t index){
+    const auto label=capturing&&static_cast<int>(index)==binding_index?std::wstring(T(L"Press a key…",L"Bir tuşa bas…")):
+        edited_bindings[index].empty()?std::wstring(T(L"Unbound",L"Atanmamış")):Wide(edited_bindings[index]);
+    if(binding_buttons[index])SetWindowTextW(binding_buttons[index],label.c_str());
+  }
+  void SetBinding(size_t index,std::string value){
+    edited_bindings[index]=std::move(value);RefreshBinding(index);
   }
   void ShowPage(int page){
     if(page<0||page>=6||switching_page||(pages_ready&&current_page==page))return;
@@ -209,9 +222,10 @@ struct App {
   void FillRenderPresets(int selection=-1){
     if(selection<0)selection=static_cast<int>(SendMessageW(render_resolution,CB_GETCURSEL,0,0));
     SendMessageW(render_resolution,CB_RESETCONTENT,0,0);
-    const std::array<std::wstring,3> names{
+    const std::array<std::wstring,4> names{
       T(L"1x - 1280 x 720 (native)",L"1x - 1280 x 720 (yerel)"),
-      L"2x - 2560 x 1440",L"3x - 3840 x 2160"};
+      L"2x - 2560 x 1440",L"3x - 3840 x 2160",
+      L"4x - 5120 x 2880"};
     for(const auto& text:names)SendMessageW(render_resolution,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));
     if(MatchingRenderPreset(settings)<0){
       auto [w,h]=RenderDimensions(settings);auto text=std::wstring(T(L"Custom — ",L"Özel — "))+std::to_wstring(w)+L" × "+std::to_wstring(h);
@@ -251,7 +265,7 @@ struct App {
     FillCombo(post_effect,{T(L"Off",L"Kapalı"),L"FXAA",L"FXAA Extreme"});
     FillCombo(backend,{L"SDL — Xbox / PlayStation",T(L"XInput — Xbox-compatible",L"XInput — Xbox uyumlu")});
     FillCombo(prompt_style,{T(L"Automatic",L"Otomatik"),L"PlayStation 3",L"Xbox 360",T(L"Keyboard",L"Klavye")});
-    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS",T(L"AMD FSR 2 (Experimental)",L"AMD FSR 2 (Deneysel)"),T(L"AMD FSR 3 (Experimental)",L"AMD FSR 3 (Deneysel)")});
+    FillCombo(effect,{T(L"Bilinear (default)",L"Bilinear (varsayılan)"),L"AMD FSR 1.0",L"AMD CAS",L"AMD FSR 2",L"AMD FSR 3"});
     FillCombo(fsr_quality,{T(L"Auto",L"Otomatik"),T(L"Native AA",L"Yerel AA"),T(L"Quality",L"Kalite"),T(L"Balanced",L"Dengeli"),T(L"Performance",L"Performans"),T(L"Ultra Performance",L"Ultra Performans")});
     FillCombo(aspect,{T(L"Auto / 16:9",L"Otomatik / 16:9"),L"16:9",T(L"21:9 (Experimental)",L"21:9 (Deneysel)"),T(L"32:9 (Experimental)",L"32:9 (Deneysel)")});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
@@ -272,6 +286,8 @@ struct App {
       SendMessageW(size,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
     SendMessageW(size,CB_SETCURSEL,selected<0?0:selected,0);
     SetWindowTextW(status,(turkish?status_tr:status_en).c_str());UpdateSharpness();RefreshRates();
+    SetWindowTextW(reset_bindings,T(L"Reset keys to defaults",L"Tuşları varsayılana döndür"));
+    for(size_t i=0;i<binding_buttons.size();++i)RefreshBinding(i);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
   void ApplyLanguage(){
@@ -288,7 +304,7 @@ struct App {
     catch(...){switching_page=changing;SendMessageW(window,WM_SETREDRAW,TRUE,0);RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);throw;}
     switching_page=changing;SendMessageW(window,WM_SETREDRAW,TRUE,0);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
-    Put(preferences.table,"language",std::string(turkish?"tr":"en"));preferences.Save();
+    config.table["launcher"].as_table()->insert_or_assign("language",std::string(turkish?"tr":"en"));config.Save();
   }
   bool CaptureKey(const MSG& message){
     if(!capturing || (message.message!=WM_KEYDOWN && message.message!=WM_SYSKEYDOWN))return false;
@@ -298,7 +314,7 @@ struct App {
     auto key=KeyName(vk);if(key.empty())return true;
     std::string value;if(GetKeyState(VK_CONTROL)&0x8000)value+="Ctrl+";
     if(GetKeyState(VK_MENU)&0x8000)value+="Alt+";if(GetKeyState(VK_SHIFT)&0x8000)value+="Shift+";
-    value+=key;CancelCapture();SetWindowTextW(binding_fields[binding_index],Wide(value).c_str());return true;
+    value+=key;CancelCapture();SetBinding(binding_index,std::move(value));return true;
   }
   void SetControls(const Settings& s){
     SetCheck(debug_overlay,s.debug_overlay_enabled);
@@ -339,9 +355,9 @@ struct App {
     SendMessageW(sharpness,TBM_SETPOS,TRUE,s.effect=="cas"?static_cast<int>((std::isfinite(s.cas_sharpness)?std::clamp(s.cas_sharpness,0.0,1.0):0.0)*100):static_cast<int>(100-(std::isfinite(s.fsr_reduction)?std::clamp(s.fsr_reduction,0.0,2.0):0.2)*50));
     for(auto [c,value]:{std::pair{vsync,s.vsync},{keyboard,s.keyboard},{mute,s.mute},
         {letterbox,s.letterbox},{dither,s.dither},{shader_cache,s.shader_cache},{msaa,s.msaa}})SetCheck(c,value);
-    CancelCapture();filling_binding=true;edited_bindings=s.bindings;
-    for(size_t i=0;i<kBindings.size();++i)SetWindowTextW(binding_fields[i],Wide(edited_bindings[i]).c_str());
-    filling_binding=false;UpdateSharpness();
+    CancelCapture();edited_bindings=s.bindings;
+    for(size_t i=0;i<kBindings.size();++i)RefreshBinding(i);
+    UpdateSharpness();
   }
   Settings GetControls()const{
     Settings s=settings;
@@ -394,13 +410,12 @@ struct App {
     const auto c=item.hwndItem;RECT r=item.rcItem;
     bool disabled=(item.itemState&ODS_DISABLED)!=0,pressed=(item.itemState&ODS_SELECTED)!=0;
     bool is_check=checks.contains(c),primary=c==play,nav=std::find(navigation.begin(),navigation.end(),c)!=navigation.end();
-    auto hdc=item.hDC;SetBkMode(hdc,TRANSPARENT);SelectObject(hdc,primary?play_font:bold);
+    const bool key_button=item.CtlID>=kCaptureBase&&item.CtlID<kCaptureBase+static_cast<int>(kBindings.size());
+    auto hdc=item.hDC;SetBkMode(hdc,TRANSPARENT);SelectObject(hdc,primary?play_font:key_button?font:bold);
     if(is_check){
       DrawSurface(hdc,c);
-      RECT box{r.left+S(1),r.top+S(6),r.left+S(17),r.top+S(22)};
-      Rounded(hdc,box,Checked(c)?kAccent:kField,(item.itemState&ODS_FOCUS)?kAccent:kBorder,4);
-      if(Checked(c)){auto pen=CreatePen(PS_SOLID,S(2),kBackground);auto old=SelectObject(hdc,pen);
-        MoveToEx(hdc,box.left+S(4),box.top+S(8),nullptr);LineTo(hdc,box.left+S(7),box.top+S(11));LineTo(hdc,box.left+S(12),box.top+S(5));SelectObject(hdc,old);DeleteObject(pen);}
+      RECT box{r.left+S(1),r.top+S(5),r.left+S(19),r.top+S(23)};
+      PaintCheckbox(hdc,box,Checked(c),!disabled,pressed);
       r.left+=S(29);SetTextColor(hdc,disabled?kMuted:kText);auto text=Text(c);DrawTextW(hdc,text.c_str(),-1,&r,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS);return;
     }
     bool active=nav && c==navigation[current_page];
@@ -408,12 +423,12 @@ struct App {
       DrawSurface(hdc,c);SetTextColor(hdc,active?kText:kMuted);auto text=Text(c);
       DrawTextW(hdc,text.c_str(),-1,&r,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
       if(active){RECT line{r.left+S(4),r.bottom-S(2),r.right-S(4),r.bottom};auto b=CreateSolidBrush(kAccent);FillRect(hdc,&line,b);DeleteObject(b);}
-      if(item.itemState&ODS_FOCUS){InflateRect(&r,-S(3),-S(3));DrawFocusRect(hdc,&r);}return;
+      return;
     }
     auto fill=primary?(pressed?RGB(227,139,29):kAccent):active?RGB(44,36,30):pressed?RGB(51,55,65):nav?kSidebar:kField;
     if(disabled)fill=RGB(40,43,50);
     DrawSurface(hdc,c);
-    Rounded(hdc,r,fill,(item.itemState&ODS_FOCUS)?kAccent:primary?fill:nav?fill:kBorder,10);
+    Rounded(hdc,r,fill,primary?fill:nav?fill:kBorder,10);
     if(active){RECT line{r.left,r.top+S(9),r.left+S(3),r.bottom-S(9)};auto b=CreateSolidBrush(kRed);FillRect(hdc,&line,b);DeleteObject(b);}
     SetTextColor(hdc,disabled?kMuted:primary?kBackground:active?kAccent:kText);
     auto text=Text(c);if(nav)r.left+=S(18);
@@ -429,13 +444,13 @@ struct App {
   LRESULT DrawSlider(NMCUSTOMDRAW& draw){
     if(draw.dwDrawStage!=CDDS_PREPAINT)return CDRF_DODEFAULT;
     auto c=draw.hdr.hwndFrom;RECT r;GetClientRect(c,&r);DrawSurface(draw.hdc,c);
-    RECT channel{},thumb{};SendMessageW(c,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));SendMessageW(c,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
+    const auto channel=SliderTrack(c);RECT thumb{};SendMessageW(c,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
     const int cy=(r.top+r.bottom)/2,cx=(thumb.left+thumb.right)/2;
     RECT track{channel.left,cy-S(2),channel.right,cy+S(2)};Rounded(draw.hdc,track,kBorder,kBorder,4);
     track.right=cx;Rounded(draw.hdc,track,IsWindowEnabled(c)?kAccent:kMuted,IsWindowEnabled(c)?kAccent:kMuted,4);
     auto brush=CreateSolidBrush(IsWindowEnabled(c)?kAccent:kMuted);auto old=SelectObject(draw.hdc,brush),pen=SelectObject(draw.hdc,GetStockObject(NULL_PEN));
     Ellipse(draw.hdc,cx-S(6),cy-S(6),cx+S(6),cy+S(6));SelectObject(draw.hdc,old);SelectObject(draw.hdc,pen);DeleteObject(brush);
-    if(GetFocus()==c){RECT focus=r;InflateRect(&focus,-S(2),-S(2));DrawFocusRect(draw.hdc,&focus);}return CDRF_SKIPDEFAULT;
+    return CDRF_SKIPDEFAULT;
   }
   #include "control_paint.inc"
   void Paint(HDC target){
@@ -463,20 +478,16 @@ struct App {
     for(auto c:{folder_label,status,achievement_note})SendMessageW(c,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
     RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
   }
-  void BindingMenu(HWND control,POINT point){
-    auto it=std::find(binding_fields.begin(),binding_fields.end(),control);if(it==binding_fields.end())return;
-    binding_index=static_cast<int>(std::distance(binding_fields.begin(),it));CancelCapture();
-    if(point.x==-1 && point.y==-1){RECT r;GetWindowRect(control,&r);point={r.left,r.bottom};}
-    auto menu=CreatePopupMenu();AppendMenuW(menu,MF_STRING,kCapture,T(L"Capture key…",L"Tuş yakala…"));
-    AppendMenuW(menu,MF_STRING,kClearBinding,T(L"Unbind",L"Tuşu kaldır"));AppendMenuW(menu,MF_STRING,kResetBinding,T(L"Restore action default",L"Eylemi varsayılana döndür"));
-    auto command=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_RIGHTBUTTON,point.x,point.y,0,window,nullptr);DestroyMenu(menu);
-    if(command)Command(command,BN_CLICKED);
+  void BindingMenu(HWND control,POINT){
+    auto it=std::find(binding_buttons.begin(),binding_buttons.end(),control);if(it==binding_buttons.end())return;
+    CancelCapture();binding_index=static_cast<int>(std::distance(binding_buttons.begin(),it));
+    SetBinding(binding_index,{});
   }
   void SaveSettings() {
     settings=GetControls(); settings.Store(config.table);
     Put(config.table,"game_data_root",Utf8(GameRoot().wstring()));
+    config.table["launcher"].as_table()->insert_or_assign("crash_monitor",Checked(crash_diagnostics));
     config.Save();
-    Put(preferences.table,"crash_monitor",Checked(crash_diagnostics));preferences.Save();
     Status(L"Settings saved. They will be used on the next launch.",L"Ayarlar kaydedildi. Sonraki açılışta kullanılacak.");
   }
   void Browse() {
@@ -553,9 +564,7 @@ struct App {
   }
   void Command(int id,int event){
     try{
-      if(id>=kBindingBase && id<kBindingBase+static_cast<int>(kBindings.size()) && event==EN_CHANGE && !filling_binding){
-        edited_bindings[id-kBindingBase]=Utf8(Text(binding_fields[id-kBindingBase]));
-      }else if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
+      if(id==kAchievementSearch && event==EN_CHANGE){FilterAchievements();
       }else if(id==kAchievementFilter && event==CBN_SELCHANGE){FilterAchievements();
       }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
         if(!language_pending){language_pending=true;PostMessageW(window,kApplyLauncherLanguage,0,0);}
@@ -566,14 +575,15 @@ struct App {
       }else if(event==BN_CLICKED){
         auto c=FindControl(id);if(checks.contains(c)){if(id==kAchievementPopup||id==kAchievementSound){SaveAchievementOption(id);return;}SetCheck(c,!Checked(c));return;}
         if(id>=kNavGraphics && id<=kNavAchievements){ShowPage(id-kNavGraphics);return;}
-        if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){binding_index=id-kCaptureBase;id=kCapture;}
+        if(id>=kCaptureBase && id<kCaptureBase+static_cast<int>(kBindings.size())){CancelCapture();binding_index=id-kCaptureBase;id=kCapture;}
         switch(id){
           case kNavMultiplayer:NetworkDialog(window,font,turkish,scale,settings).Show();break;
           case kAdaptiveTriggers:AdaptiveDialog(window,font,turkish,scale,settings.adaptive).Show();break;
-          case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);SetWindowTextW(binding_buttons[binding_index],L"?");
-            Status(L"Press a key or chord. Escape cancels.",L"Bir tuşa veya tuş birleşimine bas. Escape iptal eder.");break;
-          case kClearBinding:SetWindowTextW(binding_fields[binding_index],L"");break;
-          case kResetBinding:SetWindowTextW(binding_fields[binding_index],Wide(kBindings[binding_index].defaults).c_str());break;
+          case kCapture:CancelCapture();capturing=true;SetFocus(binding_buttons[binding_index]);RefreshBinding(binding_index);
+            break;
+          case kClearBinding:CancelCapture();SetBinding(binding_index,{});break;
+          case kResetBinding:CancelCapture();SetBinding(binding_index,kBindings[binding_index].defaults);break;
+          case kResetBindings:CancelCapture();for(size_t i=0;i<kBindings.size();++i)SetBinding(i,kBindings[i].defaults);break;
           case kVerifyFiles:StartVerification();break;
           case kBrowse:Browse();break;case kSave:SaveSettings();break;
           case kDefaults:settings=Settings{};SetControls(settings);Status(L"Defaults selected. Save or press PLAY to apply.",L"Varsayılanlar seçildi. Kaydet veya oyunu başlat.");break;

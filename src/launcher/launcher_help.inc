@@ -7,9 +7,9 @@
   void LocalizeUpscalerHelp(){
     const auto selected=SendMessageW(effect,CB_GETCURSEL,0,0);
     if(selected==3||selected==4){
-      Tip(effect,L"Experimental FSR 2 / 3 uses neutral motion and depth inputs. It may fall back to FSR 1. No frame generation.",L"Deneysel FSR 2 / 3, nötr hareket ve derinlik verileri kullanır. FSR 1'e dönebilir. Kare üretimi yoktur.");
+      Tip(effect,L"FSR 2 / 3 uses neutral motion and depth inputs. It may fall back to FSR 1. No frame generation.",L"FSR 2 / 3, nötr hareket ve derinlik verileri kullanır. FSR 1'e dönebilir. Kare üretimi yoktur.");
     }else Tip(effect,L"FSR upscales the rendered image. CAS sharpens it without upscaling. Bilinear keeps sharpness adjustment off.",L"FSR, çizilen görüntüyü ölçekler. CAS, ölçeklemeden keskinleştirir. Bilinear seçiliyken keskinlik ayarlanamaz.");
-    Tip(fsr_quality,L"Available with experimental FSR 2 / 3. Controls the internal scaling quality; Auto uses the runtime default.",L"Deneysel FSR 2 / 3 ile kullanılabilir. İç ölçekleme kalitesini belirler; Otomatik, çalışma zamanının varsayılanını kullanır.");
+    Tip(fsr_quality,L"Available with FSR 2 / 3. Controls the internal scaling quality; Auto uses the runtime default.",L"FSR 2 / 3 ile kullanılabilir. İç ölçekleme kalitesini belirler; Otomatik, çalışma zamanının varsayılanını kullanır.");
     Tip(sharpness,L"Sharpness for the selected FSR or CAS mode. Choose an upscaler or sharpener to enable this slider.",L"Seçili FSR veya CAS modunun keskinliği. Kaydırıcıyı açmak için bir ölçekleyici veya keskinleştirici seç.");
   }
   void LocalizeHelp(){
@@ -22,7 +22,7 @@
     Tip(crash_diagnostics,L"Collects an additional local crash report if the game fails. Reports are saved in Logs.",L"Oyun çökerse ek bir yerel çökme raporu toplar. Raporlar Loglar klasörüne kaydedilir.");
     Tip(multiplayer_settings,L"Choose Offline, LAN or a community Online server. Apply edits here, then Save or PLAY in the launcher.",L"Çevrimdışı, LAN veya topluluk sunucusunu seç. Burada uygula; ardından launcher'da Kaydet veya OYNA'ya bas.");
     Tip(render_resolution,L"Internal drawing resolution. Higher settings sharpen the image and increase GPU load.",L"İç çizim çözünürlüğü. Yüksek ayarlar görüntüyü netleştirir ve GPU yükünü artırır.");
-    Tip(size,L"Sets the output window size. Borderless uses your desktop resolution.",L"Çıkış penceresinin boyutunu belirler. Kenarlıksız mod masaüstü çözünürlüğünü kullanır.");
+    Tip(size,L"Common and monitor-reported window sizes that fit the selected display. Borderless uses your desktop resolution.",L"Seçili ekrana sığan yaygın ve monitörün bildirdiği pencere boyutları. Kenarlıksız mod masaüstü çözünürlüğünü kullanır.");
     Tip(refresh_rate,L"Exclusive fullscreen only. Borderless and windowed modes use the desktop refresh rate.",L"Yalnızca özel tam ekranda kullanılır. Kenarlıksız ve pencereli modlar masaüstünün yenileme hızını kullanır.");
     Tip(fps_limit,L"Adds a maximum frame rate. This does not remove the game's own limit.",L"En yüksek kare hızına sınır ekler. Oyunun kendi sınırını kaldırmaz.");
     Tip(aspect,L"Auto keeps the original 16:9 view. Wider ratios are experimental.",L"Otomatik, özgün 16:9 görüntüyü korur. Daha geniş oranlar deneyseldir.");
@@ -32,9 +32,9 @@
     Tip(backend,L"SDL supports native PlayStation and other controllers. DualSense adaptive triggers require SDL.",L"SDL, doğal PlayStation ve diğer kontrolcüleri destekler. DualSense adaptif tetikler için SDL gerekir.");
     Tip(keyboard,L"Enable keyboard input in addition to your controller. Edit individual keys below.",L"Kontrolcünün yanında klavye girişini etkinleştirir. Tuşları aşağıdan düzenleyebilirsin.");
     Tip(adaptive_triggers,L"Experimental fixed trigger resistance for DualSense / Edge using SDL. Other controllers keep their normal triggers.",L"SDL kullanan DualSense / Edge için deneysel sabit tetik direnci. Diğer kontrolcülerin tetikleri normal çalışır.");
-    for(size_t i=0;i<binding_fields.size();++i){
-      Tip(binding_fields[i],L"Type a key name or comma-separated alternatives. Right-click to capture, unbind or restore this action's default.",L"Bir tuş adı veya virgülle ayrılmış alternatifler yaz. Yakalama, kaldırma veya bu eylemi sıfırlama için sağ tıkla.");
-      Tip(binding_buttons[i],L"Click, then press a key or key combination. Esc cancels capture.",L"Tıkla, ardından bir tuşa veya tuş birleşimine bas. Esc yakalamayı iptal eder.");
+    Tip(reset_bindings,L"Restore only the keyboard bindings. Other launcher settings are preserved.",L"Yalnızca klavye tuşlarını varsayılana döndürür. Diğer launcher ayarları korunur.");
+    for(size_t i=0;i<binding_buttons.size();++i){
+      Tip(binding_buttons[i],L"Click, then press a key or key combination. Esc cancels. Right-click to clear this binding.",L"Tıkla, ardından bir tuşa veya tuş birleşimine bas. Esc iptal eder. Atamayı silmek için sağ tıkla.");
     }
     Tip(achievement_list,L"Progress is read from your game save. F7 opens achievements during play.",L"İlerleme oyun kaydından okunur. Oyun sırasında başarımlar için F7'ye bas.");
     Tip(save,L"Save launcher settings for the next game launch. During play, F1 opens settings that can change immediately.",L"Launcher ayarlarını sonraki oyun açılışı için kaydeder. Oyun sırasında F1, anında değişen ayarları açar.");

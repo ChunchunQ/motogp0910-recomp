@@ -74,8 +74,8 @@ void Dump(const std::filesystem::path& stem) {
 int main(int argc,char** argv){try{
   Check(argc==4,"Usage: in_game_settings_probe GAME_ROOT FONT OUTPUT");
   const auto out=std::filesystem::path(argv[3]);std::filesystem::create_directories(out);
-  const auto config_path=out/"fixture.toml";
-  {std::ofstream f(config_path);f<<"game_data_root = 'original-game'\nuser_data_root = 'original-saves'\nlan_enabled = true\nresolution_scale = 3\ncustom_option = 'preserve'\n[audio]\nmaster_volume = 73\n";}
+  const auto config_path=out/"config.json";
+  {std::ofstream f(config_path);f<<motogp::config::Serialize(toml::parse("game_data_root = 'original-game'\nuser_data_root = 'original-saves'\nlan_enabled = true\nresolution_scale = 3\ncustom_option = 'preserve'\n[audio]\nmaster_volume = 73\n[launcher]\nlanguage='tr'\ncrash_monitor=false\n"),config_path);}
   Check(LoadLibraryW((launcher::ExecutableFolder()/L"rexgpu-xenos.dll").c_str())!=nullptr,"Load shipped GPU plugin and its real flags");
   Driver* pad=nullptr;rex::Runtime runtime(std::filesystem::canonical(argv[1]));rex::RuntimeConfig config{.kernel_init=rex::kernel::InitializeKernel,.tool_mode=true};
   config.input_factory=[&](bool){auto input=std::make_unique<InputSystem>(nullptr);auto driver=std::make_unique<Driver>();pad=driver.get();input->AddDriver(std::move(driver));input->SetDeviceAssignment(std::make_unique<SlotAssignment>());return input;};
@@ -135,18 +135,19 @@ int main(int argc,char** argv){try{
     model->Set("keybind_a","Ctrl+K,Space");
   }
   Check(model->Save()&&!model->Unsaved(),"Save clears only successfully persisted live changes");
-  auto t=toml::parse_file(config_path.string());auto loaded=launcher::Settings::Load(t);
-  Check(loaded.volume==37&&loaded.fps_limit==144&&loaded.bindings[0]=="Ctrl+K,Space"&&loaded.effect=="fsr3","Launcher reads saved live values with correct TOML types");
+  auto t=motogp::config::Load(config_path);auto loaded=launcher::Settings::Load(t);
+  Check(loaded.volume==37&&loaded.fps_limit==144&&loaded.bindings[0]=="Ctrl+K,Space"&&loaded.effect=="fsr3","Launcher reads saved live values with correct JSON types");
+  Check(t["launcher"]["language"].value_or(std::string{})=="tr"&&!t["launcher"]["crash_monitor"].value_or(true),"Live game saves preserve preferences in the shared launcher namespace");
   Check(launcher::Get(t,"game_data_root",std::string{})=="original-game"&&launcher::Get(t,"user_data_root",std::string{})=="original-saves"&&launcher::Get(t,"resolution_scale",int64_t{})==3&&launcher::Get(t,"lan_enabled",false)&&launcher::Get(t,"custom_option",std::string{})=="preserve","Unknown, restart-only, LAN and save paths preserved");
   Check(model->Set("audio_master_volume","41"),"Second live edit");
   {launcher::Config other(config_path);launcher::Put(other.table,"other_writer",std::string("keep"));other.Save();}
-  Check(model->Save()&&launcher::Get(toml::parse_file(config_path.string()),"other_writer",std::string{})=="keep","Unrelated external edits merge without loss");
+  Check(model->Save()&&launcher::Get(motogp::config::Load(config_path),"other_writer",std::string{})=="keep","Unrelated external edits merge without loss");
   Check(model->Set("audio_master_volume","51"),"Conflict candidate remains live");
   {launcher::Config other(config_path);launcher::Put(other.table,"audio_master_volume",62);other.Save();}
   Check(!model->Save()&&rex::cvar::Query<int32_t>("audio_master_volume")==51,"Conflicting external edit rejected without losing live value");
-  Check(launcher::Get(toml::parse_file(config_path.string()),"audio_master_volume",int64_t{})==62,"Conflicting file was not overwritten");
+  Check(launcher::Get(motogp::config::Load(config_path),"audio_master_volume",int64_t{})==62,"Conflicting file was not overwritten");
   Check(model->Revert()&&!model->Unsaved(),"Revert restores last saved runtime values");
-  auto lock_path=config_path;lock_path+=".ingame.tmp";{std::ofstream f(lock_path);f<<"unrelated";}
+  auto lock_path=config_path;lock_path+=".tmp";{std::ofstream f(lock_path);f<<"unrelated";}
   Check(model->Set("fps_limit","60")&&!model->Save()&&std::filesystem::file_size(lock_path)==9,"Existing temporary file cannot be clobbered");std::filesystem::remove(lock_path);model->Revert();
   Model no_presenter(out/"headless.toml",nullptr);Check(!no_presenter.Set("present_effect","cas")&&no_presenter.Set("fps_limit","120"),"Headless runtimes do not advertise nonfunctional image controls");
   auto gate=std::make_shared<InputGate>();gate->Initialize(input);gate->SetFocused(true);SetGuestGate(gate.get());motogp::SetFrameObserver(PollGuestInput);

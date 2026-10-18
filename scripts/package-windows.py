@@ -35,6 +35,8 @@ def main():
     if STAGE.exists():
         shutil.rmtree(STAGE)
     STAGE.mkdir(parents=True, exist_ok=True)
+    binaries=STAGE/"bin"
+    binaries.mkdir()
     DIST.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((ROOT / "third_party/rexglue-runtime/manifest.json").read_text())
     for name, expected in manifest["dll_sha256"].items():
@@ -44,13 +46,14 @@ def main():
         source = BUILD / name
         if not source.is_file():
             raise SystemExit(f"Missing build output: {name}")
-        shutil.copy2(source, STAGE / name)
+        shutil.copy2(source, binaries / name)
+    shutil.copy2(BUILD / "MotoGP09-10Launcher.exe", STAGE / "MotoGP09-10Launcher.exe")
     licenses = Path("/workspace/shared/rexglue-nightly-packages/win-amd64/licenses")
     if licenses.is_dir():
         shutil.copytree(licenses, STAGE / "licenses", dirs_exist_ok=True)
     shutil.copy2("/workspace/shared/rexglue-sdk-nightly/LICENSE", STAGE / "licenses/ReXGlue-LICENSE.txt")
     controller_db = ROOT / "third_party/SDL_GameControllerDB"
-    shutil.copy2(controller_db / "gamecontrollerdb.txt", STAGE / "gamecontrollerdb.txt")
+    shutil.copy2(controller_db / "gamecontrollerdb.txt", binaries / "gamecontrollerdb.txt")
     shutil.copy2(controller_db / "LICENSE.txt", STAGE / "licenses/SDL_GameControllerDB-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/tomlplusplus-LICENSE.txt", STAGE / "licenses/tomlplusplus-LICENSE.txt")
     shutil.copy2(ROOT / "third_party/stb/LICENSE.txt", STAGE / "licenses/stb-LICENSE.txt")
@@ -58,8 +61,9 @@ def main():
     shutil.copy2(ROOT / "third_party/open-sans/NOTICE.txt", STAGE / "licenses/OpenSans-NOTICE.txt")
     shutil.copy2(ROOT / "third_party/launcher-fonts/OFL.txt", STAGE / "licenses/LauncherFonts-OFL.txt")
     shutil.copy2(ROOT / "third_party/launcher-fonts/NOTICE.txt", STAGE / "licenses/LauncherFonts-NOTICE.txt")
+    shutil.copy2(ROOT / "third_party/nlohmann/LICENSE.MIT", STAGE / "licenses/Nlohmann-json-LICENSE.txt")
     shutil.copytree(ROOT / "third_party/rexglue-runtime/licenses", STAGE / "licenses", dirs_exist_ok=True)
-    shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", STAGE / "runtime-manifest.json")
+    shutil.copy2(ROOT / "third_party/rexglue-runtime/manifest.json", binaries / "runtime-manifest.json")
     shutil.copytree(ROOT / "resources/controller", STAGE / "resources/controller",
                     ignore=None if args.include_readmes else shutil.ignore_patterns("readme*", "README*"))
     shutil.copytree(ROOT / "resources/localization/tr/overlay", STAGE / "resources/localization/tr/overlay")
@@ -69,6 +73,7 @@ def main():
     # Runtime resources and legal notices are always included. User-facing
     # instructions are opt-in so development builds contain no README files.
     (STAGE / "game").mkdir()
+    (STAGE / "logs").mkdir()
     if args.include_one_pc_test:
         shutil.copy2(ROOT / "scripts/test-lan-one-pc.ps1", STAGE / "test-lan-one-pc.ps1")
     if args.include_readmes:
@@ -211,7 +216,7 @@ def main():
             "   game/default.xex, game/xenondata/, game/nxeart/ ve diger disk dosyalari.\n"
             "3. default.xexp patch'ini ve kendi title update dosyan\n"
             "   TU_11K61VG_0000004000000.0000000000081 dosyasini da game icine koy.\n"
-            "4. motogp0910-launcher.exe dosyasini ac, ayarlarini sec ve PLAY'e bas.\n"
+            "4. Open MotoGP09-10Launcher.exe, choose settings and press PLAY.\n"
             "   Arayuz varsayilan olarak Ingilizcedir; General > Launcher language menusunden Turkce secilebilir.\n"
             "   Dil secimi sonraki acilislarda korunur. Derleme gerekmez.\n\n"
             "GRAPHICS: GPU, output size, 720p / 1440p (2K) / 4K internal resolution, native 2x MSAA,\n"
@@ -269,10 +274,10 @@ def main():
             encoding="utf-8",
         )
         (STAGE / "game/readme.txt").write_text(
-            "Kendi diskinden cikardigin tum oyun dosyalarini bu klasore koy.\n"
-            "default.xex, default.xexp veya TU paketi, xenondata/ ve nxeart/\n"
-            "ayni game klasorunde olmali. EXE ve DLL dosyalari ust klasorde kalir.\n"
-            "Bu paket oyun dosyalarini icermiyor.\n",
+            "Place all original files extracted from your own disc in this folder.\n"
+            "Keep default.xex, default.xexp or the TU package, xenondata/ and nxeart/\n"
+            "together in game/. Start MotoGP09-10Launcher.exe in the parent root;\n"
+            "private EXE and DLL files stay in bin/. Original game data is not included.\n",
             encoding="utf-8",
         )
     # Required notices are embedded and accessible in the launcher. Do not
@@ -289,6 +294,7 @@ def main():
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         # Preserve the player's game-data destination even without a README.
         package.writestr("game/", b"")
+        package.writestr("logs/", b"")
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))
     with zipfile.ZipFile(archive) as package:
@@ -296,7 +302,6 @@ def main():
         assert not any(p.endswith((".xex", ".xexp")) or p.startswith("assets/")
                        for p in package.namelist())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-    (DIST / (archive.name + ".sha256")).write_text(f"{digest}  {archive.name}\n")
     print(f"Windows package: {archive} ({archive.stat().st_size} bytes)")
     print(f"SHA-256: {digest}")
 

@@ -159,6 +159,24 @@ int wmain(int argc,wchar_t** argv) {
     std::string expected;for(const auto& arg:args) expected+=Utf8(arg)+'\n';
     Check(ReadFile(mock/L"launch-arguments.txt")==expected,"Real child received all Unicode arguments");
     Check(ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Game working directory is executable folder");
+    Check(motogp::portable::Root(mock)==mock && motogp::portable::Root(mock/L"bin")==mock,"Flat and bin executables share the installation root");
+    const auto bin=mock/L"bin";fs::create_directory(bin);
+    fs::rename(mock/L"motogp0910.exe",bin/L"motogp0910.exe");
+    for(const auto& entry:fs::directory_iterator(mock))if(entry.path().extension()==L".dll")fs::rename(entry.path(),bin/entry.path().filename());
+    Check(motogp::portable::Binaries(mock)==bin,"Bin executable directory is selected");
+    fs::remove(mock/L"launch-arguments.txt");fs::remove(mock/L"launch-cwd.txt");
+    process=Start(mock,args);Check(WaitForSingleObject(process,15000)==WAIT_OBJECT_0,"Bin child starts with all runtime DLLs confined to bin");
+    GetExitCodeProcess(process,&exit);CloseHandle(process);
+    Check(exit==17 && ReadFile(mock/L"launch-arguments.txt")==expected && ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Bin game retains Unicode arguments and root working directory");
+    fs::copy_file(self,bin/L"motogp0910-launcher.exe");
+    fs::copy_file(motogp::portable::Root(program)/L"MotoGP09-10Launcher.exe",mock/L"MotoGP09-10Launcher.exe");
+    fs::remove(mock/L"launch-arguments.txt");fs::remove(mock/L"launch-cwd.txt");
+    command=Quote((mock/L"MotoGP09-10Launcher.exe").wstring());for(const auto& arg:args)command+=L" "+Quote(arg);
+    STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION bootstrap{};
+    Check(CreateProcessW((mock/L"MotoGP09-10Launcher.exe").c_str(),command.data(),nullptr,nullptr,FALSE,0,nullptr,base.c_str(),&startup,&bootstrap),"CRT-independent public launcher starts from an unrelated working directory");
+    CloseHandle(bootstrap.hThread);Check(WaitForSingleObject(bootstrap.hProcess,15000)==WAIT_OBJECT_0,"Public launcher waits for its private UI process");
+    GetExitCodeProcess(bootstrap.hProcess,&exit);CloseHandle(bootstrap.hProcess);
+    Check(exit==17 && ReadFile(mock/L"launch-arguments.txt")==expected && ReadFile(mock/L"launch-cwd.txt")==Utf8(mock.wstring()),"Public launcher forwards exit status, Unicode arguments and root working directory without root DLLs");
     std::cout<<checks<<" launcher checks passed\n";return 0;
   }catch(const std::exception& e){std::cerr<<"FAIL after "<<checks<<" checks: "<<e.what()<<'\n';return 1;}
 }

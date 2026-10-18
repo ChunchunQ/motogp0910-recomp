@@ -1,4 +1,5 @@
 #include "crash_report.h"
+#include "portable_paths.h"
 #ifdef _WIN32
 #include <DbgHelp.h>
 #include <TlHelp32.h>
@@ -65,7 +66,7 @@ std::string Hash(const fs::path& file){
 fs::path ReportDirectory(DWORD pid,DWORD tid){
   SYSTEMTIME time{};GetSystemTime(&time);wchar_t name[160];
   swprintf_s(name,L"crash-%04u%02u%02u-%02u%02u%02u-%03u-%lu-%lu",time.wYear,time.wMonth,time.wDay,time.wHour,time.wMinute,time.wSecond,time.wMilliseconds,pid,tid);
-  fs::path root=Folder()/L"logs";std::error_code error;fs::create_directories(root,error);
+  fs::path root=portable::Root(Folder())/L"logs";std::error_code error;fs::create_directories(root,error);
   if(error){std::array<wchar_t,32768> local{};const auto n=GetEnvironmentVariableW(L"LOCALAPPDATA",local.data(),static_cast<DWORD>(local.size()));
     if(n && n<local.size())root=fs::path(std::wstring(local.data(),n))/L"MotoGP0910"/L"crashes";
     else {GetTempPathW(static_cast<DWORD>(local.size()),local.data());root=fs::path(local.data())/L"MotoGP0910"/L"crashes";}
@@ -74,14 +75,15 @@ fs::path ReportDirectory(DWORD pid,DWORD tid){
   auto folder=root/name;for(unsigned suffix=1;!fs::create_directory(folder);++suffix)folder=root/(std::wstring(name)+L"-"+std::to_wstring(suffix));return folder;
 }
 void CopyEvidence(const fs::path& folder,std::ostream& report){
-  std::error_code error;const auto root=Folder();fs::path latest;fs::file_time_type time=fs::file_time_type::min();
+  std::error_code error;const auto root=portable::Root(Folder());fs::path latest;fs::file_time_type time=fs::file_time_type::min();
   for(const auto& file:fs::directory_iterator(root/L"logs",error)){
     if(!file.is_regular_file(error) || file.path().extension()!=L".log")continue;
     const auto modified=file.last_write_time(error);if(!error && modified>=time){time=modified;latest=file.path();}
   }
   if(!latest.empty()){fs::copy_file(latest,folder/L"game.log",fs::copy_options::overwrite_existing,error);report<<"Game log: "<<(error?error.message():"game.log")<<'\n';}
-  for(const auto* name:{L"motogp0910.toml",L"motogp0910-launcher.toml",L"runtime-manifest.json"}){
-    if(!fs::is_regular_file(root/name,error))continue;fs::copy_file(root/name,folder/name,fs::copy_options::overwrite_existing,error);
+  for(const auto* name:{L"config.json",L"runtime-manifest.json"}){
+    const auto source=std::wstring_view(name)==L"runtime-manifest.json"?Folder()/name:root/name;
+    if(!fs::is_regular_file(source,error))continue;fs::copy_file(source,folder/name,fs::copy_options::overwrite_existing,error);
     if(error)report<<"Evidence copy failed: "<<Utf8(name)<<" ("<<error.message()<<")\n";
   }
 }

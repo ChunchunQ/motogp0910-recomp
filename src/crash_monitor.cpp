@@ -17,7 +17,7 @@ std::string DebugText(HANDLE process,const OUTPUT_DEBUG_STRING_INFO& info){
 int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
   HANDLE process_handle=nullptr;DWORD pid=0;
   try{
-    const auto root=launcher::ExecutableFolder(),game=root/L"motogp0910.exe";
+    const auto binaries=launcher::ExecutableFolder(),root=motogp::portable::Root(binaries),game=binaries/L"motogp0910.exe";
     int count=0;auto** arguments=CommandLineToArgvW(GetCommandLineW(),&count);if(!arguments)throw std::runtime_error("Cannot parse crash-monitor command");
     std::wstring command=launcher::Quote(game.wstring());for(int i=1;i<count;++i)command+=L" "+launcher::Quote(arguments[i]);LocalFree(arguments);
     STARTUPINFOW startup{sizeof(startup)};PROCESS_INFORMATION process{};

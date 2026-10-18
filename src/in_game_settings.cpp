@@ -1,4 +1,5 @@
 #include "in_game_settings.h"
+#include "config_file.h"
 #include "adaptive_triggers.h"
 #include "overlay_theme.h"
 #include "keyboard_binding_specs.h"
@@ -62,7 +63,7 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
     {"fps_limit","Frame rate limit","FPS sınırı",P::Graphics,K::Integer,0,1000},
     {"vsync","VSync","VSync",P::Graphics,K::Toggle},
     {"present_letterbox","Keep aspect ratio","En-boy oranını koru",P::Graphics,K::Toggle},
-    {"present_effect","Upscaling / sharpening","Yükseltme / keskinleştirme",P::Graphics,K::Choice,0,0,{{"bilinear","Bilinear","Bilinear"},{"cas","AMD CAS","AMD CAS"},{"fsr","AMD FSR 1","AMD FSR 1"},{"fsr2","AMD FSR 2 (Experimental)","AMD FSR 2 (Deneysel)"},{"fsr3","AMD FSR 3 (Experimental)","AMD FSR 3 (Deneysel)"}}},
+    {"present_effect","Upscaling / sharpening","Yükseltme / keskinleştirme",P::Graphics,K::Choice,0,0,{{"bilinear","Bilinear","Bilinear"},{"cas","AMD CAS","AMD CAS"},{"fsr","AMD FSR 1","AMD FSR 1"},{"fsr2","AMD FSR 2","AMD FSR 2"},{"fsr3","AMD FSR 3","AMD FSR 3"}}},
     {"present_fsr_quality_mode","FSR quality mode","FSR kalite modu",P::Graphics,K::Choice,0,0,{{"auto","Automatic","Otomatik"},{"nativeaa","Native AA","Yerel AA"},{"quality","Quality","Kalite"},{"balanced","Balanced","Dengeli"},{"performance","Performance","Performans"},{"ultra_performance","Ultra performance","Ultra performans"}}},
     {"present_fsr_sharpness_reduction","FSR sharpness","FSR keskinliği",P::Graphics,K::Number,0,2},
     {"present_cas_additional_sharpness","CAS sharpness","CAS keskinliği",P::Graphics,K::Number,0,1},
@@ -117,7 +118,7 @@ bool PatchPaintConfig(Paint& config,std::string_view key,std::string_view value)
 }
 struct Model::Disk {
   toml::table baseline;std::string load_error;
-  explicit Disk(const std::filesystem::path& path){try{if(auto bytes=Read(path))baseline=toml::parse(*bytes);}catch(const std::exception& e){load_error=e.what();}}
+  explicit Disk(const std::filesystem::path& path){try{if(auto bytes=Read(path))baseline=motogp::config::Parse(*bytes,path);}catch(const std::exception& e){load_error=e.what();}}
 };
 Model::Model(std::filesystem::path config,rex::ui::Presenter* presenter):path_(std::move(config)),disk_(std::make_unique<Disk>(path_)),presenter_(presenter){
   for(const auto& s:Catalog())if(Available(s))saved_[s.key]=rex::cvar::GetFlagByName(s.key);
@@ -167,7 +168,7 @@ bool Model::Save(){
   if(path_.empty()||!disk_->load_error.empty()){error_="Cannot save settings: "+disk_->load_error;return false;}
   // Hold an exclusive temporary file before reading/merging. Concurrent games
   // never overwrite each other's pending write; only changed managed keys move.
-  auto temp=path_;temp+=".ingame.tmp";
+  auto temp=path_;temp+=path_.extension()==".json"?".tmp":".ingame.tmp";
 #ifdef _WIN32
   HANDLE handle=CreateFileW(temp.c_str(),GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
   if(handle==INVALID_HANDLE_VALUE){error_="Cannot save. Check folder access or close another settings writer.";return false;}
@@ -178,7 +179,7 @@ bool Model::Save(){
   struct Cleanup{int h;std::filesystem::path p;~Cleanup(){if(h>=0)close(h);std::error_code ec;std::filesystem::remove(p,ec);}} cleanup{handle,temp};
 #endif
   try{
-    auto original=Read(path_);auto table=original?toml::parse(*original):toml::table{};
+    auto original=Read(path_);auto table=original?motogp::config::Parse(*original,path_):toml::table{};
     for(const auto& [key,old]:saved_)if(const auto current=Value(key);current!=old){
       if(Serialized(Node(table,key))!=Serialized(Node(disk_->baseline,key))){
         auto expected=table;Store(expected,*Find(key),current);
@@ -186,7 +187,7 @@ bool Model::Save(){
       }
       Store(table,*Find(key),current);
     }
-    std::ostringstream out;out<<toml::toml_formatter{table}<<'\n';const auto bytes=out.str();
+    const auto bytes=motogp::config::Serialize(table,path_);
 #ifdef _WIN32
     DWORD written=0;if(!WriteFile(handle,bytes.data(),DWORD(bytes.size()),&written,nullptr)||written!=bytes.size()||!FlushFileBuffers(handle))throw std::runtime_error("Cannot write settings; original preserved.");
     CloseHandle(handle);cleanup.h=INVALID_HANDLE_VALUE;
@@ -339,7 +340,7 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
       ImGui::TextWrapped("%s",adaptive::Status(tr).c_str());ImGui::Separator();
     }
     if(view.page==Page::Graphics&&(model.Value("present_effect")=="fsr2"||model.Value("present_effect")=="fsr3")){
-      ImGui::TextWrapped("%s",Tr(tr,"Experimental FSR 2/3: full temporal reconstruction is incomplete. No frame generation or scene render-cost reduction.","Deneysel FSR 2/3: tam zamansal yeniden oluşturma eksik. Kare üretimi veya sahne çizim yükü azalması sağlamaz."));ImGui::Separator();
+      ImGui::TextWrapped("%s",Tr(tr,"FSR 2/3: full temporal reconstruction is incomplete. No frame generation or scene render-cost reduction.","FSR 2/3: tam zamansal yeniden oluşturma eksik. Kare üretimi veya sahne çizim yükü azalması sağlamaz."));ImGui::Separator();
     }
     for(const auto& s:Catalog())if(s.page==view.page&&model.Available(s)){
       const auto effect=model.Value("present_effect");

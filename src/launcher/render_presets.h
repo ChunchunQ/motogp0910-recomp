@@ -4,8 +4,8 @@
 
 namespace launcher {
 struct RenderPreset { int width, height, scale; };
-inline constexpr std::array<RenderPreset,3> kRenderPresets{{
-    {1280,720,1}, {2560,1440,2}, {3840,2160,3}}};
+inline constexpr std::array<RenderPreset,4> kRenderPresets{{
+    {1280,720,1}, {2560,1440,2}, {3840,2160,3}, {5120,2880,4}}};
 // MotoGP's source image is 1280x720. ReXGlue's internal scales are integers,
 // so 1440p and 4K are exact 2x/3x presets; a fake fractional 1080p is omitted.
 template<class Settings>

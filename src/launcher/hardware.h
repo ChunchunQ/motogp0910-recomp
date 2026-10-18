@@ -21,10 +21,6 @@ inline std::vector<Adapter> HardwareAdapters() {
     DXGI_ADAPTER_DESC1 info{};
     if(SUCCEEDED(adapter->GetDesc1(&info)) && !(info.Flags&DXGI_ADAPTER_FLAG_SOFTWARE)) {
       std::wstring name=info.Description;
-      if(info.DedicatedVideoMemory) {
-        auto mib=info.DedicatedVideoMemory/(1024*1024);
-        name+=L" ("+std::to_wstring(mib)+L" MB)";
-      }
       result.push_back({static_cast<int>(index),std::move(name)});
     }
     adapter->Release();
@@ -70,6 +66,22 @@ inline std::pair<int,int> HardwareDisplayMaximum(int monitor_index=0) {
   DEVMODEW mode{};mode.dmSize=sizeof(mode);
   if(EnumDisplaySettingsW(device.DeviceName,ENUM_CURRENT_SETTINGS,&mode))return {static_cast<int>(mode.dmPelsWidth),static_cast<int>(mode.dmPelsHeight)};
   return {GetSystemMetrics(SM_CXSCREEN),GetSystemMetrics(SM_CYSCREEN)};
+}
+inline std::vector<std::pair<int,int>> HardwareDisplayModes(int monitor_index=0) {
+  std::vector<DISPLAY_DEVICEW> displays;
+  for(DWORD i=0;;++i){DISPLAY_DEVICEW device{};device.cb=sizeof(device);
+    if(!EnumDisplayDevicesW(nullptr,i,&device,0))break;
+    if((device.StateFlags&DISPLAY_DEVICE_ATTACHED_TO_DESKTOP)&&!(device.StateFlags&DISPLAY_DEVICE_MIRRORING_DRIVER))displays.push_back(device);
+  }
+  std::stable_sort(displays.begin(),displays.end(),[](const auto& a,const auto& b){return bool(a.StateFlags&DISPLAY_DEVICE_PRIMARY_DEVICE)>bool(b.StateFlags&DISPLAY_DEVICE_PRIMARY_DEVICE);});
+  std::vector<std::pair<int,int>> result;if(displays.empty())return result;
+  const auto index=monitor_index>0&&monitor_index<=static_cast<int>(displays.size())?monitor_index-1:0;
+  for(DWORD i=0;;++i){DEVMODEW mode{};mode.dmSize=sizeof(mode);
+    if(!EnumDisplaySettingsW(displays[index].DeviceName,i,&mode))break;
+    const std::pair<int,int> size{static_cast<int>(mode.dmPelsWidth),static_cast<int>(mode.dmPelsHeight)};
+    if(std::find(result.begin(),result.end(),size)==result.end())result.push_back(size);
+  }
+  return result;
 }
 inline std::vector<int> HardwareRefreshRates(int width,int height,int monitor_index=0) {
   std::vector<DISPLAY_DEVICEW> displays;

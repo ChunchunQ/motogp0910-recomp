@@ -1,4 +1,5 @@
 #include "achievement_ui.h"
+#include "config_file.h"
 #include "overlay_theme.h"
 #include <imgui.h>
 #include <rex/ui/immediate_drawer.h>
@@ -57,7 +58,10 @@ void Preferences::Load(const std::filesystem::path& user_root,const std::filesys
   path=user_root/"achievement-ui.toml";
   try {baseline=ReadOptions(path);popup=baseline.popup;sound=baseline.sound;volume=baseline.volume;}
   catch(const std::exception& e) {REXLOG_WARN("Could not load achievement preferences: {}",e.what());}
-  try {const auto file=executable_root/"motogp0910-launcher.toml"; if(std::filesystem::is_regular_file(file)) turkish=toml::parse_file(file.string())["language"].value_or(std::string("en"))=="tr";}
+  try {const auto file=executable_root/"config.json";
+    if(std::filesystem::is_regular_file(file))turkish=motogp::config::Load(file)["launcher"]["language"].value_or(std::string("en"))=="tr";
+    else if(std::filesystem::is_regular_file(executable_root/"motogp0910-launcher.toml"))turkish=toml::parse_file((executable_root/"motogp0910-launcher.toml").string())["language"].value_or(std::string("en"))=="tr";
+  }
   catch(const std::exception&) {turkish=false;}
 }
 bool Preferences::Save() const {

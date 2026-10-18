@@ -27,6 +27,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir', type=Path, required=True)
     parser.add_argument('--wine', type=Path)
+    parser.add_argument('--bin-layout', action='store_true', help='Keep binaries in bin and verify reports/config evidence in the parent root')
     parser.add_argument('--output-dir', type=Path, default=Path('out/crash-report-validation'))
     args = parser.parse_args()
     build = args.build_dir.resolve(strict=True)
@@ -39,13 +40,16 @@ def main():
     for mode, monitored, expected in cases:
         folder = root / (mode + ('-monitor' if monitored else '-direct'))
         folder.mkdir()
+        binaries=folder/'bin' if args.bin_layout else folder
+        binaries.mkdir(exist_ok=True)
         for dll in build.glob('*.dll'):
             if dll.name.lower().startswith(('msvcp', 'vcruntime')):
-                shutil.copy2(dll, folder / dll.name)
-        shutil.copy2(build / 'crash_report_probe.exe', folder / 'motogp0910.exe')
-        shutil.copy2(build / 'motogp0910-crash-monitor.exe', folder / 'motogp0910-crash-monitor.exe')
-        (folder / 'motogp0910.toml').write_text('lan_enabled = true\nlan_bind_ip = ""\n')
-        target = folder / ('motogp0910-crash-monitor.exe' if monitored else 'motogp0910.exe')
+                shutil.copy2(dll, binaries / dll.name)
+        shutil.copy2(build / 'crash_report_probe.exe', binaries / 'motogp0910.exe')
+        shutil.copy2(build / 'motogp0910-crash-monitor.exe', binaries / 'motogp0910-crash-monitor.exe')
+        (binaries/'runtime-manifest.json').write_text('{"fixture": true}\n')
+        (folder / 'config.json').write_text('{"lan_enabled":true,"lan_bind_ip":"","launcher":{}}\n')
+        target = binaries / ('motogp0910-crash-monitor.exe' if monitored else 'motogp0910.exe')
         command = ([str(args.wine.resolve())] if args.wine else []) + [str(target), mode]
         with (folder / 'process-output.txt').open('w') as output:
             process = subprocess.run(command, cwd=folder, stdout=output, stderr=subprocess.STDOUT, timeout=45)
@@ -62,7 +66,8 @@ def main():
             assert process.returncode != 0 and len(reports) == 1, f'{mode}: exactly one crash report required'
             report = reports[0].read_text()
             assert (reports[0].parent / 'game.log').read_text() == 'Diagnostic fixture evidence\n'
-            assert (reports[0].parent / 'motogp0910.toml').is_file()
+            assert json.loads((reports[0].parent / 'config.json').read_text())['lan_enabled'] is True
+            assert json.loads((reports[0].parent/'runtime-manifest.json').read_text())=={'fixture':True}
             if expected is not None:
                 assert f'Exception: 0x{expected:08x}' in report, report
                 assert dump_exception(reports[0].parent / 'crash.dmp') == expected
@@ -75,6 +80,8 @@ def main():
             if mode == 'fastfail':
                 assert 'Parameter[0]: 0x7' in report
         results.append({'case': folder.name, 'returncode': process.returncode, 'reports': len(reports)})
+        if args.bin_layout:
+            assert not (binaries/'logs').exists(), 'Logs must stay in the installation root'
         print(f'{folder.name}: passed', flush=True)
     (root / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
     print(f'{len(cases)} native crash-report scenarios passed. Evidence: {root}')

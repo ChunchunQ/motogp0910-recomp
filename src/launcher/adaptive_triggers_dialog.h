@@ -48,6 +48,7 @@ class AdaptiveDialog {
     auto child=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,S(x),S(y),S(w),S(h),window,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
     SendMessageW(child,WM_SETFONT,reinterpret_cast<WPARAM>(font_),TRUE);
     if(std::wstring_view(cls)==L"COMBOBOX")style_.AttachCombo(child);
+    if(std::wstring_view(cls)==L"BUTTON"&&(style&BS_TYPEMASK)==BS_AUTOCHECKBOX)style_.AttachCheckbox(child);
     if(std::wstring_view(cls)==TRACKBAR_CLASSW)AttachSliderPaint(child);
     return child;
   }

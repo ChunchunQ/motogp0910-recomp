@@ -14,6 +14,8 @@
 #include "render_presets.h"
 #include "engine_options.h"
 #include "../adaptive_trigger_config.h"
+#include "../portable_paths.h"
+#include "../config_file.h"
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -102,15 +104,14 @@ class Config {
   toml::table table;
   std::optional<std::string> original;
   explicit Config(fs::path file) : path(std::move(file)), original(ReadFile(path)) {
-    if (original) table = toml::parse(*original);
+    if (original) table = motogp::config::Parse(*original,path);
+    if(path.filename()=="config.json"&&!table.contains("launcher"))table.insert("launcher",toml::table{});
   }
   void Save() {
     if (ReadFile(path) != original) throw Error(
         L"Settings changed outside the launcher. Close and reopen it before saving.",
         L"Ayar dosyası launcher dışında değişti. Kaydetmeden önce launcher'ı yeniden aç.");
-    std::ostringstream output;
-    output << toml::toml_formatter{table} << '\n';
-    auto bytes = output.str();
+    auto bytes = motogp::config::Serialize(table,path);
     // Keep the exact pre-launcher file once; never overwrite an existing backup.
     const fs::path backup(path.wstring() + L".bak");
     if (original && !fs::exists(backup)) fs::copy_file(path, backup);
@@ -125,6 +126,7 @@ class Config {
     bool ok = WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr)
         && written == bytes.size() && FlushFileBuffers(file);
     CloseHandle(file);
+    if(ReadFile(path)!=original){DeleteFileW(temporary.c_str());throw Error(L"Settings changed during save. Retry after the other writer finishes.",L"Ayarlar kaydetme sırasında değişti. Diğer işlem tamamlanınca tekrar dene.");}
     if (!ok || !MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
       DeleteFileW(temporary.c_str());
       throw Error(L"Failed to write settings; the original file was preserved.",
@@ -317,9 +319,10 @@ inline std::string Sha256(const fs::path& path) {
   return result;
 }
 inline void Validate(const fs::path& exe, const fs::path& game) {
+  const auto binaries=motogp::portable::Binaries(exe);
   for (const auto* name : {L"motogp0910.exe", L"rexruntime.dll", L"rexgpu-xenos.dll", L"amd_fidelityfx_dx12.dll",
        L"msvcp140.dll", L"msvcp140_atomic_wait.dll", L"vcruntime140.dll", L"vcruntime140_1.dll"}) {
-    if (!fs::is_regular_file(exe / name)) throw Error(
+    if (!fs::is_regular_file(binaries / name)) throw Error(
         L"Program file missing: " + std::wstring(name) + L". Extract the complete Windows package.",
         L"Program dosyası eksik: " + std::wstring(name) + L". Windows paketini tamamen çıkar.");
   }
@@ -400,7 +403,8 @@ inline std::vector<std::wstring> Arguments(const fs::path& game, const Settings&
   return args;
 }
 inline HANDLE Start(const fs::path& exe, const std::vector<std::wstring>& arguments,bool monitored=false) {
-  const auto program = exe / (monitored?"motogp0910-crash-monitor.exe":"motogp0910.exe");
+  const auto root=motogp::portable::Root(exe);
+  const auto program = motogp::portable::Binaries(root) / (monitored?"motogp0910-crash-monitor.exe":"motogp0910.exe");
   if(monitored && !fs::is_regular_file(program))throw Error(
       L"Crash monitor is missing. Extract the complete new Windows ZIP.",
       L"Çökme izleyicisi eksik. Yeni Windows ZIP’ini tamamen çıkar.");
@@ -409,7 +413,7 @@ inline HANDLE Start(const fs::path& exe, const std::vector<std::wstring>& argume
   STARTUPINFOW startup{sizeof(startup)};
   PROCESS_INFORMATION process{};
   if (!CreateProcessW(program.c_str(), command.data(), nullptr, nullptr, FALSE,
-      0, nullptr, exe.c_str(), &startup, &process)) throw Error(
+      0, nullptr, root.c_str(), &startup, &process)) throw Error(
           L"Could not start motogp0910.exe. Check the package and folder permissions.",
           L"motogp0910.exe başlatılamadı. Paketi ve klasör izinlerini kontrol et.");
   CloseHandle(process.hThread);

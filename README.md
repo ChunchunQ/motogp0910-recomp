@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-quality-audit.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-portable-launcher.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -16,8 +16,8 @@ historical milestones and do not contain every current fix.
 
 1. Place all original disc files under `game/`, retaining `default.xex`,
    `default.xexp` or the original TU, `xenondata/`, `nxeart/` and remaining files.
-2. Open `motogp0910-launcher.exe`, choose settings and press **PLAY**. Direct
-   `motogp0910.exe` startup is also supported.
+2. Open `MotoGP09-10Launcher.exe`, choose settings and press **PLAY**. Direct
+   `bin/motogp0910.exe` startup is also supported.
 3. Launcher language and game text language are independent. Select **General
    → Game language → Turkish** for translated game text; original voices remain.
 
@@ -25,11 +25,17 @@ Keyboard defaults: Enter = Start, Space = A, Backspace = B, W/S/A/D = left
 stick, Shift + arrows = D-pad. Explicit input settings are preserved.
 **F1** opens live settings and **F7** opens achievements.
 
-The title first checks `game/default.xex` beside the executable, then the
+The title first checks `game/default.xex` in the installation root, then the
 legacy flat layout. An explicit `--game_data_root` takes priority. Missing
 patch data can be extracted from the supplied original TU without rewriting
 the stock XEX or an existing patch. Saves/cache retain the SDK user-data
-location; default game logs are in `logs/` beside the EXE.
+location; default game logs are in `logs/` in the installation root. The game and
+launcher settings share `config.json` in that root, alongside `resources/` and
+`game/`. Private executables, DLLs, the controller database, map and runtime
+manifest live in `bin/`. Keep the complete directory structure when extracting.
+Existing game/launcher TOMLs migrate automatically; their original bytes remain
+in `.legacy.bak` files. F1 saves to the same JSON file. Saves, unlock data and
+cache retain their existing user-data location.
 
 Development ZIPs omit README files, feature instructions, SHA256SUMS and separate
 license folders. Required third-party notices are embedded in the launcher and
@@ -37,10 +43,19 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `cb8f9c6dd4c6c4db7cba721a91c6c4affc72e48eb0ce24c6b2f36683c95ced3b`.
+Package SHA-256: `b62638f244f1fdc0c2295ff02f3788b45d072176df6b4db686f73b037ebe565c`.
 
 ## Current features and evidence
 
+- **Portable launcher:** the root entry point is `MotoGP09-10Launcher.exe`;
+  binaries and runtime files live in `bin/`. Keyboard bindings use rounded key
+  buttons: click to capture, Esc to cancel, right-click to unbind. Sliders jump
+  directly to the clicked point and retain dragging. Focus outlines and adapter
+  VRAM suffixes are removed. Internal rendering now includes 4x (5120×2880).
+  The pinned renderer supports integer scales; fractional 1.5x is not exposed.
+  Native dropdowns fade in with Windows motion preferences respected. Rounded
+  checkboxes accept rapid clicks, and Window size includes common and reported
+  monitor modes that fit the physical display.
 - **Quality audit fixes:** FSR 2/3 sharpness survives switching to CAS and back;
   achievement search handles accented Latin/Turkish case variants; normal window
   close releases adaptive trigger effects before the SDK exits. Invalid trigger
