@@ -34,7 +34,24 @@ void Icon(const rex::system::AchievementInfo& info,bool unlocked,float size,rex:
   if(texture) ImGui::ImageWithBg(reinterpret_cast<ImTextureID>(texture),ImVec2(size,size),ImVec2(0,0),ImVec2(1,1),ImVec4(0,0,0,0), unlocked?white:muted);
   else {Trophy(ImGui::GetCursorScreenPos(),size,ImGui::GetColorU32(unlocked?orange:muted)); ImGui::Dummy(ImVec2(size,size));}
 }
-std::string Fold(std::string value) { for(auto& c:value) if(c>='A'&&c<='Z') c+=32; return value; }
+std::string Fold(std::string_view value) {
+  std::string out;out.reserve(value.size());
+  for(size_t i=0;i<value.size();++i){
+    uint32_t code=static_cast<unsigned char>(value[i]);
+    if((code&0xe0)==0xc0&&i+1<value.size()&&(static_cast<unsigned char>(value[i+1])&0xc0)==0x80)
+      code=((code&0x1f)<<6)|(static_cast<unsigned char>(value[++i])&0x3f);
+    else if(code>=0x80){out+=value[i];continue;}
+    // Search tolerates all Turkish I variants, including an English catalog
+    // displayed with Turkish UI. Do not change the original display strings.
+    if(code>='A'&&code<='Z')code+='a'-'A';
+    else if(code==0x130||code==0x131)code='i';
+    else if((code>=0xc0&&code<=0xd6)||(code>=0xd8&&code<=0xde))code+=0x20;
+    else if(code==0x11e||code==0x15e||code==0x152)++code;
+    if(code<0x80)out+=static_cast<char>(code);
+    else {out+=static_cast<char>(0xc0|(code>>6));out+=static_cast<char>(0x80|(code&0x3f));}
+  }
+  return out;
+}
 }
 void Preferences::Load(const std::filesystem::path& user_root,const std::filesystem::path& executable_root) {
   path=user_root/"achievement-ui.toml";

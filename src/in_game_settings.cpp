@@ -139,7 +139,7 @@ bool Model::Set(std::string_view key,std::string value){
     auto p=adaptive::ReadProfile();auto& t=key.starts_with("dualsense_rt_")?p.right:p.left;
     if(key=="dualsense_adaptive_triggers")p.enabled=value=="true";
     else if(key.ends_with("mode"))t.mode=value;else if(key.ends_with("start"))t.start=static_cast<int>(number);else if(key.ends_with("end"))t.end=static_cast<int>(number);else if(key.ends_with("strength"))t.strength=static_cast<int>(number);
-    if(!p.Valid()){error_="Weapon: end must exceed start / Bitiş başlangıçtan büyük olmalı.";return false;}
+    if(!p.Valid()){error_="Resistance-zone end must exceed start / Direnç aralığının bitişi başlangıçtan büyük olmalı.";return false;}
     if(!adaptive::WriteProfile(p)){error_="Could not update DualSense profile.";return false;}error_.clear();return true;
   }
   if(Value(key)==value){error_.clear();return true;}

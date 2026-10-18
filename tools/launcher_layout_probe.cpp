@@ -59,6 +59,19 @@ void CheckSliderInteractions(App& app){
   for(int id:{111,112,113,121,122,123})CheckSliderJump(GetDlgItem(modal,id));
   DestroyWindow(modal);SetForegroundWindow(app.window);app.ShowPage(3);
 }
+void CheckSharpnessPersistence(App& app){
+  const auto saved=app.GetControls();
+  for(int mode:{1,3,4}){
+    SendMessageW(app.effect,CB_SETCURSEL,mode,0);app.Command(kEffect,CBN_SELCHANGE);
+    const int value=37+mode;SendMessageW(app.sharpness,TBM_SETPOS,TRUE,value);
+    SendMessageW(app.window,WM_HSCROLL,TB_THUMBPOSITION,reinterpret_cast<LPARAM>(app.sharpness));
+    CheckUI(std::abs(app.settings.fsr_reduction-(2.0-value/50.0))<.00001,"Every FSR mode retains the current sharpness edit in pending settings");
+    SendMessageW(app.effect,CB_SETCURSEL,2,0);app.Command(kEffect,CBN_SELCHANGE);
+    SendMessageW(app.effect,CB_SETCURSEL,mode,0);app.Command(kEffect,CBN_SELCHANGE);
+    CheckUI(std::abs(SendMessageW(app.sharpness,TBM_GETPOS,0,0)-value)<=1,"Switching between CAS and temporal FSR preserves the FSR sharpness edit");
+  }
+  app.SetControls(saved);
+}
 void CheckSurface(App& app,HWND control,int x,int y){
   RECT r;GetClientRect(control,&r);const auto target=GetDC(app.window),paint=CreateCompatibleDC(target),expected=CreateCompatibleDC(target);
   const auto bitmap=CreateCompatibleBitmap(target,r.right,r.bottom);const auto previous=SelectObject(paint,bitmap);
@@ -272,6 +285,7 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
     CheckSliderInteractions(app);
+    CheckSharpnessPersistence(app);
     if(argc==4){CheckUI(std::wstring_view(argv[3])==L"--sliders-only","Known targeted regression mode");DestroyWindow(window);std::cout<<ui_checks<<" slider channel-click checks passed\n";Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;}
     CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
     CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");

@@ -206,7 +206,7 @@ struct Settings {
   void Validate() const {
     if(network_mode!="offline" && network_mode!="lan" && network_mode!="online")throw Error(L"Choose Offline, LAN or Online.",L"Çevrimdışı, LAN veya Çevrimiçi seç.");
     if(network_mode=="online" && (online_server.empty() || online_server.size()>512 || online_server.find_first_of("\r\n\t ")!=std::string::npos || (!online_server.starts_with("https://") && !online_server.starts_with("http://127.0.0.1:") && !online_server.starts_with("http://localhost:"))))throw Error(L"Online requires a community server HTTPS address (for example https://play.example.com).",L"Çevrimiçi için topluluk sunucusunun HTTPS adresi gerekli (örneğin https://play.example.com).");
-    if(!adaptive.Valid())throw Error(L"Invalid DualSense profile. Weapon end must exceed start; positions 0-9, strength 0-8.",L"Geçersiz DualSense profili. Weapon bitişi başlangıçtan büyük olmalı; konumlar 0-9, güç 0-8.");
+    if(!adaptive.Valid())throw Error(L"Invalid DualSense profile. Resistance-zone end must exceed start; positions 0-9, strength 0-8.",L"Geçersiz DualSense profili. Direnç aralığının bitişi başlangıçtan büyük olmalı; konumlar 0-9, güç 0-8.");
     const auto ipv4=[](const std::string& value){
       if(value.empty())return true;unsigned parts=0,number=0,digits=0;uint32_t address=0;
       for(char c:value){if(c=='.'){if(!digits || number>255 || ++parts>3)return false;address=(address<<8)|number;number=digits=0;}

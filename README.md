@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-slider-click-fix.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-quality-audit.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -37,10 +37,15 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `e1ce02ccc9dc15d89f594d4db18befa2ab015a112148d0301123a9d291f8aae7`.
+Package SHA-256: `cb8f9c6dd4c6c4db7cba721a91c6c4affc72e48eb0ce24c6b2f36683c95ced3b`.
 
 ## Current features and evidence
 
+- **Quality audit fixes:** FSR 2/3 sharpness survives switching to CAS and back;
+  achievement search handles accented Latin/Turkish case variants; normal window
+  close releases adaptive trigger effects before the SDK exits. Invalid trigger
+  errors use racing terminology. Automated CPU/UI and protocol checks are
+  distinguished from native Windows GPU and physical hardware verification.
 - **Optional debug overlay and startup skipping:** Advanced → Enable debug
   overlay permits F3 to show guest presentation timing, graphics/runtime counters,
   display settings, memory and audio/cache diagnostics. The overlay defaults off

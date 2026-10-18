@@ -176,6 +176,12 @@ class Motogp0910App : public rex::ReXApp {
     rex::ui::ProcessKeyEvent(event);
   }
   void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
+  bool OnWindowCloseRequested() override {
+    // The pinned SDK hard-exits in OnClosing before OnShutdown can run.
+    // Release controller firmware effects while SDL and the runtime are alive.
+    motogp::adaptive::Stop();
+    return true;
+  }
   void OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) override {
     // The SDK has just registered F3; replace it before the game is launched.
     motogp::debug::RegisterToggle([this]{

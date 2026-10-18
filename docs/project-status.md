@@ -21,14 +21,21 @@ Don't publish original game data, personal logs or preview screenshots.
 ## Current evidence
 
 The latest [launcher package](launcher-redesign.md) passed
-all 27 Windows PE/Wine suite entries with its matching custom Release DLLs.
+all 28 Windows PE/Wine suite entries with its matching custom Release DLLs.
 Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
 the native transition with Cross/A or Start, Space or Enter. Final checks include
 76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 87,871 launcher UI assertions. All eight sliders
-also pass 58 targeted real channel-click repaint checks. Extended crash
+quit/startup/input checks and 87,877 launcher UI assertions. All eight sliders
+also pass 64 targeted slider repaint and cross-mode persistence checks. Extended crash
 diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
 D3D12 overlay/gameplay and physical controller validation remain separate.
+
+The current quality package also fixes temporal FSR sharpness persistence across
+mode changes, accented achievement search and adaptive-trigger cleanup on normal
+window close. Additional validation passed 56 community-server tests, 96
+sanitized LAN protocol/session checks, 73 relay authentication checks and nine
+native crash-monitor scenarios. These checks do not establish all-track gameplay
+coverage or a measured native Windows frame-rate improvement.
 
 | Area | Implemented / checked | Native Windows evidence / limit |
 |---|---|---|

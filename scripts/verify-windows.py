@@ -26,6 +26,7 @@ PROBES = {
     'achievement_ui_probe': 'achievements', 'quit_menu_probe': 'quit',
     'in_game_settings_probe': 'settings', 'adaptive_triggers_probe': '',
     'debug_overlay_probe': 'debug', 'gpu_diagnostics_bridge_probe': 'gpu',
+    'relay_crypto_probe': '',
 }
 
 def main():
@@ -72,6 +73,11 @@ def main():
             (fixture / 'input-probe.toml').write_text(config, encoding='utf-8')
         command = ([str(args.wine.resolve())] if args.wine else []) + [target(fixture / (name + '.exe')), *(extra or [])]
         env = os.environ.copy()
+        if args.wine:
+            # Exercise the Microsoft CRT shipped with the application. Wine's
+            # builtin MSVCP can give different condition-variable behavior.
+            native_crt = 'msvcp140,msvcp140_atomic_wait,vcruntime140,vcruntime140_1=n'
+            env['WINEDLLOVERRIDES'] = ';'.join(filter(None, (env.get('WINEDLLOVERRIDES', ''), native_crt)))
         for key in ('REX_MNK_MODE', 'REXGLUE_MNK_MODE'):
             env.pop(key, None)
         env.update(environment or {})

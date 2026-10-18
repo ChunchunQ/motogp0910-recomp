@@ -72,6 +72,13 @@ int main(int argc,char** argv) {try {
   MenuState state;state.filter=1;Check(Matches(catalog[0],true,state)&&!Matches(catalog[1],false,state),"Unlocked filter");
   state.filter=2;Check(!Matches(catalog[0],true,state)&&Matches(catalog[1],false,state),"Locked filter");
   state.filter=0;std::memcpy(state.search,"VICTORY",8);Check(Matches(catalog[0],true,state)&&!Matches(catalog[1],false,state),"Case-insensitive search");
+  {AchievementInfo info;info.label="ÇEVİK ŞAMPİYON";MenuState query;std::strcpy(query.search,"çevik");Check(Matches(info,false,query),"Turkish uppercase achievement titles match lowercase UTF-8 searches");
+   info.label="ÖDÜL VE GÜÇ";std::strcpy(query.search,"ödül");Check(Matches(info,false,query),"Turkish umlauts retain case-insensitive search");
+   info.label="Final";info.unachieved_description="DOĞRU YOL";std::strcpy(query.search,"doğru");Check(Matches(info,false,query),"Turkish case folding also covers locked descriptions");
+   info.label="IŞIK";info.unachieved_description.clear();std::strcpy(query.search,"ışık");Check(Matches(info,false,query),"Turkish dotted and dotless I are searchable regardless of keyboard layout");
+   info.label="FIRST";std::strcpy(query.search,"first");Check(Matches(info,false,query),"English I case folding remains unchanged when UI and game languages differ");
+   info.label="ÉTOILE";std::strcpy(query.search,"étoile");Check(Matches(info,false,query),"French accented uppercase titles are also searchable");
+   info.label="CAMPEÓN";std::strcpy(query.search,"campeón");Check(Matches(info,false,query),"Spanish accented uppercase titles are also searchable");}
   ToastQueue queue;AchievementEvent first{catalog[0],100},second{catalog[1],200};
   std::vector<std::thread> producers;for(int i=0;i<8;++i) producers.emplace_back([&]{for(int j=0;j<100;++j)queue.Push(first);});for(auto& thread:producers) thread.join();
   Check(!queue.Next(0,false),"Background notifications wait without sound");auto current=queue.Next(10,true);Check(current && current->play_sound && current->event.achievement.id==1,"First visible notification sounds exactly once");
