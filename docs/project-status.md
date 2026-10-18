@@ -25,7 +25,7 @@ all 29 Windows PE/Wine suite entries with its matching custom Release DLLs.
 Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
 the native transition with Cross/A or Start, Space or Enter. Final checks include
 76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 69,426 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
+quit/startup/input checks and 70,109 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
 mouse selection and inline network visibility are included in the UI run. Extended crash
 diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
 D3D12 overlay/gameplay and physical controller validation remain separate.
@@ -56,7 +56,7 @@ was removed so it cannot obscure cards.
 | Community Online / VDS | Separate Offline/LAN/Online launcher modes; Linux/Windows Python service, HTTPS identities, authenticated UDP relay and native 378-view persistent leaderboards | Local Windows PEs exercised with Linux and Windows Python backends under Wine; public VDS/TLS/firewall and Internet race pending. Use Player Match; no official Xbox Live ranked/friends/voice. See community-online.md. |
 | Community service security | MGO2 UDP endpoint proof, strict room transitions, pre-TLS admission, authenticated Caddy proxy, bounded SQLite/HTTP/UDP work; 46 server tests and 12 real HTTPS checks per Linux/Windows backend | Windows Python/clients exercised under Wine; deployed VDS OS/firewall/provider DDoS controls and Internet race remain unverified. See community-security.md. |
 | Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
-| Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 345 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
+| Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 346 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
 | Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; normalized 48 Turkish glyphs across four banks; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
 | Quit menu | Uppercase entry; white stripe and upper cap with brightness/alpha retained; separate boot/frontend guards; 109 checks | User confirmed Press Start Back now opens exit confirmation. User also accepted the white upper cap. See quit-menu.md. |
 | Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 60,132 actual launcher UI checks | EN/TR previews inspected. Native scrollbar now passes actual mouse-drag input; title bar has only minimize/close. Native game GPU/listening check pending |

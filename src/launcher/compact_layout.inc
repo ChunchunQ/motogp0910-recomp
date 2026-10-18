@@ -31,7 +31,7 @@
   void Reveal(HWND control){
     for(const auto& p:placements)if(p.control==control){
       wchar_t cls[32];GetClassNameW(control,cls,32);
-      const int h=std::wstring_view(cls)==L"COMBOBOX"?32:p.h;
+      const int h=lstrcmpiW(cls,L"COMBOBOX")==0?32:p.h;
       const int offset=page_scroll[current_page];
       if(p.y<offset)ScrollPage(p.y);
       else if(p.y+h>offset+kPageHeight)ScrollPage(p.y+h-kPageHeight+4);
@@ -182,7 +182,7 @@
     page_content=Control(L"STATIC",L"",WS_CLIPCHILDREN,0,0,kPageWidth-22,kPageHeight,0,page_view);
     SetWindowLongPtrW(page_content,GWL_EXSTYLE,GetWindowLongPtrW(page_content,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
     SetWindowSubclass(page_content,ContentProc,1,reinterpret_cast<DWORD_PTR>(this));
-    auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,220,id);};
+    auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,310,id);};
     auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,30,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
     auto check=[&](int page,int x,int y,int w,int id){return PageControl(page,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,x,y,w,28,id);};
     auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){auto label=LabelControl(page,en,tr,x,y,kColumnWidth,24);auto control=combo(page,x,y+26,kColumnWidth,id);help_labels[control]=label;return control;};
@@ -264,9 +264,11 @@
     try{
       const auto result=verify_future.get();
       if(result.cancelled){Status(L"File verification cancelled. No files were changed.",L"Dosya kontrolü iptal edildi. Hiçbir dosya değiştirilmedi.");return;}
-      const auto count=std::to_wstring(result.matched),issues=std::to_wstring(result.missing+result.changed+result.unreadable);
-      Status(result.Passed()?L"Verification passed: "+count+L" original data files + XEX/update checked.":L"Verification found "+issues+L" issue(s). Open logs for the report.",
-          result.Passed()?L"Doğrulama başarılı: "+count+L" özgün veri dosyası ve XEX/güncelleme kontrol edildi.":L"Doğrulamada "+issues+L" sorun bulundu. Rapor için logları aç.",result.Passed());
+      const auto count=std::to_wstring(result.matched),issues=std::to_wstring(result.missing+result.changed+result.unreadable),missing=std::to_wstring(result.missing);
+      const auto failure_en=result.missing?L"Found "+missing+(result.missing==1?L" missing file.":L" missing files.")+L" Open logs for the report.":L"Verification found "+issues+L" issue(s). Open logs for the report.";
+      const auto failure_tr=result.missing?missing+L" eksik dosya bulundu. Rapor için logları aç.":L"Doğrulamada "+issues+L" sorun bulundu. Rapor için logları aç.";
+      Status(result.Passed()?L"Verification passed: "+count+L" original data files + XEX/update checked.":failure_en,
+          result.Passed()?L"Doğrulama başarılı: "+count+L" özgün veri dosyası ve XEX/güncelleme kontrol edildi.":failure_tr,result.Passed());
       fs::create_directories(exe/L"logs");
       SYSTEMTIME now{};GetSystemTime(&now);wchar_t filename[100];
       swprintf_s(filename,L"verification-%04u%02u%02u-%02u%02u%02u-%lu.txt",now.wYear,now.wMonth,now.wDay,now.wHour,now.wMinute,now.wSecond,GetCurrentProcessId());
@@ -281,6 +283,16 @@
       MessageBoxW(window,message.c_str(),T(L"Game file verification",L"Oyun dosyası doğrulama"),MB_OK|(result.Passed()?MB_ICONINFORMATION:MB_ICONWARNING));
     }catch(const std::exception& e){ErrorBox(e);}
   }
+  void DrawComboControl(HDC dc,HWND control){
+    RECT r;GetClientRect(control,&r);DrawSurface(dc,control);
+      const bool open=SendMessageW(control,CB_GETDROPPEDSTATE,0,0)!=0;
+      Rounded(dc,r,kField,open?kAccent:kBorder,6);
+      DRAWITEMSTRUCT item{};item.CtlType=ODT_COMBOBOX;item.hwndItem=control;item.hDC=dc;item.rcItem=r;item.rcItem.left+=S(1);item.rcItem.top+=S(1);item.rcItem.right-=S(27);item.rcItem.bottom-=S(1);
+      item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));item.itemState=ODS_COMBOBOXEDIT;if(!IsWindowEnabled(control))item.itemState|=ODS_DISABLED;
+      DrawPopupItemContents(item,font,scale);
+      const auto pen=CreatePen(PS_SOLID,std::max(1,S(1)),IsWindowEnabled(control)?kMuted:kBorder);const auto old=SelectObject(dc,pen);
+      const int x=r.right-S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-S(4),y+(open?S(2):-S(2)),nullptr);LineTo(dc,x,y+(open?-S(2):S(2)));LineTo(dc,x+S(4),y+(open?S(2):-S(2)));SelectObject(dc,old);DeleteObject(pen);
+  }
   static LRESULT CALLBACK ComboFrameProc(HWND control,UINT message,WPARAM wparam,LPARAM lparam,UINT_PTR id,DWORD_PTR data){
     auto& app=*reinterpret_cast<App*>(data);
     if(message==WM_MOUSEWHEEL&&!SendMessageW(control,CB_GETDROPPEDSTATE,0,0)){
@@ -290,16 +302,10 @@
     }
     if(message==WM_ERASEBKGND)return 1;
     if(message==WM_PAINT){
-      PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);
-      const bool open=SendMessageW(control,CB_GETDROPPEDSTATE,0,0)!=0;
-      app.Rounded(dc,r,kField,open?kAccent:kBorder,6);
-      DRAWITEMSTRUCT item{};item.CtlType=ODT_COMBOBOX;item.hwndItem=control;item.hDC=dc;item.rcItem=r;item.rcItem.left+=app.S(1);item.rcItem.top+=app.S(1);item.rcItem.right-=app.S(27);item.rcItem.bottom-=app.S(1);
-      item.itemID=static_cast<UINT>(SendMessageW(control,CB_GETCURSEL,0,0));item.itemState=ODS_COMBOBOXEDIT;if(!IsWindowEnabled(control))item.itemState|=ODS_DISABLED;
-      app.DrawCombo(item);
-      const auto pen=CreatePen(PS_SOLID,std::max(1,app.S(1)),IsWindowEnabled(control)?kMuted:kBorder);const auto old=SelectObject(dc,pen);
-      const int x=r.right-app.S(13),y=(r.top+r.bottom)/2;MoveToEx(dc,x-app.S(4),y+(open?app.S(2):-app.S(2)),nullptr);LineTo(dc,x,y+(open?-app.S(2):app.S(2)));LineTo(dc,x+app.S(4),y+(open?app.S(2):-app.S(2)));SelectObject(dc,old);DeleteObject(pen);
+      PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);app.PaintControl(dc,control);
       EndPaint(control,&ps);return 0;
     }
+    if(message==WM_PRINTCLIENT){app.PaintControl(reinterpret_cast<HDC>(wparam),control);return 0;}
     if(message==WM_NCDESTROY)RemoveWindowSubclass(control,ComboFrameProc,id);
     return DefSubclassProc(control,message,wparam,lparam);
   }

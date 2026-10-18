@@ -5,7 +5,7 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-single-launcher.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-paint-fix.zip)
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -43,7 +43,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `0e81d994fb15040bde7b16b34f160ee9bf8d385a4b3a7c6dd208aeacb24301af`.
+Package SHA-256: `4b02db392a5dd64f0f3b1d9fff0328becf3df6ab424232a106d1c6543310c903`.
 
 ## Current features and evidence
 
@@ -51,14 +51,20 @@ Package SHA-256: `0e81d994fb15040bde7b16b34f160ee9bf8d385a4b3a7c6dd208aeacb24301
   the UI runs in that process with its library and runtime files in `bin/`,
   without a second launcher EXE. Checkboxes match the orange accent; the
   achievement list has no tooltip covering its cards. Keyboard bindings use rounded key
-  buttons: click to capture, Esc to cancel, right-click to unbind. Sliders jump
+  buttons: click to capture, Esc to cancel, right-click to unbind. All 25 actions
+  show compact controller equivalents such as `(A/Cross)` and `(RT/R2)`. Sliders jump
   directly to the clicked point and retain dragging. Focus outlines and adapter
   VRAM suffixes are removed. Internal rendering now includes 4x (5120×2880).
   The pinned renderer supports integer scales; fractional 1.5x is not exposed.
   Native dropdowns use rounded charcoal panels with orange selection text and
-  two-way fades, respecting Windows motion preferences. Rounded orange
+  two-way fades, respecting Windows motion preferences. Open lists share the
+  closed field background. Synchronous owner-draw checkbox and menu paints
+  present their text/glyphs together. Rounded orange
   checkboxes accept rapid clicks, and Window size includes common and reported
-  monitor modes that fit the physical display.
+  monitor modes that fit the physical display. Long dropdowns have bounded
+  height and a visible scrollbar supporting wheel input and thumb dragging.
+  Verification identifies missing files explicitly and retains the detailed
+  read-only report. The ZIP omits empty logs; logging creates that folder on demand.
 - **Quality audit fixes:** FSR 2/3 sharpness survives switching to CAS and back;
   achievement search handles accented Latin/Turkish case variants; normal window
   close releases adaptive trigger effects before the SDK exits. Invalid trigger

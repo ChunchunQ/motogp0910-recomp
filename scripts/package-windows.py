@@ -73,7 +73,6 @@ def main():
     # Runtime resources and legal notices are always included. User-facing
     # instructions are opt-in so development builds contain no README files.
     (STAGE / "game").mkdir()
-    (STAGE / "logs").mkdir()
     if args.include_one_pc_test:
         shutil.copy2(ROOT / "scripts/test-lan-one-pc.ps1", STAGE / "test-lan-one-pc.ps1")
     if args.include_readmes:
@@ -294,13 +293,13 @@ def main():
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         # Preserve the player's game-data destination even without a README.
         package.writestr("game/", b"")
-        package.writestr("logs/", b"")
         for file in sorted(p for p in STAGE.rglob("*") if p.is_file()):
             package.write(file, file.relative_to(STAGE))
     with zipfile.ZipFile(archive) as package:
         assert package.testzip() is None
         assert "bin/motogp0910-launcher.exe" not in package.namelist()
         assert "bin/motogp0910-ui.dll" in package.namelist()
+        assert not any(p.startswith("logs/") for p in package.namelist())
         assert not any(p.endswith((".xex", ".xexp")) or p.startswith("assets/")
                        for p in package.namelist())
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

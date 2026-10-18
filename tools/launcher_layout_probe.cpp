@@ -85,13 +85,16 @@ void CheckSharpnessPersistence(App& app){
   }
   app.SetControls(saved);
 }
-std::vector<uint32_t> PrintedControl(HWND control){
+std::vector<uint32_t> PrintedControl(HWND control,HWND owner=nullptr,App* combo=nullptr){
   RECT r;GetClientRect(control,&r);const auto dc=GetDC(control),copy=CreateCompatibleDC(dc);
   BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=r.right;info.bmiHeader.biHeight=-r.bottom;
   info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
   void* pixels=nullptr;const auto bitmap=CreateDIBSection(dc,&info,DIB_RGB_COLORS,&pixels,nullptr,0);
   CheckUI(bitmap&&pixels,"Focus regression has a real offscreen control surface");
-  const auto old=SelectObject(copy,bitmap);SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(copy),PRF_CLIENT);
+  const auto old=SelectObject(copy,bitmap);
+  if(combo)combo->DrawComboControl(copy,control);
+  else if(owner){DRAWITEMSTRUCT item{};item.CtlType=ODT_BUTTON;item.CtlID=GetDlgCtrlID(control);item.itemAction=ODA_DRAWENTIRE;item.hwndItem=control;item.hDC=copy;item.rcItem=r;SendMessageW(owner,WM_DRAWITEM,item.CtlID,reinterpret_cast<LPARAM>(&item));}
+  else SendMessageW(control,WM_PRINTCLIENT,reinterpret_cast<WPARAM>(copy),PRF_CLIENT);
   const auto first=static_cast<uint32_t*>(pixels);std::vector<uint32_t> result(first,first+r.right*r.bottom);
   SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(control,dc);return result;
 }
@@ -110,6 +113,115 @@ void CheckRapidCheckbox(HWND control){
   }
   CheckUI(SendMessageW(control,BM_GETCHECK,0,0)==original,"An even rapid click sequence restores the original checkbox state");
 }
+void CheckPaintCoherence(App& app){
+  const auto target=GetDC(app.window),copy=CreateCompatibleDC(target);const auto bitmap=CreateCompatibleBitmap(target,640,64);const auto previous=SelectObject(copy,bitmap);
+  RECT area{0,0,640,64};SetDCBrushColor(copy,RGB(255,0,255));FillRect(copy,&area,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+  PaintBuffered(copy,area,[&](HDC staging,RECT bounds){
+    SetDCBrushColor(staging,kField);FillRect(staging,&bounds,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+    CheckUI(GetPixel(copy,20,20)==RGB(255,0,255),"Building a new control image never exposes its cleared background before glyphs and text finish");
+  });
+  CheckUI(GetPixel(copy,20,20)==kField,"Completed control image is presented after its drawing transaction");
+  CheckUI(PrintedControl(app.render_resolution)==PrintedControl(app.render_resolution,nullptr,&app),"Buffered combo class dispatch retains left-aligned body text, border and dropdown arrow");
+  app.PaintControl(copy,app.render_resolution);const auto field_color=GetPixel(copy,64,2);
+  DRAWITEMSTRUCT row{};row.CtlType=ODT_COMBOBOX;row.hwndItem=app.render_resolution;row.itemID=0;row.hDC=copy;row.rcItem={0,0,280,32};
+  DrawPopupItem(row,app.font,app.scale);CheckUI(GetPixel(copy,64,2)==field_color&&field_color==kField,"Opened rows and the closed field have exactly the same base color");
+  row.itemState=ODS_SELECTED;DrawPopupItem(row,app.font,app.scale);
+  CheckUI(GetPixel(copy,64,1)==field_color&&GetPixel(copy,250,16)!=field_color,"Selection uses a separate inset highlight without changing the popup base");
+  SelectObject(copy,previous);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(app.window,target);
+  const bool original=app.Checked(app.vsync);
+  for(bool checked:{false,true}){app.SetCheck(app.vsync,checked);CheckUI(PrintedControl(app.vsync)==PrintedControl(app.vsync,app.window),"Synchronous WM_DRAWITEM and WM_PRINTCLIENT both render the complete checkbox label and tick");}
+  app.SetCheck(app.vsync,original);
+}
+void CheckLanguageCapacity(App& app){
+  app.ShowPage(3);app.ScrollPage(0);SendMessageW(app.game_language,CB_SHOWDROPDOWN,TRUE,0);
+  COMBOBOXINFO info{sizeof(info)};GetComboBoxInfo(app.game_language,&info);RECT client,last;GetClientRect(info.hwndList,&client);
+  const auto count=SendMessageW(app.game_language,CB_GETCOUNT,0,0);
+  CheckUI(count==6&&SendMessageW(info.hwndList,LB_GETITEMRECT,count-1,reinterpret_cast<LPARAM>(&last))!=LB_ERR&&last.bottom<=client.bottom,"All six game languages, including Turkish, fit the initial popup without scrolling");
+  SendMessageW(app.game_language,CB_SHOWDROPDOWN,FALSE,0);PopupAnimation::DismissClosing();
+}
+void DragPopupThumb(HWND list,const PopupScroll::Geometry& g){
+  POINT begin{(g.thumb.left+g.thumb.right)/2,(g.thumb.top+g.thumb.bottom)/2};
+  POINT end{begin.x,g.track.top+(g.thumb.bottom-g.thumb.top)/2};ClientToScreen(list,&begin);ClientToScreen(list,&end);
+  std::atomic<bool> done=false,ok=true;
+  std::thread mouse([&]{
+    SetCursorPos(begin.x,begin.y);Sleep(25);INPUT input{};input.type=INPUT_MOUSE;input.mi.dwFlags=MOUSEEVENTF_LEFTDOWN;
+    if(SendInput(1,&input,sizeof(input))!=1)ok=false;Sleep(40);
+    for(int step=1;step<=5;++step){SetCursorPos(begin.x,begin.y+MulDiv(end.y-begin.y,step,5));Sleep(15);}
+    input.mi.dwFlags=MOUSEEVENTF_LEFTUP;if(SendInput(1,&input,sizeof(input))!=1)ok=false;done=true;
+  });
+  while(!done){PumpUI();Sleep(2);}mouse.join();PumpUI();CheckUI(ok,"Scrollbar test delivers actual mouse down, movement and up");
+}
+void CheckPopupOptions(HWND combo){
+  const bool enabled=IsWindowEnabled(combo);EnableWindow(combo,TRUE);
+  const auto original=SendMessageW(combo,CB_GETCURSEL,0,0),count=SendMessageW(combo,CB_GETCOUNT,0,0);
+  CheckUI(count>0,"Each dropdown contains its configured options");
+  SendMessageW(combo,CB_SHOWDROPDOWN,TRUE,0);COMBOBOXINFO info{sizeof(info)};GetComboBoxInfo(combo,&info);
+  const auto deadline=GetTickCount64()+220;while(GetTickCount64()<deadline){PumpUI();Sleep(3);}
+  auto g=PopupScroll::Measure(info.hwndList);
+  CheckUI(IsWindowVisible(info.hwndList)&&g.count==count,"Every configured dropdown option reaches the real native popup");
+  if(g.maximum){
+    CheckUI(g.visible<=9&&g.thumb.bottom>g.thumb.top&&g.travel>0,"Long dropdowns have bounded height and a draggable visible scrollbar");
+    PopupScroll::SetTop(info.hwndList,0);UpdateWindow(info.hwndList);g=PopupScroll::Measure(info.hwndList);
+    const auto image=PrintedControl(info.hwndList);const auto pixel=image[(g.thumb.top+g.thumb.bottom)/2*g.client.right+(g.thumb.left+g.thumb.right)/2];
+    CheckUI((pixel&0xffffff)==0x6e798b,"The popup print contains the visible scrollbar thumb");
+    {const auto dc=GetDC(info.hwndList),copy=CreateCompatibleDC(dc);const auto bitmap=CreateCompatibleBitmap(dc,g.client.right,g.client.bottom);const auto old=SelectObject(copy,bitmap);
+      SetDCBrushColor(copy,RGB(255,0,255));FillRect(copy,&g.client,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+      DRAWITEMSTRUCT row{};row.CtlType=ODT_COMBOBOX;row.hwndItem=combo;row.hDC=copy;row.itemID=0;row.itemState=ODS_SELECTED;SendMessageW(info.hwndList,LB_GETITEMRECT,0,reinterpret_cast<LPARAM>(&row.rcItem));
+      DrawPopupItem(row,reinterpret_cast<HFONT>(SendMessageW(combo,WM_GETFONT,0,0)),1);
+      CheckUI(GetPixel(copy,(g.rail.left+g.rail.right)/2,15)==RGB(255,0,255)&&GetPixel(copy,3,1)==kPopupBackground,"Synchronous selected-row painting preserves the separate scrollbar surface");
+      SelectObject(copy,old);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(info.hwndList,dc);}
+    const auto before=SendMessageW(combo,CB_GETCURSEL,0,0);
+    ClickControl(info.hwndList,g.track.bottom-1,(g.rail.left+g.rail.right)/2);g=PopupScroll::Measure(info.hwndList);
+    if(g.top!=g.maximum||!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)||SendMessageW(combo,CB_GETCURSEL,0,0)!=before)std::cerr<<"Rail click id="<<GetDlgCtrlID(combo)<<" count="<<g.count<<" visible="<<g.visible<<" top="<<g.top<<" max="<<g.maximum<<" open="<<SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)<<" selection="<<SendMessageW(combo,CB_GETCURSEL,0,0)<<" expected="<<before<<" dragging="<<GetCapture()<<" list="<<info.hwndList<<'\n';
+    CheckUI(g.top==g.maximum&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)&&SendMessageW(combo,CB_GETCURSEL,0,0)==before,"Clicking the rail reaches the final options without selecting or closing");
+    DragPopupThumb(info.hwndList,g);g=PopupScroll::Measure(info.hwndList);
+    CheckUI(g.top==0&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0)&&SendMessageW(combo,CB_GETCURSEL,0,0)==before,"Real thumb dragging reaches the first options and retains native popup capture");
+    SendMessageW(info.hwndList,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);PumpUI();g=PopupScroll::Measure(info.hwndList);
+    CheckUI(g.top>0&&SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Mouse wheel scrolling reveals more rows in the same open dropdown");
+  }
+  PopupScroll::SetTop(info.hwndList,std::max<LRESULT>(0,count-g.visible));UpdateWindow(info.hwndList);
+  RECT last{},client{};GetClientRect(info.hwndList,&client);
+  CheckUI(SendMessageW(info.hwndList,LB_GETITEMRECT,count-1,reinterpret_cast<LPARAM>(&last))!=LB_ERR&&last.top>=0&&last.bottom<=client.bottom,"The final option in every dropdown is fully visible and reachable");
+  ClickControl(info.hwndList,(last.top+last.bottom)/2,client.right/2);
+  CheckUI(SendMessageW(combo,CB_GETCURSEL,0,0)==count-1&&!SendMessageW(combo,CB_GETDROPPEDSTATE,0,0),"Actual mouse input can select the final option in every dropdown");
+  SendMessageW(combo,CB_SETCURSEL,original,0);EnableWindow(combo,enabled);PopupAnimation::DismissClosing();
+}
+void CheckAllPopupOptions(App& app){
+  const auto saved=app.GetControls();const bool language=app.turkish;int audited=0;
+  for(bool tr:{false,true}){
+    app.turkish=tr;app.Localize();
+    for(int page:{3,0,4,1,2,6,5}){
+      app.ShowPage(page);app.ScrollPage(0);
+      for(auto control:app.pages[page]){
+        wchar_t cls[32]{};GetClassNameW(control,cls,32);if(lstrcmpiW(cls,L"COMBOBOX"))continue;
+        app.Reveal(control);CheckPopupOptions(control);++audited;
+        // Selecting the launcher-language row posts a real relocalization;
+        // restore the language/settings so each audit uses the intended set.
+        app.turkish=tr;app.Localize();app.SetControls(saved);
+      }
+    }
+    auto profile=app.settings.adaptive;profile.enabled=true;
+    AdaptiveDialog dialog(app.window,app.font,tr,app.scale,profile);auto modal=dialog.Create();ShowWindow(modal,SW_SHOW);UpdateWindow(modal);
+    for(int id:{110,120}){CheckPopupOptions(GetDlgItem(modal,id));++audited;}
+    DestroyWindow(modal);app.SetControls(saved);
+  }
+  app.turkish=language;app.Localize();app.SetControls(saved);app.ShowPage(3);app.ScrollPage(0);
+  std::cout<<audited<<" dropdowns audited across English and Turkish, including controller settings\n";
+}
+void CheckBindingLabelWidths(App& app){
+  const bool language=app.turkish;
+  for(bool tr:{false,true})for(double scale:{.75,1.,1.25,1.5}){
+    app.Rescale(scale);app.turkish=tr;app.Localize();
+    const auto dc=GetDC(app.window);const auto old=SelectObject(dc,app.font);
+    for(const auto& binding:kBindings){
+      const auto text=tr?binding.turkish:binding.english;SIZE size{};GetTextExtentPoint32W(dc,text,static_cast<int>(wcslen(text)),&size);
+      CheckUI(size.cx<=app.S(App::kFormWidth-196)&&size.cy<=app.S(26),"Controller equivalents fit every keyboard action label at all supported UI scales");
+      CheckUI(!wcsstr(text,L"Xbox ")&&!wcsstr(text,L"PS "),"Controller equivalent labels use the requested compact parenthesized names");
+    }
+    SelectObject(dc,old);ReleaseDC(app.window,dc);
+  }
+  app.Rescale(1);app.turkish=language;app.Localize();
+}
 void CheckPopupAnimation(HWND combo){
   COMBOBOXINFO info{sizeof(info)};CheckUI(GetComboBoxInfo(combo,&info),"Native combo popup is available");
   DWORD_PTR data=0;CheckUI(GetWindowSubclass(info.hwndList,PopupAnimation::Proc,PopupAnimation::kSubclass,&data)&&data,"Native list has its own animation lifetime");
@@ -120,6 +232,8 @@ void CheckPopupAnimation(HWND combo){
     BYTE alpha=255;DWORD flags=0;const auto layered=GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags);
     if(!state.active||!layered||alpha==255)std::cerr<<"Popup fade: active="<<state.active<<" owns_layer="<<state.owns_layer<<" started="<<state.started<<" elapsed="<<(state.started?GetTickCount64()-state.started:0)<<" layered="<<layered<<" alpha="<<int(alpha)<<" styles="<<GetWindowLongPtrW(info.hwndList,GWL_EXSTYLE)<<'\n';
     CheckUI(state.active&&layered&&alpha<255,"Opening begins with real popup opacity below 255");
+    state.Start(info.hwndList);Sleep(220);SendMessageW(info.hwndList,WM_TIMER,PopupAnimation::kTimer,0);
+    CheckUI(GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha<64&&state.active,"A blocked native show transaction cannot consume the opening fade before its first rendered frame");
     const auto deadline=GetTickCount64()+1000;while(state.active&&GetTickCount64()<deadline){PumpUI();Sleep(5);}
     CheckUI(!state.active&&GetLayeredWindowAttributes(info.hwndList,nullptr,&alpha,&flags)&&alpha==255,"Non-blocking timer completes the fade and stops while idle");
   }else CheckUI(!state.active,"Windows reduced-motion preference disables the fade");
@@ -365,7 +479,7 @@ int wmain(int argc,wchar_t** argv){
     CheckSharpnessPersistence(app);
     CheckFocusPainting(app);
     app.ShowPage(1);app.ScrollPage(0);CheckRapidCheckbox(app.mute);app.ShowPage(0);app.ScrollPage(0);CheckRapidCheckbox(app.vsync);CheckRapidCheckbox(app.msaa);
-    CheckPopupAnimation(app.render_resolution);app.ShowPage(3);
+    CheckPaintCoherence(app);CheckPopupAnimation(app.render_resolution);CheckLanguageCapacity(app);CheckAllPopupOptions(app);CheckBindingLabelWidths(app);app.ShowPage(3);
     if(argc==4){CheckUI(std::wstring_view(argv[3])==L"--sliders-only","Known targeted regression mode");DestroyWindow(window);std::cout<<ui_checks<<" slider channel-click checks passed\n";Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;}
     CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
     CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");
@@ -415,6 +529,13 @@ int wmain(int argc,wchar_t** argv){
       CheckUI(app.status_positive&&app.status_en.starts_with(L"Verification passed")&&IsWindowEnabled(app.play),"Successful background verification updates status, writes a report and unlocks PLAY");
       bool report_found=false;for(const auto& entry:fs::directory_iterator(app.exe/L"logs"))if(entry.path().filename().wstring().starts_with(L"verification-"))report_found=true;
       CheckUI(report_found,"Verification result report is available through Open logs");
+      SetWindowTextW(app.path,scratch.c_str());app.StartVerification();dismiss_done=false;
+      std::thread dismiss_missing([&]{while(!dismiss_done){auto dialog=FindWindowW(L"#32770",nullptr);
+        if(dialog&&GetWindow(dialog,GW_OWNER)==window){PostMessageW(dialog,WM_COMMAND,IDOK,0);break;}Sleep(10);}});
+      while(app.verifying){app.PollVerification();Sleep(10);}dismiss_done=true;dismiss_missing.join();
+      CheckUI(!app.status_positive&&app.status_en==L"Found 4386 missing files. Open logs for the report."&&app.status_tr.starts_with(L"4386 eksik dosya"),"An empty game directory reports the missing-file count without counting the separate core error as another missing file");
+      CheckUI(!fs::exists(sample)&&!fs::exists(scratch/L"logs"),"Missing-file verification neither recreates game files nor writes reports into the game folder");
+      SetWindowTextW(app.path,game.c_str());
       app.ReadyStatus();
     }
 

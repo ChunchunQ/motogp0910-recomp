@@ -4,6 +4,7 @@
 #include <uxtheme.h>
 #include <algorithm>
 #include <new>
+#include "popup_scroll.h"
 
 namespace launcher {
 // Keep native combo input, accessibility and geometry. Only paint/opacity are
@@ -14,7 +15,7 @@ struct PopupAnimation {
   static inline HWND closing_popup{};
   ULONGLONG started=0;
   bool active=false,owns_layer=false,shown=false,rounding=false;
-  HWND combo{};
+  HWND combo{};PopupScroll scroll;
   static bool Enabled(){
     BOOL enabled=TRUE;SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION,0,&enabled,0);return enabled!=FALSE;
   }
@@ -43,6 +44,7 @@ struct PopupAnimation {
       bool copied=false;if(self->bitmap){const auto old=SelectObject(copy,self->bitmap);copied=BitBlt(copy,0,0,r.right-r.left,r.bottom-r.top,dc,0,0,SRCCOPY)!=FALSE;SelectObject(copy,old);}
       if(copy)DeleteDC(copy);if(dc)ReleaseDC(source,dc);if(!copied){delete self;return;}
       DWORD flags=0;GetLayeredWindowAttributes(source,nullptr,&self->alpha,&flags);
+      if(!self->alpha){delete self;return;}
       WNDCLASSW cls{};cls.lpfnWndProc=Proc;cls.hInstance=GetModuleHandleW(nullptr);cls.lpszClassName=L"MotoGPPopupClose";RegisterClassW(&cls);
       const auto window=CreateWindowExW(WS_EX_LAYERED|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW|WS_EX_TRANSPARENT,cls.lpszClassName,L"",WS_POPUP,r.left,r.top,r.right-r.left,r.bottom-r.top,owner,nullptr,cls.hInstance,nullptr);
       if(!window){delete self;return;}
@@ -85,21 +87,30 @@ struct PopupAnimation {
     SetWindowLongPtrW(window,GWL_EXSTYLE,style|WS_EX_LAYERED);owns_layer=(GetWindowLongPtrW(window,GWL_EXSTYLE)&WS_EX_LAYERED)!=0;
     if(!owns_layer)return;
     if(!SetLayeredWindowAttributes(window,0,0,LWA_ALPHA)){Stop(window);return;}
-    started=GetTickCount64();active=SetTimer(window,kTimer,15,nullptr)!=0;if(!active)Stop(window);
+    // Native Windows may finish its own popup show transaction before timers
+    // are dispatched. Start elapsed time on the first rendered timer frame,
+    // so that delay cannot consume our entire fade and reveal an opaque list.
+    started=0;active=SetTimer(window,kTimer,15,nullptr)!=0;if(!active)Stop(window);
   }
   void Hide(HWND window){
     if(shown&&Enabled()&&IsWindowVisible(window))Closing::Show(window,GetAncestor(combo,GA_ROOT));
-    shown=false;Stop(window);
+    scroll.dragging=false;shown=false;Stop(window);
     InvalidateRect(combo,nullptr,FALSE);
   }
   static LRESULT CALLBACK Proc(HWND window,UINT message,WPARAM wp,LPARAM lp,UINT_PTR id,DWORD_PTR data){
     auto& state=*reinterpret_cast<PopupAnimation*>(data);
     if(message==WM_SHOWWINDOW){if(wp&&!state.shown)state.Start(window);else if(!wp)state.Hide(window);}
     if(message==WM_WINDOWPOSCHANGING){auto& pos=*reinterpret_cast<WINDOWPOS*>(lp);if(pos.flags&SWP_SHOWWINDOW){state.Position(window,pos);if(!state.shown)state.Start(window);}else if(pos.flags&SWP_HIDEWINDOW)state.Hide(window);}
-    if(message==WM_WINDOWPOSCHANGED){const auto result=DefSubclassProc(window,message,wp,lp);if(state.shown&&!state.rounding){state.rounding=true;Round(window);state.rounding=false;}return result;}
+    if(message==WM_WINDOWPOSCHANGED){const auto result=DefSubclassProc(window,message,wp,lp);if(state.shown)state.scroll.HideNative(window);if(state.shown&&!state.rounding){state.rounding=true;Round(window);state.rounding=false;}return result;}
+    if(state.scroll.Input(window,message,lp))return 0;
+    if(message==WM_PAINT||message==WM_PRINTCLIENT){
+      state.scroll.HideNative(window);const auto result=DefSubclassProc(window,message,wp,lp);
+      const auto dc=message==WM_PRINTCLIENT?reinterpret_cast<HDC>(wp):GetDC(window);
+      if(dc){PopupScroll::Paint(window,dc);if(message!=WM_PRINTCLIENT)ReleaseDC(window,dc);}return result;
+    }
     if(message==WM_NCPAINT){const auto result=DefSubclassProc(window,message,wp,lp);const auto dc=GetWindowDC(window);if(dc){RECT r;GetWindowRect(window,&r);const auto pen=CreatePen(PS_SOLID,1,RGB(48,53,64));const auto old_pen=SelectObject(dc,pen),old_brush=SelectObject(dc,GetStockObject(NULL_BRUSH));RoundRect(dc,0,0,r.right-r.left,r.bottom-r.top,6,6);SelectObject(dc,old_brush);SelectObject(dc,old_pen);DeleteObject(pen);ReleaseDC(window,dc);}return result;}
     if(message==WM_TIMER&&wp==kTimer){
-      if(state.active){const auto elapsed=GetTickCount64()-state.started;const auto alpha=static_cast<BYTE>(255*std::min(elapsed,kDuration)/kDuration);SetLayeredWindowAttributes(window,0,alpha,LWA_ALPHA);if(elapsed>=kDuration){KillTimer(window,kTimer);state.active=false;}}return 0;
+      if(state.active){if(!state.started)state.started=GetTickCount64();const auto elapsed=GetTickCount64()-state.started;const auto alpha=static_cast<BYTE>(255*std::min(elapsed,kDuration)/kDuration);SetLayeredWindowAttributes(window,0,alpha,LWA_ALPHA);if(elapsed>=kDuration){KillTimer(window,kTimer);state.active=false;}}return 0;
     }
     if(message==WM_NCDESTROY){state.shown=false;state.Stop(window);RemoveWindowSubclass(window,Proc,id);delete &state;}
     return DefSubclassProc(window,message,wp,lp);

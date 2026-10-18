@@ -6,6 +6,8 @@
 - Development Windows packages omit README files, feature readmes, SHA256SUMS
   and separate license folders. Preserve source licenses and embedded launcher
   notices. The user will add the final release README later.
+- Do not include an empty `logs/` directory in packages. Runtime logging creates
+  it when needed; keep existing historical ZIPs unchanged.
 - Keep original game data, user configuration, saves and personal logs out of
   commits/packages. Preserve historical release ZIPs; use unique archive names.
 - Windows 10/11 x64 is the product target. Distinguish Wine/CPU/UI checks from

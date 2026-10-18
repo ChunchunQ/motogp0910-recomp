@@ -2,7 +2,7 @@
   // transaction. Switching modes or tabs never discards hidden field values.
   void BuildNetworkPage(){
     const auto label=LabelControl(6,L"Connection mode",L"Bağlantı modu",0,0,kFormWidth,24);
-    network_mode=PageControl(6,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,0,26,kFormWidth,220,kLanEnabled);
+    network_mode=PageControl(6,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,0,26,kFormWidth,310,kLanEnabled);
     help_labels[network_mode]=label;
     auto field=[&](const wchar_t* en,const wchar_t* tr,int x,int y,int width,int id,int limit){
       const auto caption=LabelControl(6,en,tr,x,y,width,24);

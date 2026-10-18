@@ -85,7 +85,7 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
   for(const auto& b:launcher::kBindings){
     // UTF-8 UI names come from the SDK-independent canonical binding list.
     std::string en;for(auto* p=b.english;*p;++p)en+=char(*p);
-    const char* tr[]={"A / Onayla","B / Geri","X düğmesi","Y düğmesi","Sol tetik (LT)","Sağ tetik (RT)","Sol omuz (LB)","Sağ omuz (RB)","Sol çubuk: yukarı","Sol çubuk: aşağı","Sol çubuk: sol","Sol çubuk: sağ","Sol çubuk: bas","Sağ çubuk: yukarı","Sağ çubuk: aşağı","Sağ çubuk: sol","Sağ çubuk: sağ","Sağ çubuk: bas","D-pad: yukarı","D-pad: aşağı","D-pad: sol","D-pad: sağ","Back / Seç","Start / Duraklat","Guide düğmesi"};
+    const char* tr[]={"A / Onayla (A/Cross)","B / Geri (B/Circle)","X düğmesi (X/Square)","Y düğmesi (Y/Triangle)","Sol tetik (LT/L2)","Sağ tetik (RT/R2)","Sol omuz (LB/L1)","Sağ omuz (RB/R1)","Sol çubuk: yukarı (LS/Left stick)","Sol çubuk: aşağı (LS/Left stick)","Sol çubuk: sol (LS/Left stick)","Sol çubuk: sağ (LS/Left stick)","Sol çubuk: bas (LS/L3)","Sağ çubuk: yukarı (RS/Right stick)","Sağ çubuk: aşağı (RS/Right stick)","Sağ çubuk: sol (RS/Right stick)","Sağ çubuk: sağ (RS/Right stick)","Sağ çubuk: bas (RS/R3)","Yön: yukarı (D-pad)","Yön: aşağı (D-pad)","Yön: sol (D-pad)","Yön: sağ (D-pad)","Geri / Seç (Back/Select)","Başlat / Duraklat (Start/Start)","Rehber düğmesi (Guide/PS)"};
     s.push_back({b.key,en,tr[&b-launcher::kBindings.data()],P::Controls,K::Binding});
   }
   return s;
