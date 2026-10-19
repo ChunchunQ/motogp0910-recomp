@@ -21,11 +21,19 @@ PREFIX = '/api/motogp/'
 STALE = 30  # seconds before a live snapshot counts as offline
 
 
-# Native race boards store the total race time in 1/20 s units, scaled by 100 and
-# negated: rating = -(time_in_20ths * 100). Column 2 holds the unscaled 1/20 s count.
-# Checked against reported laps (Mugello 250cc 3 laps ~5:41 -> column 2 about 6800).
+# Native race boards store the rider's best lap in 1/60 s ticks, scaled by 100 and
+# negated: rating = -(ticks * 100); column 2 holds the unscaled tick count.
+# Checked against laps shown in game: Losail time trial 1:45.20 -> 6312,
+# Mugello 250cc 1:50.87 -> 6652, Jerez 125cc 1:51.70 -> 6702.
 def race_ms(value):
-    return abs(int(value)) // 2
+    return round(abs(int(value)) / 6)
+
+
+def fmt_lap(value):
+    centis = round(abs(int(value)) / 60)  # ticks*100/60 hundredths
+    minutes, rest = divmod(centis, 6000)
+    seconds, hundredths = divmod(rest, 100)
+    return f'{minutes}:{seconds:02d}.{hundredths:02d}' if minutes else f'{seconds}.{hundredths:02d}'
 
 
 def fmt_time(ms):
@@ -74,7 +82,7 @@ class Api:
         if fmt is None:
             fmt = 'time_ms' if value < 0 else 'score'
         if fmt == 'time_ms':
-            return {'kind': 'time', 'text': fmt_time(race_ms(value)), 'ms': race_ms(value)}
+            return {'kind': 'time', 'text': fmt_lap(value), 'ms': race_ms(value)}
         return {'kind': 'score', 'text': f'{int(value):,}'.replace(',', '.')}
 
     @staticmethod
