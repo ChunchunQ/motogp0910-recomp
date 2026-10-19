@@ -258,7 +258,7 @@ def main():
     p.add_argument('--live', default='/var/lib/motogp-online/live.json')
     p.add_argument('--views', default=str(Path(__file__).with_name('views.json')))
     p.add_argument('--bind', default='127.0.0.1')
-    p.add_argument('--port', type=int, default=8091)
+    p.add_argument('--port', type=int, default=8095)
     args = p.parse_args()
     if args.bind not in ('127.0.0.1', '::1'):
         raise SystemExit('bind to loopback; publish through Caddy')
