@@ -1,4 +1,5 @@
 #include "debug_overlay.h"
+#include "overlay_theme.h"
 #include "frame_pacing.h"
 #include <atomic>
 #ifndef _WIN32
@@ -41,8 +42,8 @@ void FrameTick(){
  if(previous.time_since_epoch().count()){const float ms=std::chrono::duration<float,std::milli>(now-previous).count();if(ms>0)guest_ms.store(ms,std::memory_order_relaxed);}
  previous=now;
 }
-const ImVec4 orange{1.f,.67f,.19f,1.f};
-struct Panel {Panel(const char* title,ImVec2 position,ImVec2 pivot){ImGui::SetNextWindowPos(position,ImGuiCond_Always,pivot);ImGui::SetNextWindowBgAlpha(.82f);ImGui::PushStyleColor(ImGuiCol_TitleBg,ImVec4(.15f,.11f,.06f,1));ImGui::PushStyleColor(ImGuiCol_TitleBgActive,ImVec4(.27f,.17f,.06f,1));ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(.05f,.06f,.08f,1));ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(.65f,.4f,.12f,.8f));ImGui::PushStyleColor(ImGuiCol_PlotLines,orange);ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(.95f,.96f,.97f,1));ImGui::Begin(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoCollapse);}~Panel(){ImGui::End();ImGui::PopStyleColor(6);}};
+using motogp::overlay::orange;
+struct Panel {Panel(const char* title,ImVec2 position,ImVec2 pivot){ImGui::SetNextWindowPos(position,ImGuiCond_Always,pivot);ImGui::SetNextWindowBgAlpha(.82f);ImGui::PushStyleColor(ImGuiCol_TitleBg,motogp::overlay::AccentTint(.08f));ImGui::PushStyleColor(ImGuiCol_TitleBgActive,motogp::overlay::AccentTint(.18f));ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(.05f,.06f,.08f,1));ImGui::PushStyleColor(ImGuiCol_Border,motogp::overlay::AccentTint(.55f,.8f));ImGui::PushStyleColor(ImGuiCol_PlotLines,orange);ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(.95f,.96f,.97f,1));ImGui::Begin(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoCollapse);}~Panel(){ImGui::End();ImGui::PopStyleColor(6);}};
 void RuntimeCounter(const char* label,C id){ImGui::Text("%s: %lld",label,static_cast<long long>(rex::perf::GetCounter(id)));}
 void GpuCounter(const char* label,C id,const std::array<int64_t,static_cast<size_t>(C::kCount)>& counters,bool available){if(available)ImGui::Text("%s: %lld",label,static_cast<long long>(counters[static_cast<size_t>(id)]));else ImGui::TextDisabled("%s: n/a",label);}
 void Flag(const char* label,const char* key){auto value=rex::cvar::GetFlagByName(key);ImGui::Text("%s: %s",label,value.empty()?"n/a":value.c_str());}

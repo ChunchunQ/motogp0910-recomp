@@ -76,7 +76,7 @@ inline Geometry MakeKeyboardGeometry(const std::string& label,float aspect,uint3
   // A compact warm accent follows the cover/launcher palette. Avoid a thick
   // bright frame, which competes with the action text at native 720p.
   const float accent=std::min(.34f/aspect,.50f);
-  g.Rect((1-accent)*.5f,.112f,accent,.032f,alpha|0xFFAE24);
+  g.Rect((1-accent)*.5f,.112f,accent,.032f,alpha|0xFF6A13);
   g.Text(label,aspect,alpha|0xF3F4F6,face);
   return g;
 }

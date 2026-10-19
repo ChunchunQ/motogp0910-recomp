@@ -38,6 +38,6 @@ REX_HOOK_RAW(sub_82370A60) {
     Scope(){scope_function(1);}
     ~Scope(){scope_function(-1);}
   } scope;
-  REXLOG_INFO("LIVERY_READBACK: generating custom texture with synchronous resolve readback");
+  REXLOG_DEBUG("LIVERY_READBACK: generating custom texture with synchronous resolve readback");
   __imp__sub_82370A60(ctx,base);
 }

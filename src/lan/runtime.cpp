@@ -9,6 +9,7 @@
 #include <rex/system/xthread.h>
 #include <rex/system/xam/user_profile.h>
 #include <shared_mutex>
+#include <atomic>
 #ifdef _WIN32
 #include <Windows.h>
 #endif
@@ -82,7 +83,7 @@ bool Message(PPCContext& ctx,uint8_t* base,bool async){
   if(!result)return false;
   if(ctx.r4.u32!=0xB0006 && ctx.r4.u32!=0xB0007){
     const auto room=bridge->Network().CurrentRoom();
-    REXLOG_INFO("LAN_SESSION: message={:08X} result={:08X} room={:016X} members={}",ctx.r4.u32,*result,room?room->id:0,room?room->members:0);
+    REXLOG_DEBUG("LAN_SESSION: message={:08X} result={:08X} room={:016X} members={}",ctx.r4.u32,*result,room?room->id:0,room?room->members:0);
   }
   if(ctx.r4.u32==0xB0011 && *result==0 && sockets && before_delete && !bridge->Network().CurrentRoom())sockets->CancelSessionReceives();
   if(overlapped){
@@ -128,14 +129,14 @@ void Start(rex::system::KernelState* kernel){
   if(mode=="online"){
     service=std::make_shared<online::Client>(rex::cvar::Query<std::string>("online_server"),player);
     options.bind_ip.clear();options.relay=service->Connection();
-    REXLOG_INFO("ONLINE_STARTUP: authenticated community connection; relay port={}",options.relay->endpoint.port);
+    REXLOG_DEBUG("ONLINE_STARTUP: authenticated community connection; relay port={}",options.relay->endpoint.port);
   }
-  REXLOG_INFO("LAN_STARTUP: initializing adapter={}",options.bind_ip.empty()?"automatic":options.bind_ip);
+  REXLOG_DEBUG("LAN_STARTUP: initializing adapter={}",options.bind_ip.empty()?"automatic":options.bind_ip);
   auto node=std::make_shared<Node>(options);
   auto next_bridge=std::make_unique<GuestBridge>(kernel,node,mode=="online"?"":rex::cvar::Query<std::string>("lan_host_ip"),rex::cvar::Query<std::string>("lan_room_name"),service);
   auto next_sockets=std::make_unique<SocketBridge>(*next_bridge);
   bridge=std::move(next_bridge);sockets=std::move(next_sockets);
-  REXLOG_INFO("LAN_LOBBY: adapter={} endpoint={}:{} discovery={} transport=guest-UDP/VDP protocol=LAN02",node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
+  REXLOG_INFO("NETWORK_READY: mode={} adapter={} endpoint={}:{} discovery={}",mode,node->AdapterName(),IPv4(node->Address().ip),node->Address().port,
       rex::cvar::Query<std::string>("lan_host_ip").empty()?"automatic":"direct-IP fallback");
 #else
   (void)kernel;throw std::runtime_error("The LAN preview targets Windows");
@@ -147,6 +148,20 @@ void Stop(){
 }
 std::optional<Room> CurrentRoom(){std::shared_lock lock(bridge_mutex);return bridge?bridge->Network().CurrentRoom():std::nullopt;}
 #ifdef _WIN32
+REX_HOOK_RAW(__imp__NetDll_XNetGetOpt){
+  // Preserve the pinned runtime's unsupported-option contract: WSAEINVAL,
+  // with both output arguments untouched. This is log throttling, not an
+  // implementation of option 6. Keep the error visible without writing it
+  // four times a second throughout an otherwise successful race.
+  if(ctx.r3.u32==1 && ctx.r4.u32==6){
+    static std::atomic<uint64_t> occurrences{0};
+    const auto count=occurrences.fetch_add(1,std::memory_order_relaxed)+1;
+    if((count&(count-1))==0)
+      REXLOG_ERROR("NetDll_XNetGetOpt: option 6 unimplemented; occurrence={} (repeated queries throttled; returning WSAEINVAL)",count);
+    ctx.r3.u64=0x2726;return;
+  }
+  Original("__imp__NetDll_XNetGetOpt",ctx,base);
+}
 REX_HOOK_RAW(__imp__XamUserCreateStatsEnumerator){
   std::shared_lock lock(bridge_mutex);
   if(!bridge || !bridge->Online()){Original("__imp__XamUserCreateStatsEnumerator",ctx,base);return;}

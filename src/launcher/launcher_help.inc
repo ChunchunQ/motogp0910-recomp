@@ -38,7 +38,7 @@
     Tip(engine_choices[6],L"Sets the soft-shadow range, within the overall shadow render distance.",L"Genel gölge çizim mesafesi içindeki yumuşak gölge mesafesini ayarlar.");
     Tip(engine_choices[7],L"Controls the density of particles such as smoke, sparks and rain.",L"Duman, kıvılcım ve yağmur gibi parçacıkların yoğunluğunu ayarlar.");
     Tip(engine_choices[8],L"Scales instance visibility distance within the engine's limits. Higher values can increase GPU load.",L"Nesnelerin görünme mesafesini motorun sınırları içinde değiştirir. Yüksek değerler GPU yükünü artırabilir.");
-    Tip(debug_overlay,L"Enables F3 to show performance, display and runtime diagnostics. Off by default; applies on the next launch.",L"F3 ile performans, görüntü ve çalışma bilgilerini açar. Varsayılan kapalıdır; sonraki açılışta uygulanır.");
+    Tip(debug_overlay,L"Enables F3 diagnostics and detailed Debug logs on the next launch. Off uses normal Info logs unless you explicitly choose another log level.",L"Sonraki açılışta F3 tanılamasını ve ayrıntılı Debug loglarını açar. Başka log seviyesi seçmediysen kapalıyken normal Info logları kullanılır.");
     Tip(shadow_distance,L"Sets how far rider and bike shadows are drawn. Higher values can increase GPU load.",L"Sürücü ve motosiklet gölgelerinin çizim mesafesini ayarlar. Yüksek değerler GPU yükünü artırabilir.");
     Tip(backend,L"SDL supports native PlayStation and other controllers. DualSense adaptive triggers require SDL.",L"SDL, doğal PlayStation ve diğer kontrolcüleri destekler. DualSense adaptif tetikler için SDL gerekir.");
     Tip(keyboard,L"Enable keyboard input in addition to your controller. Edit individual keys below.",L"Kontrolcünün yanında klavye girişini etkinleştirir. Tuşları aşağıdan düzenleyebilirsin.");

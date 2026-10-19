@@ -92,6 +92,17 @@ No separate START, PS/Guide or text-labelled L3/R3 bitmap was found in this
 identified set. Stick prompts use the original stick pictures. Literal PRESS
 START text stays unchanged.
 
+Loading-tip icons use a separate immediate quad path (`0x82388DA8`, called
+from `0x822BAD6C`) that bypasses the ordinary prompt hook. This path now uses
+the same registered texture-to-glyph mapping and selected prompt style. The
+game still resolves each tip token through its active control preset; keyboard
+labels then read the saved binding for that resolved button. Each keyboard
+icon's width is adjusted before the next text segment is positioned, and the
+original width property is restored when the tip finishes rendering. Loading
+also refreshes automatic input style without waiting for a gameplay frame.
+This follow-up change is included in the compiled UI/log update. No runtime
+tests were run for that build, at the user's request.
+
 ## Rendering
 
 The pack is uploaded to guest physical memory as linear 64×64 BC3 textures.
@@ -109,6 +120,7 @@ archives are not modified.
 | Hook | Purpose |
 | --- | --- |
 | `0x82388C38` | Registered glyph and selected replay quad replacement |
+| `0x822BA980`, `0x822BA6C0`, `0x82388DA8` | Loading-tip input style, keyboard spacing and immediate icon replacement |
 | `0x8227E440` | Identify verified replay controller sprite calls |
 | `0x82358448` | Keyboard cap spacing in prompt bars |
 | `0x82284E98`, `0x82284E88`, `0x82284DB0` | Inline glyph recognition and sizing |

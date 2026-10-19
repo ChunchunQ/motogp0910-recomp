@@ -131,7 +131,7 @@ std::function<uint32_t()> PrepareWrite(lan::GuestBridge& bridge,uint32_t buffer)
   auto reservation=std::make_shared<WriteReservation>(bridge.Online());
   return [reservation,views=std::move(views),key=std::move(key)](){
    uint32_t result=0;
-   try{reservation->client->Write(views,key);REXLOG_INFO("ONLINE_STATS: {} native view(s) stored for this player",views.size());}
+   try{reservation->client->Write(views,key);REXLOG_DEBUG("ONLINE_STATS: {} native view(s) stored for this player",views.size());}
    catch(const std::exception& error){REXLOG_WARN("ONLINE_STATS: write failed: {}",error.what());result=Error(1231);}
    reservation->Finish();return result;
   };

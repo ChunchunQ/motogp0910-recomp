@@ -238,7 +238,8 @@ The six additional settings passed native CPU consumer and production UI
 checks; their GPU rendering has not been visually checked in a race. All ten
 settings have concise English/Turkish hover explanations on
 both the label and field, and occupy five aligned rows of two columns. Debug
-and crash diagnostics follow those rows. The F1 menu exposes the same choices
+and crash diagnostics sit side by side below the last row, within the page
+viewport. The F1 menu exposes the same choices
 and persists them through the shared JSON configuration. Every new setting
 defaults to `game`; existing configurations retain their original behavior.
 

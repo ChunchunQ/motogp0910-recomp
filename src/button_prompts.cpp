@@ -27,6 +27,9 @@
 #include "button_prompt_options.h"
 
 REX_EXTERN(__imp__sub_82388C38);
+REX_EXTERN(__imp__sub_82388DA8);
+REX_EXTERN(__imp__sub_822BA980);
+REX_EXTERN(__imp__sub_822BA6C0);
 REX_EXTERN(__imp__sub_82358448);
 REX_EXTERN(__imp__sub_823D1008);
 REX_EXTERN(__imp__sub_82284E98);
@@ -85,6 +88,49 @@ Style SelectedStyle() {
   if(value=="keyboard") return Style::Keyboard;
   return active.style();
 }
+char TextureGlyph(uint32_t texture,const uint8_t* base) {
+  if(!texture)return 0;
+  const auto table=rex::memory::load_and_swap<uint32_t>(base+0x8292CCB8);
+  if(table)for(unsigned i=0;i<22;++i) {
+    if(rex::memory::load_and_swap<uint32_t>(base+table+4*i)!=texture)continue;
+    const auto code=rex::memory::load_and_swap<uint32_t>(base+0x8292CC60+4*i);
+    return code>=0x700 && code<0x780?char(code-0x700):0;
+  }
+  return 0;
+}
+
+// Loading tips resolve <6>, <7>, etc. through the active native control preset.
+// Their renderer advances by a separate icon-width property rather than the
+// normal inline-font measurement. Keep each keyboard cap and the next text
+// segment aligned, and restore the property after this rendering pass.
+struct LoadingTipSizing;
+thread_local LoadingTipSizing* loading_tip_sizing=nullptr;
+struct LoadingTipSizing {
+  uint8_t* base;
+  LoadingTipSizing* previous;
+  uint32_t address=0,saved=0;
+  float original=0;
+  LoadingTipSizing(uint8_t* memory,bool keyboard):base(memory),previous(loading_tip_sizing) {
+    constexpr uint32_t property=0x8299E65C;
+    if(keyboard && rex::memory::load_and_swap<uint32_t>(base+property+12)==property+16) {
+      original=rex::memory::load_and_swap<float>(base+property+16);
+      if(std::isfinite(original) && original>0) {
+        address=property+16;saved=rex::memory::load_and_swap<uint32_t>(base+address);
+      }
+    }
+    loading_tip_sizing=this;
+  }
+  ~LoadingTipSizing() {
+    if(address)rex::memory::store_and_swap<uint32_t>(base+address,saved);
+    loading_tip_sizing=previous;
+  }
+  void ForTexture(uint32_t texture) {
+    if(!address)return;
+    const auto glyph=TextureGlyph(texture,base);
+    const float width=FindGlyph(glyph)?original*LabelAspect(Label(glyph,Style::Keyboard)):original;
+    rex::memory::store_and_swap<float>(base+address,width);
+  }
+};
 bool SDLCALL Observe(void*, SDL_Event* event) {
   active.Observe(*event,focused.load(std::memory_order_relaxed));
   return true;
@@ -109,7 +155,8 @@ class KeyboardObserver final : public rex::ui::WindowInputListener, public rex::
 
 // Interpolate inside the original sprite instead of assuming pixel coordinates
 // or reproducing the game's projection matrices in a host overlay.
-void Emit(PPCContext& ctx,uint8_t* base,const Geometry& geometry) {
+using QuadDraw=void(*)(PPCContext&,uint8_t*);
+void Emit(PPCContext& ctx,uint8_t* base,const Geometry& geometry,QuadDraw draw_quad=motogp::wide::DrawUiQuad) {
   const PPCContext entry=ctx;
   const uint32_t pointers[]={ctx.r3.u32,ctx.r4.u32,ctx.r5.u32,ctx.r6.u32};
   uint8_t saved[4][24];float corners[4][3];
@@ -127,7 +174,7 @@ void Emit(PPCContext& ctx,uint8_t* base,const Geometry& geometry) {
       rex::memory::store_and_swap<uint32_t>(base+pointers[v]+12,quad.color);
     }
     PPCContext draw=entry;draw.r7.u64=0;
-    motogp::wide::DrawUiQuad(draw,base);
+    draw_quad(draw,base);
     ctx=draw;
   }
   for(unsigned v=0;v<4;++v)std::memcpy(base+pointers[v],saved[v],24);
@@ -164,7 +211,7 @@ float MeasureButtonHalfWidth(char code,float original,Style style) {
   return style==Style::Keyboard && FindGlyph(code)?original*LabelAspect(Label(code,style)):original;
 }
 namespace {
-bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_glyph) {
+bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_glyph,QuadDraw draw_quad=motogp::wide::DrawUiQuad) {
     auto* definition=FindGlyph(glyph);
     if(style==Style::Xbox || !definition) return false;
     if(style==Style::PlayStation) {
@@ -178,7 +225,7 @@ bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_
         rex::memory::store_and_swap<float>(base+pointers[i]+20,i>=2?1.f:0.f);
       }
       ctx.r7.u64=texture;
-      motogp::wide::DrawUiQuad(ctx,base);
+      draw_quad(ctx,base);
       for(unsigned i=0;i<4;++i)std::memcpy(base+pointers[i]+16,saved[i].data(),8);
       return true;
     }
@@ -194,18 +241,12 @@ bool DrawGlyph(PPCContext& ctx,uint8_t* base,Style style,char glyph,bool inline_
     auto geometry=MakeKeyboardGeometry(label,width/height*factor,color);
     if(factor!=1)for(auto& q:geometry.quads)for(auto& p:q.points)p.x=.5f+(p.x-.5f)*factor;
     if(geometry.quads.empty()) return false;
-    Emit(ctx,base,geometry);return true;
+    Emit(ctx,base,geometry,draw_quad);return true;
 }
 }
 bool DrawReplacement(PPCContext& ctx,uint8_t* base,Style style,bool inline_glyph) {
   if(style==Style::Xbox || !ctx.r7.u32) return false;
-  const auto table=rex::memory::load_and_swap<uint32_t>(base+0x8292CCB8);
-  if(table) for(unsigned i=0;i<22;++i) {
-    if(rex::memory::load_and_swap<uint32_t>(base+table+4*i)!=ctx.r7.u32) continue;
-    const char glyph=char(rex::memory::load_and_swap<uint32_t>(base+0x8292CC60+4*i)-0x700);
-    return DrawGlyph(ctx,base,style,glyph,inline_glyph);
-  }
-  return false;
+  return DrawGlyph(ctx,base,style,TextureGlyph(ctx.r7.u32,base),inline_glyph);
 }
 char ReplaySpriteGlyph(uint64_t caller,uint32_t sprite,const uint8_t* base) {
   // The five-control Second Chance row and the eight-control full replay row
@@ -237,6 +278,32 @@ REX_HOOK_RAW(sub_82388C38) {
   if(sprite_glyph && DrawGlyph(ctx,base,sprite_style,sprite_glyph,false))return;
   if(ready.load(std::memory_order_relaxed) && DrawReplacement(ctx,base,frame_style.load(std::memory_order_relaxed),inline_depth!=0)) return;
   motogp::wide::DrawUiQuad(ctx,base);
+}
+REX_HOOK_RAW(sub_822BA980) {
+  using namespace motogp::prompts;
+  if(!ready.load(std::memory_order_relaxed)){__imp__sub_822BA980(ctx,base);return;}
+  // Loading can run without the normal gameplay frame callback. Observe live
+  // input here too so Auto and manual styles remain current while it scrolls.
+  active.SetKeyboardEnabled(rex::cvar::Query<bool>("mnk_mode"));
+  PollXInput();
+  const auto style=SelectedStyle();
+  frame_style.store(style,std::memory_order_relaxed);
+  LoadingTipSizing sizing(base,style==Style::Keyboard);
+  __imp__sub_822BA980(ctx,base);
+}
+REX_HOOK_RAW(sub_822BA6C0) {
+  using namespace motogp::prompts;
+  const bool measure=ctx.lr==0x822BAC88;
+  __imp__sub_822BA6C0(ctx,base);
+  if(measure && loading_tip_sizing)loading_tip_sizing->ForTexture(ctx.r3.u32);
+}
+REX_HOOK_RAW(sub_82388DA8) {
+  using namespace motogp::prompts;
+  // Only the loading-tip icon call bypasses the regular prompt draw hook.
+  // Retain this path's own UI state setup, projection and batching.
+  if(ctx.lr==0x822BAD6C && ready.load(std::memory_order_relaxed) &&
+     DrawGlyph(ctx,base,frame_style.load(std::memory_order_relaxed),TextureGlyph(ctx.r7.u32,base),false,__imp__sub_82388DA8))return;
+  __imp__sub_82388DA8(ctx,base);
 }
 REX_HOOK_RAW(sub_8227E440) {
   using namespace motogp::prompts;

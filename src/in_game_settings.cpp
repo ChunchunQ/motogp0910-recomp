@@ -318,7 +318,7 @@ void Widget(Model& model,View& view,const Spec& s,bool tr){
 }
 bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
   using namespace motogp::overlay;Theme theme(font);
-  ImGui::PushStyleColor(ImGuiCol_PopupBg,card);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImVec4(.30f,.23f,.13f,1));ImGui::PushStyleColor(ImGuiCol_HeaderActive,ImVec4(.42f,.28f,.10f,1));
+  ImGui::PushStyleColor(ImGuiCol_PopupBg,card);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,AccentTint(.24f));ImGui::PushStyleColor(ImGuiCol_HeaderActive,AccentTint(.36f));
   ImGui::PushStyleColor(ImGuiCol_FrameBg,ImVec4(.125f,.14f,.175f,1));
   ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.125f,.14f,.175f,1));
   ImGui::PushStyleColor(ImGuiCol_NavCursor,orange);
@@ -334,7 +334,7 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
     const char* en[]={"General","Graphics","Advanced","Audio","Controls"};const char* tu[]={"Genel","Grafik","Gelişmiş","Ses","Kontroller"};
     // A wrapping navigation row also fits 640x480 without horizontal scrolling.
     for(int i=0;i<5;++i){const char* label=tr?tu[i]:en[i];float w=ImGui::CalcTextSize(label).x+26;if(i&&ImGui::GetContentRegionAvail().x>w+12)ImGui::SameLine();
-      bool selected=int(view.page)==i;if(selected)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.32f,.23f,.11f,1));
+      bool selected=int(view.page)==i;if(selected)ImGui::PushStyleColor(ImGuiCol_Button,AccentTint(.24f));
       if(ImGui::Button(label)){view.page=Page(i);view.capture.clear();}if(selected)ImGui::PopStyleColor();
     }
     ImGui::BeginChild("##settings_list",ImVec2(0,-130),ImGuiChildFlags_Borders);

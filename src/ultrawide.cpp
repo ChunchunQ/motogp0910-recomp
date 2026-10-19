@@ -36,7 +36,7 @@ void Update(rex::ui::Window* window) {
   }
   const auto divisor=std::gcd(x,y);x/=divisor;y/=divisor;
   SetRatio(x,y);
-  REXLOG_INFO("ULTRAWIDE: aspect={}:{} horizontal_scale={}; native 720p framebuffer retained",x,y,HorizontalScale());
+  REXLOG_DEBUG("ULTRAWIDE: aspect={}:{} horizontal_scale={}; native 720p framebuffer retained",x,y,HorizontalScale());
 }
 class Listener final:public rex::ui::WindowListener {
  void OnResize(rex::ui::UISetupEvent& event)override{if(set_aspect)Update(event.target());}
@@ -67,7 +67,7 @@ void DrawUiQuad(PPCContext& ctx,uint8_t* base){
   if(scale==1){__imp__sub_82388C38(ctx,base);return;}
   const std::array<uint32_t,4> vertices{ctx.r3.u32,ctx.r4.u32,ctx.r5.u32,ctx.r6.u32};
   static std::atomic<bool> logged{false};
-  if(!logged.load(std::memory_order_relaxed) && !logged.exchange(true,std::memory_order_relaxed))REXLOG_INFO("ULTRAWIDE_UI: first native quad x={},{}",rex::memory::load_and_swap<float>(base+vertices[0]),rex::memory::load_and_swap<float>(base+vertices[1]));
+  if(!logged.load(std::memory_order_relaxed) && !logged.exchange(true,std::memory_order_relaxed))REXLOG_DEBUG("ULTRAWIDE_UI: first native quad x={},{}",rex::memory::load_and_swap<float>(base+vertices[0]),rex::memory::load_and_swap<float>(base+vertices[1]));
   std::array<uint32_t,4> saved{};
   for(unsigned i=0;i<4;++i)saved[i]=rex::memory::load_and_swap<uint32_t>(base+vertices[i]);
   for(unsigned i=0;i<4;++i){const auto x=std::bit_cast<float>(saved[i]);

@@ -38,7 +38,7 @@ void ApplyHostDisplay(rex::ui::Window* window) {
   const auto result=configure(1,window->GetNativeWindowHandle(),mode=="fullscreen"?2:mode=="borderless"?1:0,
       rex::cvar::Query<int32_t>("window_width"),rex::cvar::Query<int32_t>("window_height"),refresh);
   if(result<0)throw std::runtime_error("The selected fullscreen resolution/refresh rate is unavailable. Choose Automatic / desktop or a supported display mode.");
-  REXLOG_INFO("HOST_DISPLAY: mode={} requested_refresh={} Hz; guest video timing unchanged",mode,refresh);
+  REXLOG_DEBUG("HOST_DISPLAY: mode={} requested_refresh={} Hz; guest video timing unchanged",mode,refresh);
 #else
   (void)window;
 #endif

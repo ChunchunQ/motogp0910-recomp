@@ -140,7 +140,7 @@ struct SocketBridge::Impl {
     while(!stopping.load()){
       auto packet=guest.Network().ReceiveData(std::chrono::milliseconds(20));if(!packet)continue;
       std::lock_guard lock(mutex);
-      if(!received_packet){received_packet=true;REXLOG_INFO("LAN_PACKET: first receive peer={:016X} guest_port={} bytes={}",packet->peer,packet->destination_port,packet->bytes.size());}
+      if(!received_packet){received_packet=true;REXLOG_DEBUG("LAN_PACKET: first receive peer={:016X} guest_port={} bytes={}",packet->peer,packet->destination_port,packet->bytes.size());}
       for(auto& [id,socket]:sockets){
         if(socket->closed || socket->port!=packet->destination_port)continue;
         bool consumed=false;
@@ -178,7 +178,7 @@ struct SocketBridge::Impl {
   }
   uint32_t Transmit(GuestSocket& socket,uint32_t ip,uint16_t port,std::span<const uint8_t> data){
     if(!socket.port || !port)return kInvalid;if(data.size()>kMaxPacket-56)return kTooLarge;
-    if(!sent_packet){sent_packet=true;REXLOG_INFO("LAN_PACKET: first send guest_port={} destination={}:{} bytes={}",socket.port,IPv4(ip),port,data.size());}
+    if(!sent_packet){sent_packet=true;REXLOG_DEBUG("LAN_PACKET: first send guest_port={} destination={}:{} bytes={}",socket.port,IPv4(ip),port,data.size());}
     if(ip==UINT32_MAX){bool sent=false;for(auto id:guest.Network().ConnectedPeers())sent|=guest.Network().SendData(id,socket.port,port,data);return sent?0:10065;}
     const auto id=Peer(ip);return id && guest.Network().Connected(id) && guest.Network().SendData(id,socket.port,port,data)?0:10065;
   }

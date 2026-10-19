@@ -30,6 +30,7 @@
 #include "lan/runtime.h"
 #include "crash_report.h"
 #include "achievement_ui.h"
+#include "overlay_theme.h"
 #include "quit_menu.h"
 #include "options_menu.h"
 #include "localization.h"
@@ -211,8 +212,12 @@ class Motogp0910App : public rex::ReXApp {
       const auto utf8_path=rex::path_to_utf8(path);
       achievement_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),17.f,nullptr,ranges);
       achievement_heading_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),30.f,nullptr,ranges);
+      if(achievement_font_)ImGui::GetIO().FontDefault=achievement_font_;
     }
     else REXLOG_WARN("Achievement font is missing; extract the complete build including resources/ui");
+  }
+  void OnConfigureStyle(ImGuiStyle& style,rex::ui::Style&) override {
+    motogp::overlay::ConfigureDialogs(style);
   }
   std::unique_ptr<rex::ui::ImGuiDialog> CreateAchievementsOverlay() override {
     if(!imgui_drawer() || !runtime()) return nullptr;
@@ -279,6 +284,12 @@ class Motogp0910App : public rex::ReXApp {
   }
   void OnConfigureLogging(rex::LogConfig& config) override {
     config.log_dir=motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"logs";
+    // The launcher diagnostics checkbox opts into detailed logs on the next
+    // launch. Keep explicit log-level/verbose and per-category overrides.
+    if(rex::cvar::Query<bool>("debug_overlay_enabled") &&
+       rex::cvar::GetFlagSource("log_level")==rex::cvar::Source::kDefault &&
+       !rex::cvar::Query<bool>("log_verbose") && config.default_level==spdlog::level::info)
+      config.default_level=spdlog::level::debug;
   }
   void OnPostInitLogging() override {
     // Resolve the default after TOML loading too, including old explicit

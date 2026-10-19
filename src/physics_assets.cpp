@@ -28,7 +28,7 @@ void ConvertCollisionRecord(PPCContext& ctx,uint8_t* base,
   if(changed){
     static std::atomic<uint32_t> repaired{0};const auto count=++repaired;
     if(count<=8 || (count&(count-1))==0)
-      REXLOG_INFO("PHYSICS_ASSET_FIX kind={} repaired_records={} corrected_fields={}",kind,count,changed);
+      REXLOG_DEBUG("PHYSICS_ASSET_FIX kind={} repaired_records={} corrected_fields={}",kind,count,changed);
   }
 }
 }

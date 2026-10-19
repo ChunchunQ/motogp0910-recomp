@@ -139,6 +139,6 @@ void Install(rex::Runtime* runtime,const std::filesystem::path& resources){
   auto achievements=runtime->kernel_state()->loaded_achievements();
   for(auto& entry:achievements)TranslateAchievement(entry);
   runtime->kernel_state()->SetLoadedAchievements(std::move(achievements));
-  REXLOG_INFO("TURKISH_TEXT_READY messages=2102 overlay_files={} voice_language=english",files.size());
+  REXLOG_DEBUG("TURKISH_TEXT_READY messages=2102 overlay_files={} voice_language=english",files.size());
 }
 }

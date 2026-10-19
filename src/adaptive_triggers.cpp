@@ -66,7 +66,7 @@ void Run(std::stop_token stop) {
             pad.last=report;pad.sent=true;
             const bool ok=shared_sdl::SendGamepadEffect(pad.handle,report.data(),static_cast<int>(report.size()));
             pad.failed=!ok;
-            if(ok){pad.owned_effect=true;REXLOG_INFO("DUALSENSE: trigger report accepted for device {}; focused={}",id,active);}
+            if(ok){pad.owned_effect=true;REXLOG_DEBUG("DUALSENSE: trigger report accepted for device {}; focused={}",id,active);}
             else REXLOG_WARN("DUALSENSE: trigger report rejected for device {}: {}",id,shared_sdl::GetError());
           }
           failed|=pad.failed;

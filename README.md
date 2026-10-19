@@ -5,12 +5,15 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-settings.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-ui-log-update.zip)
 
-This update passed 78,241 Windows/Wine launcher UI checks, 240 Advanced native
-consumer checks, 661 engine/scope checks, 392 live-settings checks, 112 launcher
-integration checks and 93 targeted graphics checks. GPU shader execution and
-native Windows races remain unverified. See [scope and evidence](docs/advanced-settings-validation.md).
+This update includes launcher spacing adjustments, loading-tip prompt
+replacement, consistent `#ff6a13` in-game overlay accents, themed system input
+dialogs and reduced routine log noise. It is compiled without running tests,
+at the user's request. The earlier Advanced package passed the CPU/UI checks
+recorded in [scope and evidence](docs/advanced-settings-validation.md); those
+results do not validate this executable. See the [supplied Windows log review
+and remaining network limitations](docs/release-log-review.md).
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -48,7 +51,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `83f51c5410da201477aa3b5c1f8fb74e97786d7747c9a93ee1f8d0fdb9d89156`.
+Package SHA-256: `adb0227053a35f28459b356ed3f2794f191b0633ea424e522a18ac211e465c69`.
 
 ## Current features and evidence
 
@@ -89,7 +92,9 @@ Package SHA-256: `83f51c5410da201477aa3b5c1f8fb74e97786d7747c9a93ee1f8d0fdb9d891
   distinguished from native Windows GPU and physical hardware verification.
 - **Optional debug overlay and startup skipping:** Advanced → Enable debug
   overlay permits F3 to show guest presentation timing, graphics/runtime counters,
-  display settings, memory and audio/cache diagnostics. The overlay defaults off
+  display settings, memory and audio/cache diagnostics. Enabling it also selects
+  detailed Debug logs on the next launch; otherwise normal Info logs apply.
+  Explicit log-level overrides are preserved. The overlay defaults off
   and does not capture gameplay input. Cross/A or Start, Space or Enter can
   request the native intro fade while preserving the final Press Start screen.
   Intro skipping needs no checkbox; Extended crash diagnostics is in Advanced.

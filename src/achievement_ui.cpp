@@ -107,7 +107,7 @@ bool DrawMenu(rex::system::AchievementManager& manager,MenuState& state,Preferen
     ImGui::SameLine(); ImGui::TextColored(orange,"  %llu / %llu G",static_cast<unsigned long long>(summary.score),static_cast<unsigned long long>(summary.available_score));
     ImGui::ProgressBar(summary.total?float(summary.earned)/summary.total:0,ImVec2(-1,5),"");
     const char* filters[]={Tr(tr,"All","Tümü"),Tr(tr,"Unlocked","Kazanılan"),Tr(tr,"Locked","Kilitli")};
-    for(int i=0;i<3;++i) {if(i) ImGui::SameLine(); const bool selected=state.filter==i; if(selected) ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.32f,.23f,.11f,1));
+    for(int i=0;i<3;++i) {if(i) ImGui::SameLine(); const bool selected=state.filter==i; if(selected) ImGui::PushStyleColor(ImGuiCol_Button,AccentTint(.24f));
       if(ImGui::Button(filters[i])) state.filter=i;
       if(selected) ImGui::PopStyleColor();
     }

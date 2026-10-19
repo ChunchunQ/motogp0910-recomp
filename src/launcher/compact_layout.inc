@@ -4,7 +4,7 @@
   std::array<int,7> page_scroll{},page_extent{};
   static constexpr int kPageX=28,kPageY=136,kPageWidth=610,kPageHeight=480;
   static constexpr int kFormWidth=kPageWidth-26,kColumnWidth=(kFormWidth-22)/2,kColumnX=kColumnWidth+22;
-  static constexpr int kActionsY=kPageY+kPageHeight+8,kStatusY=kHeight-40;
+  static constexpr int kActionsY=kPageY+kPageHeight+8,kStatusY=kHeight-30;
   std::unique_ptr<Gdiplus::Bitmap> cover,paint_background;
   HBITMAP paint_background_bitmap{};
   std::future<GameVerification> verify_future;
@@ -218,18 +218,18 @@
     post_effect=field(0,L"Anti-aliasing",L"Kenar yumuşatma",kColumnX,136,kPostEffect);
     refresh_rate=field(0,L"Refresh rate",L"Yenileme hızı",0,204,kRefreshRate);
     fps_limit=field(0,L"FPS limit",L"FPS sınırı",kColumnX,204,kFpsLimit);
-    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,288,kEffect);
-    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",kColumnX,288,kFsrQuality);
-    LabelControl(0,L"Upscaler sharpness",L"Ölçekleyici keskinliği",0,356,kFormWidth-90);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,kFormWidth-70,356,70,22);
-    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,382,kFormWidth,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
-    vsync=check(0,0,438,kColumnWidth,kVsync);msaa=check(0,kColumnX,438,kColumnWidth,kMsaa);
-    letterbox=check(0,0,480,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,480,kColumnWidth,kAspect);
-    dither=check(0,0,522,kColumnWidth,kDither);shader_cache=check(0,kColumnX,522,kColumnWidth,kShaderCache);
+    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,272,kEffect);
+    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",kColumnX,272,kFsrQuality);
+    LabelControl(0,L"Upscaler sharpness",L"Ölçekleyici keskinliği",0,340,kFormWidth-90);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,kFormWidth-70,340,70,22);
+    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,366,kFormWidth,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
+    vsync=check(0,0,422,kColumnWidth,kVsync);msaa=check(0,kColumnX,422,kColumnWidth,kMsaa);
+    letterbox=check(0,0,464,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,464,kColumnWidth,kAspect);
+    dither=check(0,0,506,kColumnWidth,kDither);shader_cache=check(0,kColumnX,506,kColumnWidth,kShaderCache);
     for(size_t i=0;i<engine_choices.size();++i){const auto slot=i<3?i:i+1;
       engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(slot%2)*kColumnX,(slot/2)*82,kEngineBase+i);}
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",kColumnX,82,kShadowDistance);
-    debug_overlay=check(4,0,432,kFormWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
-    crash_diagnostics=check(4,0,476,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(config.table,"launcher_crash_monitor",true));
+    debug_overlay=check(4,0,410,kColumnWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
+    crash_diagnostics=check(4,kColumnX,410,kColumnWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(config.table,"launcher_crash_monitor",true));
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",0,0,kFormWidth-104);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,kFormWidth-80,0,80,22);
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,kFormWidth,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     mute=check(1,0,100,kFormWidth,kMute);

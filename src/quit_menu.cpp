@@ -1,4 +1,5 @@
 #include "quit_menu.h"
+#include "overlay_theme.h"
 #include "localization.h"
 #include <rex/hook.h>
 #include "diagnostic_options.h"
@@ -144,7 +145,7 @@ bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha,uint64_t calle
   // r4=0 (not an in-race overlay); the secondary frontend path passes r4=1.
   // Match the caller as well as the mode so arbitrary/in-game calls can't arm.
   const uint32_t trace_bit=caller==0x8229CA24?1:caller==0x822AE94C?2:0;
-  if(trace_bit&&!(title_trace_mask.fetch_or(trace_bit)&trace_bit))REXLOG_INFO("PC_QUIT_TITLE_DRAW mode={} caller=0x{:08X} flag={} alpha={} focused={} boot_mode={}",mode,caller,startup,alpha,focused.load(),Read(base,0x828DA060));
+  if(trace_bit&&!(title_trace_mask.fetch_or(trace_bit)&trace_bit))REXLOG_DEBUG("PC_QUIT_TITLE_DRAW mode={} caller=0x{:08X} flag={} alpha={} focused={} boot_mode={}",mode,caller,startup,alpha,focused.load(),Read(base,0x828DA060));
   const auto boot_mode=Read(base,0x828DA060);
   const bool boot=caller==0x8229CA24&&startup==0&&boot_mode==11;
   const bool frontend=caller==0x822AE94C&&startup==1&&mode==15&&alpha>=1.0;
@@ -215,19 +216,19 @@ class Dialog final:public rex::ui::ImGuiDialog {
     ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(.19f,.21f,.26f,1));
     ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(.94f,.95f,.97f,1));
     ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.13f,.15f,.19f,1));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(.34f,.24f,.11f,1));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(.5f,.3f,.10f,1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,motogp::overlay::AccentTint(.24f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,motogp::overlay::AccentTint(.36f));
     ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg,ImVec4(0,0,0,.6f));
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x*.5f,io.DisplaySize.y*.5f),ImGuiCond_Always,ImVec2(.5f,.5f));
     ImGui::SetNextWindowSize(ImVec2(std::min(490.f,io.DisplaySize.x-32),0),ImGuiCond_Always);
     if(ImGui::BeginPopupModal("##motogp_quit_confirmation",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize)){
-      ImGui::TextColored(ImVec4(1,.65f,.12f,1),"%s",tr("QUIT GAME","OYUNDAN ÇIK"));
+      ImGui::TextColored(motogp::overlay::orange,"%s",tr("QUIT GAME","OYUNDAN ÇIK"));
       ImGui::Spacing();ImGui::TextWrapped("%s",tr("Are you sure you want to quit?","Oyundan çıkmak istiyor musunuz?"));ImGui::Spacing();
       const float width=(ImGui::GetContentRegionAvail().x-12)*.5f;
-      if(!model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.3f,.23f,.12f,1));
+      if(!model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,motogp::overlay::AccentTint(.24f));
       if(ImGui::Button(tr("Cancel","Vazgeç"),ImVec2(width,0)))cancel=true;
       if(!model_.exit_selected())ImGui::PopStyleColor();ImGui::SameLine();
-      if(model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.45f,.28f,.1f,1));
+      if(model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,motogp::overlay::AccentTint(.36f));
       if(ImGui::Button(tr("Quit game","Oyundan çık"),ImVec2(width,0)))confirm=true;
       if(model_.exit_selected())ImGui::PopStyleColor();
       if(keyboard_armed_){
@@ -278,7 +279,7 @@ bool PollTitleInput(uint8_t* base,uint32_t expected_mode) {
   const auto value=Read(base,0x8292710C);
   const bool mode_matches=expected_mode==11?Read(base,0x828DA060)==11:
       value>=0x82000000&&value<0x84000000&&Read(base,value)==expected_mode;
-  if(back&&!back_was_down&&serial&&observed_title_mode.load()==expected_mode&&back_trace_count.fetch_add(1)<8)REXLOG_INFO("PC_QUIT_TITLE_BACK mode={} fresh_draw={} focused={} armed={} pending={}",expected_mode,serial!=title_consumed,focused.load(),input_armed.load(),Pending());
+  if(back&&!back_was_down&&serial&&observed_title_mode.load()==expected_mode&&back_trace_count.fetch_add(1)<8)REXLOG_DEBUG("PC_QUIT_TITLE_BACK mode={} fresh_draw={} focused={} armed={} pending={}",expected_mode,serial!=title_consumed,focused.load(),input_armed.load(),Pending());
   if(!Pending()&&serial!=title_consumed&&observed_title_mode.load()==expected_mode&&mode_matches&&back&&!back_was_down){Request();SynchronizeBlocker();}
   // Several native updates may occur between draws. A neutral poll must not
   // consume the visible title, otherwise a later Back edge in the same frame

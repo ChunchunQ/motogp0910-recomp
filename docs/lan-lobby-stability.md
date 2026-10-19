@@ -71,6 +71,10 @@ separate implementation based on the correct option contract. This patch does
 not invent clock/statistic values or suppress that error, and the supplied
 logs do not establish it as the cause of the initial lobby failures.
 
+A later [release logging change](release-log-review.md) throttles repeated
+option 6 errors at powers of two while retaining error severity and the same
+return/output behavior. The option itself remains unimplemented.
+
 Other file/compression and GPU fetch warnings also appear in successful runs.
 They are not sufficient evidence of the lobby's cause. Native crash reports
 remain included in the package for any complete process exit.

@@ -48,6 +48,6 @@ uint32_t WhiteAccentDescriptor(uint8_t* base,uint32_t original){
   std::memcpy(base+copy,base+original,52);
   for(unsigned i=0;i<6;++i)Write(base,copy+28+4*i,reinterpret_cast<uint32_t*>(&fetch)[i]);
   accent_descriptors.emplace(original,copy);
-  REXLOG_INFO("PC_QUIT_WHITE_ACCENT: native texture view created; original pixels and alpha retained");
+  REXLOG_DEBUG("PC_QUIT_WHITE_ACCENT: native texture view created; original pixels and alpha retained");
   return copy;
 }

@@ -43,7 +43,9 @@ the shared speed-FX enable byte also disabled vignette. Blur Off now scopes only
 the blur alpha and velocity while preserving the original camera enable state.
 
 The ten settings and their labels fit five aligned rows at 75–150% scales.
-Debug/crash diagnostics remain below them and are reachable by scrolling.
+In that validated build, Debug/crash diagnostics followed them vertically and
+required scrolling. A subsequent layout change places both checkboxes side by
+side below the last row; that layout change has not been runtime-tested.
 
 The final ZIP's public root launcher also passed a separate smoke check: real
 mouse/keyboard selections for all six new settings were saved to root
