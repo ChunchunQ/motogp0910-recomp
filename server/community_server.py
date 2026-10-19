@@ -135,6 +135,7 @@ class Client:
     adverts: set = field(default_factory=set)
     queries: dict = field(default_factory=dict)
     joins: Bucket = field(default_factory=lambda: Bucket(10,20))
+    dropped: dict = field(default_factory=dict)
 
 @dataclass
 class Room:
@@ -329,6 +330,7 @@ class Service(asyncio.DatagramProtocol):
         self.db_cpu = Bucket(0.25,0.25)
         self.transport = None
         self.live_snapshot = None
+        self.drops_logged = 0.0
         # NOBK Online accounts: launcher tokens are verified by the site's own
         # account API on this machine (loopback); None disables /v2/link.
         self.account_api = None
@@ -352,7 +354,8 @@ class Service(asyncio.DatagramProtocol):
         return struct.pack('>Q16s32sH', peer, client.ticket, client.key, self.udp_port)
     def envelope(self, client, data, address):
         size = len(data)+68
-        if not client.outgoing.take(size) or not self.udp_outgoing.take(size): return
+        if not client.outgoing.take(size) or not self.udp_outgoing.take(size):
+            client.dropped['out-limit']=client.dropped.get('out-limit',0)+1;return
         client.sequence += 1
         body=ENVELOPE.pack(ONLINE_MAGIC, client.ticket, client.sequence, client.peer)+data
         self.transport.sendto(body+hmac.digest(client.key, b'S'+body, 'sha256'), address)
@@ -376,10 +379,12 @@ class Service(asyncio.DatagramProtocol):
         # Unauthenticated traffic/replays must never spend another player's
         # quota, or the verified global gameplay budget. Crypto work has its
         # own bounded gate so failure-path CPU is still capped.
-        if not client.packets.take() or not self.udp_packets.take() or not self.udp_incoming.take(len(data)): return
+        if not client.packets.take() or not self.udp_packets.take() or not self.udp_incoming.take(len(data)):
+            client.dropped['in-limit']=client.dropped.get('in-limit',0)+1;return
         now=time.monotonic()
         client.allowance=min(256000, client.allowance+(now-client.budget_at)*128000);client.budget_at=now
-        if client.allowance < len(data): return
+        if client.allowance < len(data):
+            client.dropped['in-bytes']=client.dropped.get('in-bytes',0)+1;return
         client.allowance -= len(data)
         raw=data[36:-32]
         try:
@@ -441,12 +446,13 @@ class Service(asyncio.DatagramProtocol):
                 if previous.session != session: return
                 previous.body=body;previous.seen=time.monotonic();return
             if kind == LEFT and peer in self.rooms and self.rooms[peer].session == session:
-                self.close_room(peer);return
+                self.close_room(peer,'host left');return
             if kind == ROSTER:
                 room=self.rooms.get(peer)
                 if not room or room.session!=session or sequence<room.host_sequence:return
                 present=self.roster(room,body)
                 for removed in room.members-present:
+                    LOG.info('Room %016x: host %d removed player %d',room.session,peer&0xFFFFFF,removed&0xFFFFFF)
                     previous=self.clients.get(removed)
                     if previous:
                         if previous.room==peer:previous.room=0
@@ -520,12 +526,13 @@ class Service(asyncio.DatagramProtocol):
         if kind == LEAVE and target==room.host and peer!=room.host:
             # Release the directory slot even if the host's UDP acknowledgment
             # is lost. The leaving client has already cleared its local room.
+            LOG.info('Room %016x: player %d left',room.session,peer&0xFFFFFF)
             room.members.discard(peer);client.room=0
             room.pending.pop(peer,None)
         if kind == LEFT:
             room.members.discard(target);destination.room=0
             room.pending.pop(target,None);room.host_sequence=sequence
-    def close_room(self, host):
+    def close_room(self, host, reason=''):
         room=self.rooms.pop(host,None)
         if not room: return
         for peer in room.members:
@@ -533,21 +540,25 @@ class Service(asyncio.DatagramProtocol):
             if client and client.room==host:
                 if peer!=host:self.forward(client,packet(LEFT,0,host,room.session))
                 client.room=0
-        LOG.info('Closed room %016x', room.session)
+        LOG.info('Closed room %016x host %d members %s: %s', room.session, host&0xFFFFFF, sorted(m&0xFFFFFF for m in room.members), reason or 'closed')
     def remove(self, peer):
         client=self.clients.get(peer)
         if not client:return
-        self.close_room(peer)
+        self.close_room(peer,'host disconnected')
         if client.room in self.rooms:self.rooms[client.room].members.discard(peer)
         self.clear_pending(peer)
         self.tickets.pop(client.ticket,None);self.clients.pop(peer,None)
     def expire(self):
         now=time.monotonic()
         for host,room in list(self.rooms.items()):
-            if now-room.seen>15:self.close_room(host)
+            if now-room.seen>15:self.close_room(host,'no host advert for 15 s')
             else:room.pending={p:v for p,v in room.pending.items() if now-v[1]<10}
         for peer,c in list(self.clients.items()):
-            if now-c.seen>45:self.remove(peer)
+            if now-c.seen>45:LOG.info('Player %d timed out (no UDP for 45 s)',peer&0xFFFFFF);self.remove(peer)
+        if now-self.drops_logged>=10:
+            for c in self.clients.values():
+                if c.dropped:LOG.info('Player %d: %s',c.peer&0xFFFFFF,', '.join(f'{k} {v}' for k,v in sorted(c.dropped.items())));c.dropped.clear()
+            self.drops_logged=now
         self.limits.prune();self.profile_limits.prune()
         for client in self.clients.values():
             client.queries={p:v for p,v in client.queries.items() if now-v[1]<5}
