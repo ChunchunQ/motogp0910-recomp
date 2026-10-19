@@ -136,4 +136,73 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue((await self.request(request.replace(b'Host: localhost',b'Host: localhost\r\nHost: another'))).startswith(b'HTTP/1.1 400'))
         self.assertTrue((await self.request(request[:-len(body)]+bytes([body[0]^1])+body[1:])).startswith(b'HTTP/1.1 400'))
 
+class FakeAccounts:
+    """Stand-in for the NOBK Online site API (/api/account/launcher) on loopback."""
+    def __init__(self):
+        import http.server, threading
+        self.tokens={'A'*43:(7,'NOBK'),'B'*43:(8,'OCALEX')};self.seen=[]
+        outer=self
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self,*a):pass
+            def do_POST(self):
+                body=json.loads(self.rfile.read(int(self.headers['Content-Length'])));outer.seen.append((self.headers.get('X-Requested-With'),body))
+                hit=outer.tokens.get(body.get('token'))
+                data,code=({'gamertag':hit[1],'xuid':'%x'%(0x100000+hit[0]),'token':body['token']},200) if hit else ({'error':'Oturumun süresi doldu, tekrar giriş yap.'},400)
+                raw=json.dumps(data).encode();self.send_response(code);self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
+        self.server=http.server.ThreadingHTTPServer(('127.0.0.1',0),H)
+        threading.Thread(target=self.server.serve_forever,daemon=True).start()
+        self.url=f'http://127.0.0.1:{self.server.server_address[1]}/api/account/launcher'
+    def close(self):self.server.shutdown();self.server.server_close()
+
+class AccountLinkTests(unittest.TestCase):
+    def setUp(self):
+        self.store=Store(':memory:',SCHEMAS);self.addCleanup(self.store.db.close)
+    def test_link_keeps_records_shares_identity_and_fixes_name(self):
+        pc1,pc2,other=(secrets.token_bytes(32) for _ in range(3))
+        anon=self.store.connect(pc1,'Rider')&0xFFFFFF
+        self.store.write(anon,secrets.token_hex(16),[(1,score(-90000))])
+        self.assertEqual(self.store.link(pc1,7,'NOBK'),anon)                       # first link keeps the records
+        self.assertEqual(self.store.connect(pc1,'Changed')&0xFFFFFF,anon)
+        self.assertEqual(self.store.db.execute('SELECT name FROM players WHERE id=?',(anon,)).fetchone()[0],'NOBK')
+        self.assertEqual(self.store.link(pc2,7,'NOBK'),anon)                       # second PC shares the player
+        self.assertEqual(self.store.connect(pc2,'Whatever')&0xFFFFFF,anon)
+        self.assertEqual(self.store.owner(pc2),anon)
+        self.assertEqual(self.store.read(1,1,10)[0],1)
+        with self.assertRaises(Invalid):self.store.link(pc2,8,'OCALEX')           # a PC cannot switch accounts silently
+        fresh=self.store.link(other,8,'OCALEX');self.assertNotEqual(fresh,anon)   # new account, new player
+        self.assertEqual(self.store.connect(other,'x')&0xFFFFFF,fresh)
+        with self.assertRaises(Invalid):self.store.connect(secrets.token_bytes(32),'Anon',require_account=True)
+        self.assertEqual(self.store.connect(pc1,'NOBK',require_account=True)&0xFFFFFF,anon)
+    def test_schema_migrates_an_existing_database(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=str(Path(folder)/'old.sqlite3');db=sqlite3.connect(path)
+            db.executescript("CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, credential TEXT UNIQUE NOT NULL, name TEXT NOT NULL);INSERT INTO players(credential,name) VALUES('x','Old');");db.commit();db.close()
+            store=Store(path,SCHEMAS);self.assertEqual(store.db.execute('SELECT name,account FROM players').fetchone(),('Old',None));store.db.close()
+
+class AccountHttpTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.accounts=FakeAccounts();self.addCleanup(self.accounts.close)
+        self.service=Service(Store(':memory:',SCHEMAS),30821);self.service.transport=Capture();self.service.account_api=self.accounts.url
+        self.server=await asyncio.start_server(self.service.http,'127.0.0.1',0,limit=8192)
+        self.port=self.server.sockets[0].getsockname()[1]
+        self.addCleanup(self.service.store.db.close)
+    async def asyncTearDown(self):self.server.close();await self.server.wait_closed()
+    async def post(self,path,key,body):
+        r,w=await asyncio.open_connection('127.0.0.1',self.port)
+        w.write(f'POST {path} HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {key.hex()}\r\nContent-Length: {len(body)}\r\n\r\n'.encode()+body);await w.drain()
+        answer=await r.read();w.close();await w.wait_closed();head,_,rest=answer.partition(b'\r\n\r\n');return int(head.split()[1]),rest
+    async def test_link_endpoint_verifies_the_site_token(self):
+        key=secrets.token_bytes(32)
+        self.assertEqual(await self.post('/v2/link',key,b'A'*43),(200,b'NOBK'))
+        self.assertEqual(self.accounts.seen[-1],('nobk',{'token':'A'*43}))
+        status,body=await self.post('/v2/connect',key,struct.pack('>Q',COMPAT)+text('Typed'));self.assertEqual(status,200)
+        peer=struct.unpack('>Q',body[:8])[0]
+        self.assertEqual(self.service.store.db.execute('SELECT name,account FROM players WHERE id=?',(peer&0xFFFFFF,)).fetchone(),('NOBK',7))
+        status,body=await self.post('/v2/link',secrets.token_bytes(32),b'C'*43);self.assertEqual(status,400);self.assertIn('Oturumun'.encode(),body)
+        self.assertEqual((await self.post('/v2/link',key,b'bad token!'*3))[0],400)
+        self.service.require_account=True
+        self.assertEqual((await self.post('/v2/connect',secrets.token_bytes(32),struct.pack('>Q',COMPAT)+text('Anon')))[0],400)
+        self.service.account_api=None
+        self.assertEqual((await self.post('/v2/link',key,b'A'*43))[0],400)
+
 if __name__=='__main__':unittest.main()
