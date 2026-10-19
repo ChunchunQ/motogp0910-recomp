@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 project(MotoGPTools LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
-find_package(rexglue 0.10.0 EXACT REQUIRED CONFIG)
+find_package(rexglue 0.10.0 REQUIRED CONFIG)  # scripts check the exact SDK build with rexglue --version
 add_executable(motogp_inspect inspect.cpp)
 target_link_libraries(motogp_inspect PRIVATE rex::runtime)
 if(WIN32)
