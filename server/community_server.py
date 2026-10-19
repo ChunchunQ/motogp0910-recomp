@@ -136,6 +136,7 @@ class Client:
     queries: dict = field(default_factory=dict)
     joins: Bucket = field(default_factory=lambda: Bucket(10,20))
     dropped: dict = field(default_factory=dict)
+    relayed: dict = field(default_factory=dict)  # kind -> [last monotonic time, count] of room packets this peer sent
 
 @dataclass
 class Room:
@@ -523,15 +524,23 @@ class Service(asyncio.DatagramProtocol):
             r=Reader(body);source_port,dest_port=r.u16(),r.u16();r.blob(1344);r.end()
             if not source_port or not dest_port:return
         self.forward(destination,raw)
+        mark=client.relayed.setdefault(kind,[0.0,0]);mark[0]=time.monotonic();mark[1]+=1
         if kind == LEAVE and target==room.host and peer!=room.host:
             # Release the directory slot even if the host's UDP acknowledgment
             # is lost. The leaving client has already cleared its local room.
-            LOG.info('Room %016x: player %d left',room.session,peer&0xFFFFFF)
+            LOG.info('Room %016x: player %d left; traffic %s; host traffic %s',room.session,peer&0xFFFFFF,self.traffic(peer),self.traffic(room.host))
             room.members.discard(peer);client.room=0
             room.pending.pop(peer,None)
         if kind == LEFT:
             room.members.discard(target);destination.room=0
             room.pending.pop(target,None);room.host_sequence=sequence
+    def traffic(self, peer):
+        """Seconds since this peer last sent each room packet kind through the relay (diagnostics)."""
+        client=self.clients.get(peer)
+        if not client:return 'gone'
+        now=time.monotonic();names={DATA:'data',HEARTBEAT:'hb',ROSTER:'roster'}
+        parts=[f'{names[k]} {now-client.relayed[k][0]:.1f}s/{client.relayed[k][1]}' for k in names if k in client.relayed]
+        return ', '.join(parts) or 'none'
     def close_room(self, host, reason=''):
         room=self.rooms.pop(host,None)
         if not room: return
@@ -540,7 +549,8 @@ class Service(asyncio.DatagramProtocol):
             if client and client.room==host:
                 if peer!=host:self.forward(client,packet(LEFT,0,host,room.session))
                 client.room=0
-        LOG.info('Closed room %016x host %d members %s: %s', room.session, host&0xFFFFFF, sorted(m&0xFFFFFF for m in room.members), reason or 'closed')
+        LOG.info('Closed room %016x host %d members %s: %s; traffic %s', room.session, host&0xFFFFFF, sorted(m&0xFFFFFF for m in room.members), reason or 'closed',
+                 '; '.join(f'{m&0xFFFFFF}: {self.traffic(m)}' for m in sorted(room.members|{host})))
     def remove(self, peer):
         client=self.clients.get(peer)
         if not client:return

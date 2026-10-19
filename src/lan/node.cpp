@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <cstdarg>
+#include <cstdio>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -91,6 +93,16 @@ struct Node::Impl {
  std::vector<uint8_t> local_qos;
  std::optional<Room> hosted,joined;
  std::deque<Datagram> datagrams;size_t queued_bytes=0;
+ std::map<uint64_t,Clock::time_point> last_data;uint64_t dropped_full=0,dropped_endpoint=0;
+ void Log(const char* format,...){
+  if(!options.log)return;char text[256];va_list args;va_start(args,format);std::vsnprintf(text,sizeof(text),format,args);va_end(args);
+  try{options.log(text);}catch(...){}
+ }
+ static bool PowerOfTwo(uint64_t n){return (n&(n-1))==0;}
+ long long DataAge(uint64_t peer,Clock::time_point now)const{
+  const auto found=last_data.find(peer);if(found==last_data.end())return -1;
+  return std::chrono::duration_cast<std::chrono::milliseconds>(now-found->second).count();
+ }
  uint32_t pending_request=0;uint64_t pending_session=0,pending_peer=0;Endpoint pending_endpoint;bool pending_done=false,pending_ok=false;
  Clock::time_point joined_seen{},last_heartbeat{};
  uint32_t next_request=static_cast<uint32_t>(RandomId());
@@ -188,10 +200,10 @@ struct Node::Impl {
    pending_done=true;changed.notify_all();return;
   }
   if(p.kind==Kind::Leave){
-   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){members.erase(found);peers.erase(p.peer);Send(from,{Kind::Left,p.request,identity,p.session,{}});BroadcastRoster();}}
+   if(hosted && p.session==hosted->id){auto found=members.find(p.peer);if(found!=members.end() && found->second.endpoint==from){Log("LAN_PEER: member %016llx left room %016llx",(unsigned long long)p.peer,(unsigned long long)hosted->id);members.erase(found);peers.erase(p.peer);Send(from,{Kind::Left,p.request,identity,p.session,{}});BroadcastRoster();}}
    return;
   }
-  if(p.kind==Kind::Left){if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint){peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}return;}
+  if(p.kind==Kind::Left){if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint){Log("LAN_PEER: host %016llx closed room %016llx",(unsigned long long)p.peer,(unsigned long long)joined->id);peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}return;}
   if(p.kind==Kind::Roster){
    if(!joined || p.session!=joined->id || p.peer!=joined->host || from!=joined->endpoint)return;
    try{Reader r(p.payload);auto room=*joined;room.flags=r.U32();room.capacity=r.U32();room.members=r.U32();room.state=r.U32();room.private_slots=r.U32();room.private_members=r.U32();
@@ -216,10 +228,15 @@ struct Node::Impl {
    else if(joined && p.session==joined->id && p.peer==joined->host && from==joined->endpoint)joined_seen=Clock::now();return;
   }
   if(p.kind==Kind::Data){
-   const auto found=peers.find(p.peer);if(found==peers.end() || found->second!=from)return;
+   const auto found=peers.find(p.peer);
+   if(found==peers.end() || found->second!=from){
+    if(found!=peers.end() && PowerOfTwo(++dropped_endpoint))Log("LAN_PEER: data from %016llx ignored: endpoint changed (count=%llu)",(unsigned long long)p.peer,(unsigned long long)dropped_endpoint);
+    return;
+   }
+   last_data[p.peer]=Clock::now();
    const auto session=hosted?hosted->id:joined?joined->id:0;if(!session || p.session!=session || (hosted && !members.contains(p.peer)) || (joined && !roster.contains(p.peer)))return;
    try{Reader r(p.payload);Datagram d;d.peer=p.peer;d.source_port=r.U16();d.destination_port=r.U16();const auto bytes=r.Blob(kMaxPacket-56);if(!r.End() || !d.source_port || !d.destination_port)return;
-    if(datagrams.size()>=512 || queued_bytes+bytes.size()>1024*1024)return;
+    if(datagrams.size()>=512 || queued_bytes+bytes.size()>1024*1024){if(PowerOfTwo(++dropped_full))Log("LAN_PEER: receive queue full, dropped data (count=%llu)",(unsigned long long)dropped_full);return;}
     d.bytes=bytes;queued_bytes+=d.bytes.size();datagrams.push_back(std::move(d));changed.notify_all();
    }catch(const std::exception&){}
   }
@@ -235,7 +252,10 @@ struct Node::Impl {
    Send(options.relay->endpoint,{Kind::Discover,search_request,identity,0,{}});relay_search_next=now+std::chrono::milliseconds(300);
   }
   std::erase_if(rooms,[&](const auto& entry){return now-entry.second.seen>options.expiry;});
-  if(std::erase_if(members,[&](const auto& entry){if(now-entry.second.seen<=options.expiry)return false;peers.erase(entry.first);return true;}))BroadcastRoster();
+  if(std::erase_if(members,[&](const auto& entry){if(now-entry.second.seen<=options.expiry)return false;
+     Log("LAN_PEER: member %016llx lost: no heartbeat for %lld ms, last data %lld ms ago",(unsigned long long)entry.first,
+         (long long)std::chrono::duration_cast<std::chrono::milliseconds>(now-entry.second.seen).count(),DataAge(entry.first,now));
+     peers.erase(entry.first);return true;}))BroadcastRoster();
   std::erase_if(peers,[&](const auto& entry){
    if(members.contains(entry.first) || (joined && roster.contains(entry.first)))return false;
    return std::none_of(rooms.begin(),rooms.end(),[&](const auto& room){return room.second.room.host==entry.first;});
@@ -244,7 +264,10 @@ struct Node::Impl {
    if((hosted && members.contains(packet.peer)) || (joined && roster.contains(packet.peer)))return false;
    queued_bytes-=packet.bytes.size();return true;
   });
-  if(joined && now-joined_seen>options.expiry){peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}
+  if(joined && now-joined_seen>options.expiry){
+   Log("LAN_PEER: room %016llx host %016llx lost: no roster for %lld ms, last data %lld ms ago",(unsigned long long)joined->id,(unsigned long long)joined->host,
+       (long long)std::chrono::duration_cast<std::chrono::milliseconds>(now-joined_seen).count(),DataAge(joined->host,now));
+   peers.clear();roster.clear();joined.reset();datagrams.clear();queued_bytes=0;changed.notify_all();}
   if(joined && now-last_heartbeat>std::min(std::chrono::milliseconds(500),options.expiry/3)){Send(joined->endpoint,{Kind::Heartbeat,0,identity,joined->id,{static_cast<uint8_t>(own_private)}});last_heartbeat=now;}
  }
  void Run(){

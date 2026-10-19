@@ -12,6 +12,8 @@
 #include <set>
 #include <thread>
 namespace motogp::lan {
+namespace {std::atomic<uint64_t> title_bytes_sent{0};}
+uint64_t TitleBytesSent(){return title_bytes_sent.load(std::memory_order_relaxed);}
 namespace {
 constexpr uint32_t kPending=0x103,kFault=10014,kInvalid=10022,kNotSocket=10038,
     kTooLarge=10040,kNotSupported=10045,kWouldBlock=10035,kAborted=995,kIncomplete=996;
@@ -179,8 +181,13 @@ struct SocketBridge::Impl {
   uint32_t Transmit(GuestSocket& socket,uint32_t ip,uint16_t port,std::span<const uint8_t> data){
     if(!socket.port || !port)return kInvalid;if(data.size()>kMaxPacket-56)return kTooLarge;
     if(!sent_packet){sent_packet=true;REXLOG_DEBUG("LAN_PACKET: first send guest_port={} destination={}:{} bytes={}",socket.port,IPv4(ip),port,data.size());}
-    if(ip==UINT32_MAX){bool sent=false;for(auto id:guest.Network().ConnectedPeers())sent|=guest.Network().SendData(id,socket.port,port,data);return sent?0:10065;}
-    const auto id=Peer(ip);return id && guest.Network().Connected(id) && guest.Network().SendData(id,socket.port,port,data)?0:10065;
+    if(ip==UINT32_MAX){
+      bool sent=false;for(auto id:guest.Network().ConnectedPeers())sent|=guest.Network().SendData(id,socket.port,port,data);
+      if(sent)title_bytes_sent.fetch_add(data.size(),std::memory_order_relaxed);return sent?0:10065;
+    }
+    const auto id=Peer(ip);
+    if(!id || !guest.Network().Connected(id) || !guest.Network().SendData(id,socket.port,port,data))return 10065;
+    title_bytes_sent.fetch_add(data.size(),std::memory_order_relaxed);return 0;
   }
   uint64_t Send(PPCContext& ctx,bool to){
     auto* socket=Socket(ctx.r4.u32);if(!socket)return Fail(kNotSocket);

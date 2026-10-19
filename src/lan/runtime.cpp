@@ -123,6 +123,7 @@ void Start(rex::system::KernelState* kernel){
   if(mode!="lan" && mode!="online")throw std::runtime_error("Invalid network_mode; choose offline, lan or online");
 #ifdef _WIN32
   Options options;options.bind_ip=rex::cvar::Query<std::string>("lan_bind_ip");
+  options.log=[](const std::string& line){REXLOG_WARN("{}",line);};
   const auto player=rex::cvar::Query<std::string>("lan_player_name");
   if(player.empty() || player.size()>15 || player.find('\0')!=std::string::npos)throw std::runtime_error("LAN player name must contain 1-15 UTF-8 bytes");
   std::shared_ptr<online::Client> service;
@@ -149,16 +150,22 @@ void Stop(){
 std::optional<Room> CurrentRoom(){std::shared_lock lock(bridge_mutex);return bridge?bridge->Network().CurrentRoom():std::nullopt;}
 #ifdef _WIN32
 REX_HOOK_RAW(__imp__NetDll_XNetGetOpt){
-  // Preserve the pinned runtime's unsupported-option contract: WSAEINVAL,
-  // with both output arguments untouched. This is log throttling, not an
-  // implementation of option 6. Keep the error visible without writing it
-  // four times a second throughout an otherwise successful race.
+  // XNetGetOpt(caller, id, value, size). The race/lobby code polls option 6,
+  // XNET_OPTID_CALLER_XMIT_BYTES (ULONGLONG bytes sent by the title), about
+  // four times a second for its bandwidth meter. The pinned runtime does not
+  // implement it, so every poll logged an error and returned WSAEINVAL.
+  // Answer it with the bytes the title has sent through the LAN bridge.
   if(ctx.r3.u32==1 && ctx.r4.u32==6){
-    static std::atomic<uint64_t> occurrences{0};
-    const auto count=occurrences.fetch_add(1,std::memory_order_relaxed)+1;
-    if((count&(count-1))==0)
-      REXLOG_ERROR("NetDll_XNetGetOpt: option 6 unimplemented; occurrence={} (repeated queries throttled; returning WSAEINVAL)",count);
-    ctx.r3.u64=0x2726;return;
+    std::shared_lock lock(bridge_mutex);
+    const auto value=ctx.r5.u32,size=ctx.r6.u32;
+    if(!bridge || !size || !bridge->Valid(size,4,true)){ctx.r3.u64=10022;return;}
+    auto* size_ptr=base+size;
+    const auto available=rex::memory::load_and_swap<uint32_t>(size_ptr);
+    rex::memory::store_and_swap<uint32_t>(size_ptr,8);
+    if(available<8){ctx.r3.u64=10040;return;}  // WSAEMSGSIZE
+    if(!value || !bridge->Valid(value,8,true)){ctx.r3.u64=10014;return;}  // WSAEFAULT
+    rex::memory::store_and_swap<uint64_t>(base+value,TitleBytesSent());
+    ctx.r3.u64=0;return;
   }
   Original("__imp__NetDll_XNetGetOpt",ctx,base);
 }
