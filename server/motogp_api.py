@@ -88,10 +88,13 @@ class Api:
             r['total'] = total
         return r
 
+    # One finished race is written to several native groups (0, 2, 3, 5) of the same
+    # track/class; the site lists only group 0 (view = 1 + group*63 + class*21 + track).
+    MAIN = '(s.view - 1) / 63 = 0'
     RANKED = '''SELECT s.view, s.player, p.name, s.value, s.columns, s.updated,
         ROW_NUMBER() OVER (PARTITION BY s.view ORDER BY s.value DESC, s.updated ASC, s.player ASC) AS rank,
         COUNT(*) OVER (PARTITION BY s.view) AS total
-        FROM scores s JOIN players p ON p.id = s.player'''
+        FROM scores s JOIN players p ON p.id = s.player WHERE (s.view - 1) / 63 = 0'''
 
     def snapshot(self):
         try:
@@ -108,9 +111,9 @@ class Api:
         live = self.snapshot()
         with self.db() as con:
             players = con.execute('SELECT COUNT(*) FROM players').fetchone()[0]
-            records, last = con.execute('SELECT COUNT(*), MAX(updated) FROM scores').fetchone()
+            records, last = con.execute(f'SELECT COUNT(*), MAX(updated) FROM scores s WHERE {self.MAIN}').fetchone()
             racers = con.execute('SELECT COUNT(DISTINCT player) FROM scores').fetchone()[0]
-            views = con.execute('SELECT COUNT(DISTINCT view) FROM scores').fetchone()[0]
+            views = con.execute(f'SELECT COUNT(DISTINCT view) FROM scores s WHERE {self.MAIN}').fetchone()[0]
         return {'online': len(live['online']), 'rooms': len(live['rooms']),
                 'in_race': sum(1 for r in live['rooms'] if r.get('in_race')),
                 'players': players, 'racers': racers, 'records': records, 'boards': views,
