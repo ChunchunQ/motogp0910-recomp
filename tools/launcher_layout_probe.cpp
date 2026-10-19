@@ -501,6 +501,44 @@ void CheckEmbeddedNotices(){
   }
   DeleteObject(font);DestroyWindow(owner);std::cout<<ui_checks<<" embedded-notices checks passed\n";
 }
+void Check1080Graphics(App& app,const fs::path& game,const fs::path& pictures){
+  const auto choose=[&](HWND control,int id,int index){SendMessageW(control,CB_SETCURSEL,index,0);app.Command(id,CBN_SELCHANGE);};
+  const auto baseline_aspect_tip=TooltipText(app.help.window,app.aspect);
+  CheckUI(Settings{}.anisotropic==-1 && Settings::Load(toml::table{}).anisotropic==-1,"Fresh settings and Defaults use Game default texture filtering");
+  for(bool tr:{false,true}){
+    app.turkish=tr;app.Localize();app.Command(kDefaults,BN_CLICKED);app.ShowPage(0);
+    CheckUI(SendMessageW(app.anisotropic,CB_GETCURSEL,0,0)==0,"Default filtering is selected in the real UI");
+    wchar_t text[128]{};SendMessageW(app.fps_limit,CB_GETLBTEXT,0,reinterpret_cast<LPARAM>(text));
+    CheckUI(std::wstring_view(text)==app.T(L"Unlimited",L"Sınırsız"),"Unlimited FPS label is localized");
+    SendMessageW(app.render_resolution,CB_GETLBTEXT,kUpscaled1080Preset,reinterpret_cast<LPARAM>(text));
+    CheckUI(std::wstring_view(text).find(app.T(L"Experimental",L"Deneysel"))!=std::wstring_view::npos,"1080p preset visibly carries the Experimental label");
+    for(auto control:{app.msaa,app.letterbox,app.dither,app.shader_cache})CheckUI(!TooltipText(app.help.window,control).empty(),"Each graphics checkbox has a registered hover explanation");
+    for(int mode:{2,3,4}){
+      app.Command(kDefaults,BN_CLICKED);
+      choose(app.effect,kEffect,mode);choose(app.render_resolution,kRenderResolution,kUpscaled1080Preset);
+      auto s=app.GetControls();const auto expected=std::array{"fsr","fsr2","fsr3"}[mode-2];
+      CheckUI(s.effect==expected && s.width==1920 && s.height==1080,"1080p selection preserves each FSR mode and chooses exact output dimensions");
+      CheckUI(s.scale_x==1 && s.scale_y==1 && s.guest_width==1280 && s.guest_height==720,"1080p upscaling retains a real 720p source");
+      CheckUI(s.aspect=="16:9" && s.display_mode!="borderless","1080p preset avoids desktop sizing and wide aspect overrides");
+      app.SaveSettings();Config saved(app.config.path);const auto loaded=Settings::Load(saved.table);
+      CheckUI(loaded.effect==expected && MatchingRenderPreset(loaded)==kUpscaled1080Preset,"Real JSON file round-trips the selected FSR mode and 1080p preset");
+      const auto args=Arguments(game,loaded,saved.table);
+      for(const auto& arg:{std::wstring(L"--window_width=1920"),std::wstring(L"--window_height=1080"),std::wstring(L"--video_mode_width=1280"),std::wstring(L"--video_mode_height=720"),L"--present_effect="+Wide(expected)})
+        CheckUI(std::count(args.begin(),args.end(),arg)==1,"Actual launch arguments forward the 720p source and 1080p FSR settings exactly once");
+      app.SetControls(loaded);choose(app.effect,kEffect,mode==4?2:mode+1);
+      CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==kUpscaled1080Preset,"Switching FSR versions keeps the 1080p preset");
+      choose(app.effect,kEffect,1);
+      CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==0 && app.GetControls().effect=="cas","Selecting CAS exits the FSR preset without overwriting the user's choice");
+      choose(app.render_resolution,kRenderResolution,kUpscaled1080Preset);choose(app.fullscreen,kFullscreen,1);
+      CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==0 && app.GetControls().display_mode=="borderless","Choosing borderless exits the fixed-output preset");
+    }
+    choose(app.render_resolution,kRenderResolution,kUpscaled1080Preset);PumpUI();
+    RedrawWindow(app.window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
+    Screenshot(app.window,pictures/(tr?L"1080p-turkish.bmp":L"1080p-english.bmp"));
+  }
+  app.turkish=false;app.Localize();
+  CheckUI(TooltipText(app.help.window,app.aspect)==baseline_aspect_tip,"Existing aspect-ratio hover help remains unchanged");
+}
 int wmain(int argc,wchar_t** argv){
   if(argc==2&&std::wstring_view(argv[1])==L"--fixture-child")return 0;
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
@@ -512,7 +550,7 @@ int wmain(int argc,wchar_t** argv){
     Gdiplus::GdiplusShutdown(token);CoUninitialize();return result;
   }
   try{
-    if(argc!=3&&argc!=4)throw std::runtime_error("Usage: launcher_ui_probe GAME_ROOT SCREENSHOT_DIRECTORY [--sliders-only] (run in an isolated executable folder)");
+    if(argc!=3&&argc!=4)throw std::runtime_error("Usage: launcher_ui_probe GAME_ROOT SCREENSHOT_DIRECTORY [--sliders-only|--graphics-only] (run in an isolated executable folder)");
     const auto pictures=fs::path(argv[2]);fs::create_directories(pictures);
     App app;app.scale=1;const auto game=fs::path(argv[1]);
     WNDCLASSW cls{};cls.hInstance=GetModuleHandleW(nullptr);cls.lpfnWndProc=WindowProc;cls.lpszClassName=L"MotoGPLauncherUIProbe";cls.hCursor=LoadCursorW(nullptr,IDC_ARROW);RegisterClassW(&cls);
@@ -521,6 +559,10 @@ int wmain(int argc,wchar_t** argv){
     auto window=CreateWindowExW(0,cls.lpszClassName,L"MotoGP 09/10 Launcher",style,20,20,bounds.right-bounds.left,bounds.bottom-bounds.top,nullptr,nullptr,cls.hInstance,&app);
     CheckUI(window!=nullptr,"Production UI window created");ShowWindow(window,SW_SHOW);SetForegroundWindow(window);UpdateWindow(window);
     SetWindowTextW(app.path,game.c_str());app.ReadyStatus();
+    if(argc==4 && std::wstring_view(argv[3])==L"--graphics-only"){
+      Check1080Graphics(app,game,pictures);DestroyWindow(window);std::cout<<ui_checks<<" targeted graphics settings checks passed\n";
+      Gdiplus::GdiplusShutdown(token);CoUninitialize();return 0;
+    }
     CheckSliderInteractions(app);
     CheckSharpnessPersistence(app);
     CheckFocusPainting(app);
@@ -926,7 +968,7 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(app.GetControls().bindings==Settings{}.bindings&&app.GetControls().volume==before_reset.volume&&app.GetControls().effect==before_reset.effect,"Keyboard-only reset preserves unrelated audio and graphics settings");
     app.Command(kClearBinding,BN_CLICKED);CheckUI(app.GetControls().bindings[0].empty(),"Individual action can be unbound");
     app.Command(kMsaa,BN_CLICKED);CheckUI(!app.GetControls().msaa,"Owner-drawn checkbox toggles setting");app.Command(kMsaa,BN_CLICKED);
-    app.ShowPage(0);SendMessageW(app.render_resolution,CB_SETCURSEL,2,0);SendMessageW(app.volume,TBM_SETPOS,TRUE,31);
+    app.ShowPage(0);SendMessageW(app.render_resolution,CB_SETCURSEL,3,0);SendMessageW(app.volume,TBM_SETPOS,TRUE,31);
     app.Command(kVsync,BN_CLICKED);Put(app.config.table,"custom_note",std::string("keep me"));app.SaveSettings();
     Config saved(app.config.path);auto s=Settings::Load(saved.table);
     CheckUI(s.scale_x==3 && s.scale_y==3 && s.guest_width==1280 && s.guest_height==720,"Saved 4K preset retains native source");

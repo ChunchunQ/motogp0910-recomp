@@ -20,11 +20,15 @@
     Tip(game_language,L"Changes game text and subtitles. Original voices are preserved.",L"Oyun metinlerini ve altyazıları değiştirir. Özgün seslendirmeler korunur.");
     Tip(prompt_style,L"Automatic follows your input device. Choose PlayStation, Xbox or keyboard to force the button symbols.",L"Otomatik, giriş aygıtını izler. Tuş simgelerini sabitlemek için PlayStation, Xbox veya klavye seç.");
     Tip(crash_diagnostics,L"Collects an additional local crash report if the game fails. Reports are saved in Logs.",L"Oyun çökerse ek bir yerel çökme raporu toplar. Raporlar Loglar klasörüne kaydedilir.");
-    Tip(render_resolution,L"Internal drawing resolution. Higher settings sharpen the image and increase GPU load.",L"İç çizim çözünürlüğü. Yüksek ayarlar görüntüyü netleştirir ve GPU yükünü artırır.");
+    Tip(render_resolution,L"1.5x upscales 720p to 1080p using FSR 1, 2 or 3; internal rendering stays at 720p. FSR 2 / 3 has limited temporal inputs.",L"1.5x, FSR 1, 2 veya 3 ile 720p görüntüyü 1080p'ye yükseltir; iç çizim 720p kalır. FSR 2 / 3'ün zamansal girdileri sınırlıdır.");
     Tip(size,L"Common and monitor-reported window sizes that fit the selected display. Borderless uses your desktop resolution.",L"Seçili ekrana sığan yaygın ve monitörün bildirdiği pencere boyutları. Kenarlıksız mod masaüstü çözünürlüğünü kullanır.");
     Tip(refresh_rate,L"Exclusive fullscreen only. Borderless and windowed modes use the desktop refresh rate.",L"Yalnızca özel tam ekranda kullanılır. Kenarlıksız ve pencereli modlar masaüstünün yenileme hızını kullanır.");
     Tip(fps_limit,L"Adds a maximum frame rate. This does not remove the game's own limit.",L"En yüksek kare hızına sınır ekler. Oyunun kendi sınırını kaldırmaz.");
     Tip(aspect,L"Auto keeps the original 16:9 view. Wider ratios are experimental.",L"Otomatik, özgün 16:9 görüntüyü korur. Daha geniş oranlar deneyseldir.");
+    Tip(msaa,L"Uses native 2× MSAA when supported by your GPU.",L"Ekran kartın destekliyorsa yerel 2× MSAA kullanır.");
+    Tip(letterbox,L"Preserves the aspect ratio, adding black bars when needed.",L"Görüntü oranını korur; gerektiğinde siyah kenarlar ekler.");
+    Tip(dither,L"Adds subtle dithering to reduce banding in color gradients.",L"Renk geçişlerindeki bantlaşmayı hafif dithering ile azaltır.");
+    Tip(shader_cache,L"Reuses saved shaders to reduce stutter on later runs.",L"Kaydedilen shader'ları tekrar kullanarak sonraki açılışlarda takılmaları azaltır.");
     for(auto control:engine_choices)Tip(control,L"Game default preserves the original effect. Off disables this effect.",L"Oyunun ayarı, özgün efekti korur. Kapalı, bu efekti devre dışı bırakır.");
     Tip(debug_overlay,L"Enables F3 to show performance, display and runtime diagnostics. Off by default; applies on the next launch.",L"F3 ile performans, görüntü ve çalışma bilgilerini açar. Varsayılan kapalıdır; sonraki açılışta uygulanır.");
     Tip(shadow_distance,L"Game default preserves each track's shadow distance. A higher distance can increase GPU load.",L"Oyunun ayarı, her pistin özgün gölge mesafesini korur. Yüksek mesafe GPU yükünü artırabilir.");

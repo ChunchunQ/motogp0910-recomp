@@ -225,8 +225,9 @@ struct App {
   void FillRenderPresets(int selection=-1){
     if(selection<0)selection=static_cast<int>(SendMessageW(render_resolution,CB_GETCURSEL,0,0));
     SendMessageW(render_resolution,CB_RESETCONTENT,0,0);
-    const std::array<std::wstring,4> names{
+    const std::array<std::wstring,5> names{
       T(L"1x - 1280 x 720 (native)",L"1x - 1280 x 720 (yerel)"),
+      T(L"1.5x - 1080p (Experimental)",L"1.5x - 1080p (Deneysel)"),
       L"2x - 2560 x 1440",L"3x - 3840 x 2160",
       L"4x - 5120 x 2880"};
     for(const auto& text:names)SendMessageW(render_resolution,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));
@@ -235,6 +236,34 @@ struct App {
       SendMessageW(render_resolution,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));
     }
     SendMessageW(render_resolution,CB_SETCURSEL,selection<0?0:selection,0);
+  }
+  void Select1080Upscale(){
+    const auto output=std::find(dimensions.begin(),dimensions.end(),std::pair{1920,1080});
+    if(output==dimensions.end()){
+      SendMessageW(render_resolution,CB_SETCURSEL,0,0);
+      throw Error(L"1080p output requires a display that supports 1920 x 1080.",L"1080p çıkış için 1920 x 1080 destekleyen bir ekran gerekiyor.");
+    }
+    SendMessageW(size,CB_SETCURSEL,std::distance(dimensions.begin(),output),0);
+    const auto upscaler=SendMessageW(effect,CB_GETCURSEL,0,0);
+    if(upscaler<2 || upscaler>4)SendMessageW(effect,CB_SETCURSEL,2,0);
+    SendMessageW(aspect,CB_SETCURSEL,1,0);
+    // Desktop borderless ignores window size. Use an actual 1080p mode when
+    // available, otherwise retain a 1080p window instead of desktop scaling.
+    if(SendMessageW(fullscreen,CB_GETCURSEL,0,0)!=2){
+      const auto rates=HardwareRefreshRates(1920,1080,Get<int64_t>(config.table,"monitor",0));
+      SendMessageW(fullscreen,CB_SETCURSEL,rates.size()>1?0:2,0);
+    }
+    SendMessageW(sharpness,TBM_SETPOS,TRUE,static_cast<int>(100-settings.fsr_reduction*50));
+    RefreshRates(0);UpdateSharpness();
+  }
+  void SyncUpscaledPreset(){
+    if(SendMessageW(render_resolution,CB_GETCURSEL,0,0)!=kUpscaled1080Preset)return;
+    const auto index=SendMessageW(size,CB_GETCURSEL,0,0);
+    const auto upscaler=SendMessageW(effect,CB_GETCURSEL,0,0);
+    if(index<0 || index>=static_cast<LRESULT>(dimensions.size()) || dimensions[index]!=std::pair{1920,1080} ||
+        upscaler<2 || upscaler>4 || SendMessageW(aspect,CB_GETCURSEL,0,0)!=1 ||
+        SendMessageW(fullscreen,CB_GETCURSEL,0,0)==1)
+      SendMessageW(render_resolution,CB_SETCURSEL,0,0);
   }
   void Localize(){
     ++localization_generation;
@@ -279,7 +308,7 @@ struct App {
     SendMessageW(shadow_distance,CB_SETCURSEL,distance_index<0?0:distance_index,0);
     FillRenderPresets();
     auto fps_selection=SendMessageW(fps_limit,CB_GETCURSEL,0,0);SendMessageW(fps_limit,CB_RESETCONTENT,0,0);
-    for(auto rate:fps_limits){auto label=rate?std::to_wstring(rate)+L" FPS":T(L"No added limit",L"Ek sınır yok");SendMessageW(fps_limit,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
+    for(auto rate:fps_limits){auto label=rate?std::to_wstring(rate)+L" FPS":T(L"Unlimited",L"Sınırsız");SendMessageW(fps_limit,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
     SendMessageW(fps_limit,CB_SETCURSEL,fps_selection<0?0:fps_selection,0);
     auto gpu=SendMessageW(adapter,CB_GETCURSEL,0,0);SendMessageW(adapter,CB_RESETCONTENT,0,0);
     SendMessageW(adapter,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(T(L"Automatic (recommended)",L"Otomatik (önerilen)")));
@@ -374,7 +403,7 @@ struct App {
     s.adapter=gpu==0?-1:adapters[gpu-1].index;s.backend=SendMessageW(backend,CB_GETCURSEL,0,0)==1?"xinput":"sdl";
     auto preset=SendMessageW(render_resolution,CB_GETCURSEL,0,0);
     if(preset<0)throw std::runtime_error("Invalid render resolution");
-    if(preset<static_cast<LRESULT>(kRenderPresets.size()))ApplyRenderPreset(s,static_cast<int>(preset));
+    if(preset<static_cast<LRESULT>(kRenderPresets.size()) && preset!=kUpscaled1080Preset)ApplyRenderPreset(s,static_cast<int>(preset));
     auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);s.effect=mode==1?"cas":mode==2?"fsr":mode==3?"fsr2":mode==4?"fsr3":"bilinear";
     constexpr std::array<const char*,6> qualities{"auto","nativeaa","quality","balanced","performance","ultra_performance"};
     auto quality=SendMessageW(fsr_quality,CB_GETCURSEL,0,0);if(quality<0 || quality>=6)throw std::runtime_error("Invalid FSR quality mode");s.fsr_quality=qualities[quality];
@@ -399,6 +428,7 @@ struct App {
     s.prompt_style=glyph_mode==1?"playstation":glyph_mode==2?"xbox":glyph_mode==3?"keyboard":"auto";
     for(size_t i=0;i<engine_choices.size();++i){auto choice=SendMessageW(engine_choices[i],CB_GETCURSEL,0,0);if(choice<0 || choice>1)throw std::runtime_error("Invalid engine effect selection");s.engine_effects[i]=choice==1?"off":"game";}
     auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);if(distance_index<0 || distance_index>=static_cast<LRESULT>(shadow_distances.size()))throw std::runtime_error("Invalid shadow distance");s.shadow_distance=shadow_distances[distance_index];
+    if(preset==kUpscaled1080Preset)ApplyRenderPreset(s,kUpscaled1080Preset);
     s.bindings=edited_bindings;s.Validate();return s;
   }
   void ReadyStatus(){try{Validate(exe,GameRoot());Status(L"Ready to play · Title update 0.0.1.1",L"Başlatmaya hazır · Title update 0.0.1.1",true);}
@@ -573,9 +603,12 @@ struct App {
       }else if(id==kLanguage && (event==CBN_SELCHANGE||event==CBN_CLOSEUP)){
         if(!language_pending){language_pending=true;PostMessageW(window,kApplyLauncherLanguage,0,0);}
       }else if(id==kLanEnabled && event==CBN_SELCHANGE){UpdateNetworkMode();
-      }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();
+      }else if(id==kRenderResolution && event==CBN_SELCHANGE){
+        if(SendMessageW(render_resolution,CB_GETCURSEL,0,0)==kUpscaled1080Preset)Select1080Upscale();
+      }else if((id==kFullscreen || id==kSize) && event==CBN_SELCHANGE){RefreshRates();SyncUpscaledPreset();
+      }else if(id==kAspect && event==CBN_SELCHANGE){SyncUpscaledPreset();
       }else if(id==kEffect && event==CBN_SELCHANGE){auto mode=SendMessageW(effect,CB_GETCURSEL,0,0);
-        SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==1?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();
+        SendMessageW(sharpness,TBM_SETPOS,TRUE,mode==1?static_cast<int>(settings.cas_sharpness*100):static_cast<int>(100-settings.fsr_reduction*50));UpdateSharpness();SyncUpscaledPreset();
       }else if(id==kPath && event==EN_CHANGE){Status(L"Select your game folder, then press PLAY.",L"Oyun klasörünü seç ve OYUNU BAŞLAT'a bas.");
       }else if(event==BN_CLICKED){
         auto c=FindControl(id);if(checks.contains(c)){if(id==kAchievementPopup||id==kAchievementSound){SaveAchievementOption(id);return;}SetCheck(c,!Checked(c));return;}

@@ -19,7 +19,7 @@ File names stay English. No CMD file is required.
 | Display mode | Fullscreen with a selected monitor mode, desktop borderless, or windowed |
 | Refresh rate | Actual host Hz for fullscreen; desktop Hz in borderless/windowed |
 | FPS limit | Independent optional guest-present cap; it does not unlock the title cap or change the guest video-mode Hz |
-| Internal resolution | 720p (native), 1440p, 2160p or 2880p; exact 1× / 2× / 3× / 4× integer scales of the 1280×720 source |
+| Internal resolution | Native 720p, a 1080p FSR output preset, or internal 1440p / 2160p / 2880p at exact 2× / 3× / 4× scales |
 | Bilinear | Original default presentation path |
 | AMD FSR 1 | Spatial EASU enlargement followed by RCAS sharpening when the rendered image is smaller than the output |
 | AMD FSR 2 / 3 | Experimental D3D12 upscalers with neutral motion/depth inputs and per-frame history reset; six quality modes |
@@ -45,12 +45,27 @@ configuration remain respected. Direct `bin/motogp0910.exe` launch also reads sa
 settings and maintains the native source mode when FSR is selected.
 
 A single internal resolution selector replaces the independent X/Y controls.
-Selecting a standard preset explicitly saves a native 1280×720 source plus the
+Selecting an integer preset explicitly saves a native 1280×720 source plus the
 matching integer draw scale; output window/fullscreen resolution stays separate.
 Existing asymmetric scales and explicit custom source modes are shown as
 **Custom** with their dimensions and preserved until a standard preset is chosen.
-1080p remains an output resolution, rather than a fictional fractional internal
-scale unsupported by this SDK.
+The additional **1.5x - 1080p (Experimental)** preset keeps internal rendering at
+1280×720 / 1× and selects a 16:9 camera and a 1920×1080 output. It preserves a
+selected FSR 1, 2 or 3 mode, or chooses FSR 1 when Bilinear or CAS was selected.
+Changing between the three FSR modes preserves the preset and the selected
+mode through saving and loading. FSR 2/3 still uses neutral motion/depth inputs
+and resets history each frame; this preset does not improve that integration.
+The 1.5× label describes the output-to-source size ratio. This is
+spatial upscaling, not fractional internal rendering. A windowed selection stays
+windowed; other display modes use a monitor-reported 1080p fullscreen mode, or
+fall back to a 1080p window if no matching fullscreen rate is reported. Desktop
+borderless is replaced because it ignores the selected output dimensions. The
+preset requires 1920×1080 to fit the selected display. Changing output size,
+aspect, effect or display mode to incompatible values returns the selector to
+native 720p and preserves the user's new choices. The combination is recognized
+again when loading the shared JSON configuration; no separate preset flag is
+needed. The update passed targeted launcher and CPU runtime checks under Wine;
+native Windows GPU upscaling remains unverified.
 
 ## Audio
 
@@ -154,7 +169,8 @@ the actual game's output stage.
 The General page now contains the game folder, Launcher language, Game language
 and Button prompts. The folder and launcher language are hidden on the other
 pages. Graphics, Audio and Controls retain their own settings. Internal render
-presets are labelled 1x / 2x / 3x with exact dimensions. Window-size choices are
+presets are labelled 1x / 2x / 3x / 4x with exact dimensions, with the separate
+1080p choice explicitly labelled as FSR upscaling. Window-size choices are
 limited by the target monitor's preferred physical dimensions, falling back to
 its current desktop size when native-mode reporting is unavailable. Existing
 oversized output values show Automatic / desktop; disk configuration changes

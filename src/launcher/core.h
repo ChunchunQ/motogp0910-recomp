@@ -142,7 +142,7 @@ struct Settings {
   bool lan_enabled=false;
   std::string network_mode="offline",online_server;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
-  int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = 3, volume = 100, adapter = -1;
+  int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = -1, volume = 100, adapter = -1;
   int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
@@ -194,7 +194,7 @@ struct Settings {
     // The SDK's single-value alias takes precedence only if actually changed.
     const auto uniform = Get<int64_t>(t, "resolution_scale", 1);
     if(uniform>1) s.scale_x=s.scale_y=static_cast<int>(uniform);
-    s.anisotropic = Get<int64_t>(t, "anisotropic_override", 3);
+    s.anisotropic = Get<int64_t>(t, "anisotropic_override", -1);
     s.volume = Get<int64_t>(t, "audio_master_volume", 100);
     s.adapter = Get<int64_t>(t, "d3d12_adapter", -1);
     s.fsr_reduction = Get(t, "present_fsr_sharpness_reduction", 0.2);

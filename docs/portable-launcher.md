@@ -62,7 +62,14 @@ Windows reduced-motion settings disable both transitions.
 Window size combines common aspect ratios, monitor-reported modes and native
 dimensions, excluding sizes larger than the physical display. Internal rendering
 adds 4x (5120×2880). The pinned renderer requires integer scale factors, so a
-fractional 1.5x option is not exposed. FSR labels omit the Experimental suffix;
+fractional 1.5x internal option is not exposed. This update adds
+an explicit **1.5x - 1080p (Experimental)** FSR output preset: 720p internal
+rendering, the selected FSR 1 / 2 / 3 mode and a 1080p fullscreen mode or window.
+Bilinear/CAS selections default to FSR 1 when this preset is chosen. FSR 2/3
+retains its existing temporal-input limitations. The preset does not use desktop borderless, which
+would override the requested output size. The preset passed targeted launcher
+and CPU runtime checks under Wine; native Windows GPU upscaling remains
+unverified. FSR labels omit the Experimental suffix;
 this is a label change, and temporal reconstruction limitations remain described
 in the relevant help text.
 
@@ -116,8 +123,9 @@ ComboLBox retains keyboard/mouse selection and accessibility behind it. Native
 owner drawing is printed into the visual surface; hover/scroll changes request
 coalesced redraws. The native input window never becomes a second visible copy.
 Interrupted transitions start from the current visible opacity and reuse the
-same visual HWND. This revision was compiled without runtime/UI tests; native
-Windows visual validation remains pending.
+same visual HWND. The original fade revision was compiled without runtime/UI
+tests; the current targeted graphics checks do not validate transition smoothness.
+Native Windows visual validation remains pending.
 
 The adaptive-trigger checkbox exclusively uses owner drawing for both native
 focus notifications and ordinary paints, preventing a second themed tick or
@@ -152,6 +160,15 @@ SDK command-line/environment/runtime overrides are preserved. Reset uses the
 new single-key defaults. See [native action mapping](pc-menu-cleanup.md).
 
 ## Validation
+
+The 1080p update passed 93 targeted real-control Windows/Wine assertions in
+English and Turkish, covering FSR 1/2/3 preservation, real JSON save/reload,
+exact source/output launch arguments, switching away from the preset, its
+Experimental label, Unlimited, default texture filtering and checkbox hover
+help. The shipped runtime also passed 183 CPU integration assertions, including
+its actual 720p-to-1080p FSR 1 pass planner and quality-mode handling. These are
+not GPU shader execution or gameplay checks; the full historical suite below
+was not rerun for this update.
 
 The previously published build (`69fb8ed`) passed the Windows PE/Wine suite's
 31/31 entries, including 70,809 production

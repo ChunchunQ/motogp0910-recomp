@@ -5,10 +5,11 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-slider-label-fix.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-1080p-fsr-update.zip)
 
-This update was compiled without running runtime or UI tests. Validation from
-the previous published build is recorded in [portable launcher notes](docs/portable-launcher.md#validation).
+This update passed 93 targeted Windows/Wine launcher checks and 183 CPU runtime
+integration checks. Native Windows GPU upscaling remains unverified. Scope and
+previous full-suite results are recorded in [portable launcher notes](docs/portable-launcher.md#validation).
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -46,7 +47,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `40daa7361edd992cd28b436665083e8182828d5d8c850cc6f9ec6fcd809c6bae`.
+Package SHA-256: `080b74647c8c894030800440edc50b04e9d74c5432afe43627e5232e00c563f1`.
 
 ## Current features and evidence
 
@@ -60,7 +61,10 @@ Package SHA-256: `40daa7361edd992cd28b436665083e8182828d5d8c850cc6f9ec6fcd809c6b
   shipped aliases migrate while other custom bindings are retained. Sliders jump
   directly to the clicked point and retain dragging. Focus outlines and adapter
   VRAM suffixes are removed. Internal rendering now includes 4x (5120×2880).
-  The pinned renderer supports integer scales; fractional 1.5x is not exposed.
+  The Experimental 1.5x / 1080p preset keeps a 720p source and upscales to a
+  1920×1080 output with the selected FSR 1, 2 or 3 mode. Internal draw scales
+  remain integers. Texture filtering defaults to Game default, the uncapped FPS
+  label reads Unlimited, and four graphics checkboxes have concise hover help.
   Native dropdowns use rounded charcoal panels with orange selection text and
   two-way fades, respecting Windows motion preferences. Open lists share the
   closed field background. Synchronous owner-draw checkbox and menu paints
