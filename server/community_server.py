@@ -282,6 +282,7 @@ class Service(asyncio.DatagramProtocol):
         self.discovery = Bucket(64,128)
         self.db_cpu = Bucket(0.25,0.25)
         self.transport = None
+        self.live_snapshot = None
     def connection_made(self, transport):
         self.transport=transport
         self.udp_port=transport.get_extra_info('sockname')[1]
@@ -502,7 +503,34 @@ class Service(asyncio.DatagramProtocol):
             if client.candidate and now-client.challenge_at>5:
                 client.candidate=None;client.challenge=b'';client.deferred=None
     async def housekeeping(self):
-        while True:await asyncio.sleep(1);self.expire()
+        tick=0
+        while True:
+            await asyncio.sleep(1);self.expire();tick+=1
+            if self.live_snapshot and tick%5==0:
+                try:self.write_snapshot()
+                except Exception:LOG.exception('live snapshot failed')
+    def write_snapshot(self):
+        """Write a public, read-only summary (names, rooms) for the website API.
+        No tickets, keys, endpoints or IP addresses are included."""
+        ids=sorted({c.peer&0xFFFFFF for c in self.clients.values() if c.endpoint})
+        names={}
+        for i in range(0,len(ids),200):
+            chunk=ids[i:i+200]
+            names.update(self.store.db.execute('SELECT id,name FROM players WHERE id IN ('+','.join('?'*len(chunk))+')',chunk).fetchall())
+        rooms=[]
+        for host,room in self.rooms.items():
+            try:
+                r=Reader(room.body);r.u64();r.u64()
+                flags,capacity,members,state,private,private_members=(r.u32() for _ in range(6))
+                r.raw(16);title=r.text(31)
+            except (Invalid,UnicodeError,struct.error):continue
+            rooms.append({'host':host&0xFFFFFF,'host_name':names.get(host&0xFFFFFF,''),'name':title,
+                'capacity':capacity,'members':[{'id':m&0xFFFFFF,'name':names.get(m&0xFFFFFF,'')} for m in sorted(room.members)],
+                'in_race':bool(state),'age':int(time.monotonic()-room.seen)})
+        data={'updated':int(time.time()),'online':[{'id':i,'name':names.get(i,'')} for i in ids],'rooms':rooms}
+        path=Path(self.live_snapshot);temporary=path.with_name(path.name+'.tmp')
+        temporary.write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+        os.replace(temporary,path)
     def connect_name(self, body):
         r=Reader(body)
         if r.u64()!=COMPAT:raise Invalid('client build/protocol is incompatible')
@@ -689,6 +717,7 @@ async def run(args):
     for option in (socket.SO_RCVBUF,socket.SO_SNDBUF):
         try:udp_socket.setsockopt(socket.SOL_SOCKET,option,1024*1024)
         except OSError:LOG.debug('OS kept the default UDP socket buffer')
+    service.live_snapshot=args.live_snapshot
     server=ControlServer(service,args.http_bind,args.http_port,ssl_context)
     task=asyncio.create_task(service.housekeeping())
     LOG.info('Control API %s:%s (%s), UDP relay %s:%s',args.http_bind,args.http_port,'TLS' if ssl_context else 'loopback HTTP',args.udp_bind,service.udp_port)
@@ -703,6 +732,7 @@ def main():
     p.add_argument('--udp-bind',default='0.0.0.0');p.add_argument('--udp-port',type=int,default=30821)
     p.add_argument('--database',default='data/community.sqlite3')
     p.add_argument('--leaderboards',default=str(Path(__file__).with_name('leaderboards.json')))
+    p.add_argument('--live-snapshot',help='Write a public JSON summary of online players/rooms here every 5 s (for the website)')
     p.add_argument('--proxy-secret-file',help='Shared private key file; requires authenticated local Caddy proxy headers')
     p.add_argument('--max-players',type=int,default=10000);p.add_argument('--max-db-mib',type=int,default=256)
     p.add_argument('--cert');p.add_argument('--key');p.add_argument('--max-clients',type=int,default=256);p.add_argument('--max-rooms',type=int,default=128)

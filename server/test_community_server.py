@@ -87,6 +87,17 @@ class RelayTests(unittest.TestCase):
         self.send(b,DATA,target=a.peer,session=42,body=struct.pack('>HHH',1000,1001,4)+b'abcd');self.assertEqual(len(self.transport.sent),3)
         self.send(c,JOIN,target=a.peer,session=42,body=b'K'*16);self.assertEqual(decode(self.transport.sent[-1][0][36:-32])[0],REJECT)
         self.send(a,LEFT,session=42);self.assertFalse(self.service.rooms);self.assertEqual(b.room,0)
+    def test_live_snapshot_is_a_public_summary(self):
+        a,b,c=self.clients
+        self.send(a,ADVERT,session=42,body=advert(a.peer));self.send(b,JOIN,target=a.peer,session=42,body=b'K'*16)
+        self.send(a,JOINED,target=b.peer,session=42,body=advert(a.peer)+b'\0')
+        with tempfile.TemporaryDirectory() as folder:
+            self.service.live_snapshot=str(Path(folder)/'live.json');self.service.write_snapshot()
+            raw=Path(folder,'live.json').read_text(encoding='utf-8');data=json.loads(raw)
+        self.assertEqual(sorted(p['name'] for p in data['online']),['Player0','Player1','Player2'])
+        room,=data['rooms'];self.assertEqual((room['name'],room['host_name'],room['capacity'],room['in_race']),('Qatar','Player0',2,False))
+        self.assertEqual([m['name'] for m in room['members']],['Player0','Player1'])
+        for secret in (a.ticket.hex(),a.key.hex(),'127.0.0.1'):self.assertNotIn(secret,raw)
     def test_expiry_disconnect_and_ticket_ownership(self):
         a,b,c=self.clients
         self.send(a,ADVERT,session=42,body=advert(a.peer));self.service.rooms[a.peer].seen-=16;self.service.expire();self.assertFalse(self.service.rooms)
