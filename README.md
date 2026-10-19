@@ -5,11 +5,12 @@ and the supplied stock XEX plus **0.0.1.1** title update. You must provide your
 own complete game files. No original XEX, title update, patch or disc data is
 included in the downloads.
 
-[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-1080p-fsr-update.zip)
+[Current Windows EXE + DLL package](https://github.com/inflamesgo/motogp0910-recomp/blob/main/downloads/MotoGP0910-Windows-x64-advanced-settings.zip)
 
-This update passed 93 targeted Windows/Wine launcher checks and 183 CPU runtime
-integration checks. Native Windows GPU upscaling remains unverified. Scope and
-previous full-suite results are recorded in [portable launcher notes](docs/portable-launcher.md#validation).
+This update passed 78,241 Windows/Wine launcher UI checks, 240 Advanced native
+consumer checks, 661 engine/scope checks, 392 live-settings checks, 112 launcher
+integration checks and 93 targeted graphics checks. GPU shader execution and
+native Windows races remain unverified. See [scope and evidence](docs/advanced-settings-validation.md).
 
 Use **Download raw file** on the GitHub file page. Extract the entire package;
 keep the matching executable, runtime DLLs and resources together. Preserve
@@ -47,7 +48,7 @@ available through **Alt+Space → Third-party notices**. Source licenses remain.
 Development binaries are unsigned. Repository Markdown
 documentation is maintained in English; translated UI strings remain localized.
 
-Package SHA-256: `080b74647c8c894030800440edc50b04e9d74c5432afe43627e5232e00c563f1`.
+Package SHA-256: `83f51c5410da201477aa3b5c1f8fb74e97786d7747c9a93ee1f8d0fdb9d89156`.
 
 ## Current features and evidence
 
@@ -93,6 +94,12 @@ Package SHA-256: `080b74647c8c894030800440edc50b04e9d74c5432afe43627e5232e00c563
   request the native intro fade while preserving the final Press Start screen.
   Intro skipping needs no checkbox; Extended crash diagnostics is in Advanced.
   [Scope and checks](docs/debug-overlay-startup.md).
+- **Advanced graphics controls:** ten settings in two columns, each with
+  English/Turkish hover help. Bloom and vignette strengths, shadow filtering,
+  soft-shadow distance, particle density and experimental instance draw distance
+  join the original controls, retaining Game default. Motion blur Off preserves
+  independently selected vignette strength. F1 saves the same options in the
+  shared JSON. The 1.5x preset preserves Borderless and other display-mode choices.
 - **Racing Lines launcher:** dark/orange MotoGP artwork, horizontal tabs,
   native hover help, file verification, larger achievement list and an
   Online tab between Controls and Achievements. Fixed tab redraw/scroll jumps, closed combo-box

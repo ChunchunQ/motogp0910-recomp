@@ -247,22 +247,15 @@ struct App {
     const auto upscaler=SendMessageW(effect,CB_GETCURSEL,0,0);
     if(upscaler<2 || upscaler>4)SendMessageW(effect,CB_SETCURSEL,2,0);
     SendMessageW(aspect,CB_SETCURSEL,1,0);
-    // Desktop borderless ignores window size. Use an actual 1080p mode when
-    // available, otherwise retain a 1080p window instead of desktop scaling.
-    if(SendMessageW(fullscreen,CB_GETCURSEL,0,0)!=2){
-      const auto rates=HardwareRefreshRates(1920,1080,Get<int64_t>(config.table,"monitor",0));
-      SendMessageW(fullscreen,CB_SETCURSEL,rates.size()>1?0:2,0);
-    }
     SendMessageW(sharpness,TBM_SETPOS,TRUE,static_cast<int>(100-settings.fsr_reduction*50));
-    RefreshRates(0);UpdateSharpness();
+    RefreshRates();UpdateSharpness();
   }
   void SyncUpscaledPreset(){
     if(SendMessageW(render_resolution,CB_GETCURSEL,0,0)!=kUpscaled1080Preset)return;
     const auto index=SendMessageW(size,CB_GETCURSEL,0,0);
     const auto upscaler=SendMessageW(effect,CB_GETCURSEL,0,0);
     if(index<0 || index>=static_cast<LRESULT>(dimensions.size()) || dimensions[index]!=std::pair{1920,1080} ||
-        upscaler<2 || upscaler>4 || SendMessageW(aspect,CB_GETCURSEL,0,0)!=1 ||
-        SendMessageW(fullscreen,CB_GETCURSEL,0,0)==1)
+        upscaler<2 || upscaler>4 || SendMessageW(aspect,CB_GETCURSEL,0,0)!=1)
       SendMessageW(render_resolution,CB_SETCURSEL,0,0);
   }
   void Localize(){
@@ -302,7 +295,11 @@ struct App {
     FillCombo(fsr_quality,{T(L"Auto",L"Otomatik"),T(L"Native AA",L"Yerel AA"),T(L"Quality",L"Kalite"),T(L"Balanced",L"Dengeli"),T(L"Performance",L"Performans"),T(L"Ultra Performance",L"Ultra Performans")});
     FillCombo(aspect,{T(L"Auto / 16:9",L"Otomatik / 16:9"),L"16:9",T(L"21:9 (Experimental)",L"21:9 (Deneysel)"),T(L"32:9 (Experimental)",L"32:9 (Deneysel)")});
     FillCombo(anisotropic,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı"),L"1×",L"2×",L"4×",L"8×",L"16×"});
-    for(auto c:engine_choices)FillCombo(c,{T(L"Game default",L"Oyunun ayarı"),T(L"Off",L"Kapalı")});
+    for(size_t i=0;i<engine_choices.size();++i){auto c=engine_choices[i];const auto selected=SendMessageW(c,CB_GETCURSEL,0,0);SendMessageW(c,CB_RESETCONTENT,0,0);
+      for(const std::string_view value:EngineValues(kEngineEffects[i])){
+        auto label=value=="game"?std::wstring(T(L"Game default",L"Oyunun ayarı")):value=="off"?std::wstring(T(L"Off",L"Kapalı")):value=="on"?std::wstring(T(L"On",L"Açık")):Wide(std::string(value))+(kEngineEffects[i].kind==EngineKind::Distance?L"":L"%");
+        SendMessageW(c,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
+      SendMessageW(c,CB_SETCURSEL,selected<0?0:selected,0);}
     auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);SendMessageW(shadow_distance,CB_RESETCONTENT,0,0);
     for(int distance:shadow_distances){auto text=distance?std::to_wstring(distance):T(L"Game default",L"Oyunun ayarı");SendMessageW(shadow_distance,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));}
     SendMessageW(shadow_distance,CB_SETCURSEL,distance_index<0?0:distance_index,0);
@@ -357,7 +354,8 @@ struct App {
     if(found==dimensions.end() && WindowSizeFits({s.width,s.height},display_maximum)){dimensions.emplace_back(s.width,s.height);Localize();found=dimensions.end()-1;}
     if(found==dimensions.end())found=dimensions.begin();
     SendMessageW(size,CB_SETCURSEL,std::distance(dimensions.begin(),found),0);
-    for(size_t i=0;i<engine_choices.size();++i)SendMessageW(engine_choices[i],CB_SETCURSEL,s.engine_effects[i]=="off"?1:0,0);
+    for(size_t i=0;i<engine_choices.size();++i){const auto values=EngineValues(kEngineEffects[i]);auto found=std::find(values.begin(),values.end(),s.engine_effects[i]);
+      SendMessageW(engine_choices[i],CB_SETCURSEL,found==values.end()?0:std::distance(values.begin(),found),0);}
     auto shadow=std::find(shadow_distances.begin(),shadow_distances.end(),s.shadow_distance);
     if(shadow==shadow_distances.end()){shadow_distances.push_back(s.shadow_distance);auto text=std::to_wstring(s.shadow_distance);SendMessageW(shadow_distance,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text.c_str()));shadow=shadow_distances.end()-1;}
     SendMessageW(shadow_distance,CB_SETCURSEL,std::distance(shadow_distances.begin(),shadow),0);
@@ -426,7 +424,7 @@ struct App {
     const auto glyph_mode=SendMessageW(prompt_style,CB_GETCURSEL,0,0);
     if(glyph_mode<0 || glyph_mode>3)throw std::runtime_error("Invalid prompt style selection");
     s.prompt_style=glyph_mode==1?"playstation":glyph_mode==2?"xbox":glyph_mode==3?"keyboard":"auto";
-    for(size_t i=0;i<engine_choices.size();++i){auto choice=SendMessageW(engine_choices[i],CB_GETCURSEL,0,0);if(choice<0 || choice>1)throw std::runtime_error("Invalid engine effect selection");s.engine_effects[i]=choice==1?"off":"game";}
+    for(size_t i=0;i<engine_choices.size();++i){auto choice=SendMessageW(engine_choices[i],CB_GETCURSEL,0,0);const auto values=EngineValues(kEngineEffects[i]);if(choice<0 || choice>=static_cast<LRESULT>(values.size()))throw std::runtime_error("Invalid engine effect selection");s.engine_effects[i]=values[choice];}
     auto distance_index=SendMessageW(shadow_distance,CB_GETCURSEL,0,0);if(distance_index<0 || distance_index>=static_cast<LRESULT>(shadow_distances.size()))throw std::runtime_error("Invalid shadow distance");s.shadow_distance=shadow_distances[distance_index];
     if(preset==kUpscaled1080Preset)ApplyRenderPreset(s,kUpscaled1080Preset);
     s.bindings=edited_bindings;s.Validate();return s;

@@ -50,22 +50,23 @@ matching integer draw scale; output window/fullscreen resolution stays separate.
 Existing asymmetric scales and explicit custom source modes are shown as
 **Custom** with their dimensions and preserved until a standard preset is chosen.
 The additional **1.5x - 1080p (Experimental)** preset keeps internal rendering at
-1280×720 / 1× and selects a 16:9 camera and a 1920×1080 output. It preserves a
+1280×720 / 1× and selects a 16:9 camera and a 1920×1080 window size. It preserves a
 selected FSR 1, 2 or 3 mode, or chooses FSR 1 when Bilinear or CAS was selected.
 Changing between the three FSR modes preserves the preset and the selected
 mode through saving and loading. FSR 2/3 still uses neutral motion/depth inputs
 and resets history each frame; this preset does not improve that integration.
 The 1.5× label describes the output-to-source size ratio. This is
-spatial upscaling, not fractional internal rendering. A windowed selection stays
-windowed; other display modes use a monitor-reported 1080p fullscreen mode, or
-fall back to a 1080p window if no matching fullscreen rate is reported. Desktop
-borderless is replaced because it ignores the selected output dimensions. The
-preset requires 1920×1080 to fit the selected display. Changing output size,
-aspect, effect or display mode to incompatible values returns the selector to
+spatial upscaling, not fractional internal rendering. The preset preserves the
+selected display mode, including the default Borderless.
+Windowed/fullscreen uses the 1080p window-size setting; Borderless uses desktop
+resolution, so its actual upscale ratio depends on the desktop. The preset
+requires 1920×1080 to fit the selected display. Changing output size,
+aspect or effect to incompatible values returns the selector to
 native 720p and preserves the user's new choices. The combination is recognized
 again when loading the shared JSON configuration; no separate preset flag is
 needed. The update passed targeted launcher and CPU runtime checks under Wine;
-native Windows GPU upscaling remains unverified.
+native Windows GPU upscaling remains unverified. Borderless preservation passed
+the targeted real-control graphics checks in English and Turkish.
 
 ## Audio
 
@@ -222,24 +223,57 @@ controls, rather than Unreal Engine configuration names:
 
 | Setting | Behavior |
 | --- | --- |
-| Motion blur (speed) | Game default or Off; affects the title's speed-blur enable byte |
+| Motion blur (speed) | Game default or Off; scopes the blur alpha and velocity to zero while preserving the independent vignette |
 | Depth of field | Game default or Off; affects the native camera DOF enable byte |
 | Dynamic shadows | Game default or Off; scopes the title Shadows/Enabled flag while rendering |
 | Shadow render distance | Game default or 45 / 90 / 180; scopes Shadows/RenderDistance during the native shadow pass |
+| Vignette intensity | Game default, Off or 25 / 50 / 75 / 100%; scales speed-related edge darkening independently of blur |
+| Bloom intensity | Game default, Off or 25 / 50 / 75 / 100%; scales the interpolated bloom intensity |
+| Shadow filtering | Game default, Off or On; scopes the native shadow filter flag |
+| Soft shadow distance | Game default or 45 / 90 / 180; controls the soft-shadow threshold within the overall shadow range |
+| Particle density | Game default, Off or 25 / 50 / 75 / 100%; overrides the native particle density percentage |
+| Draw distance (Experimental) | Game default or 50 / 75 / 100 / 125 / 150%; scales the instance far-clip property within its native bounds |
 
-The two camera effect overrides are applied after `0x82386158` copies camera
-settings and immediately before `0x8237FA00` consumes those settings. Other
-focus, blur and camera values are preserved. Shadow enable/distance overrides
+The six additional settings passed native CPU consumer and production UI
+checks; their GPU rendering has not been visually checked in a race. All ten
+settings have concise English/Turkish hover explanations on
+both the label and field, and occupy five aligned rows of two columns. Debug
+and crash diagnostics follow those rows. The F1 menu exposes the same choices
+and persists them through the shared JSON configuration. Every new setting
+defaults to `game`; existing configurations retain their original behavior.
+
+The vignette override scales only the alpha float at `0x8337BE64` during the
+FSFX consumer `0x8237FA00`, restoring its exact original bits on return. Bloom
+scales the current camera intensity at `0x82892554` only while `0x82385428`
+publishes the interpolated state; it leaves preset selection and transitions
+intact. Percentages are relative to the game's current strength and cannot
+force an effect whose native strength is zero. Shadow filtering scopes the
+initialized `0x83487A8C` byte around `0x8237B370`. Soft-shadow distance scopes
+`0x83487CC4` in the existing `0x8238CFD8` wrapper. Particle density scopes the
+initialized integer at `0x829177BC` during native spawn/update/preparation
+consumers `0x82273780`, `0x82274570` and `0x82274838`. Instance visibility scopes
+the float property at `0x834F6CA8` during `0x823908C0` and clamps scaled values
+to the native declared range. Scopes restore originals on return, nesting and
+exceptions. Original game data and tweak files remain unchanged.
+
+The DOF override is applied after `0x82386158` copies camera settings. Motion
+blur Off now scopes its alpha and velocity floats to zero during `0x8237FA00`,
+so it does not disable the shared speed-FX stage that also owns vignette.
+Original camera parameters are restored after consumption, and no disabled
+camera effect is forced on. Shadow enable/distance overrides
 wrap `0x822ADAC0` / `0x8238CFD8`; initialized registry pointers are checked and
 the original values are restored on return, nested calls and exceptions.
 The original default.tweaks and game data files are not edited.
 
-All four defaults keep the original game behavior. Forced enable modes are
-not offered: disabling an effect is supported without inventing missing effect
-parameters. Bloom, AO, lens flares, LOD, decals and shadow texture resolution
-need separate native rendering analysis before they can be exposed reliably.
+The original four settings keep their existing choices. The blur/vignette
+interaction above was corrected during native consumer validation. The new
+shadow-filter On choice uses the identified native Boolean flag. The other new
+controls adjust existing effect values; they do not create missing parameters.
+AO, lens flares, decals and shadow texture resolution remain outside the menu
+pending separate native rendering analysis.
 
-The five-page English/Turkish production UI passed 50,408 layout/configuration
+Before this update, the five-page English/Turkish production
+UI passed 50,408 layout/configuration
 assertions at 75–150% scales. The native engine probe passed 277 checks on Linux
 and Windows/Wine for actual camera flags, preservation of parameters and PPC
 ABI, scope nesting/exception restoration and the pinned shadow-distance consumer.

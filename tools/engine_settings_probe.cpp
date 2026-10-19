@@ -34,7 +34,7 @@ int main(int argc,char** argv){
       PPCContext ctx{};ctx.r1.u32=stack+2048;ctx.lr=0x11223344;ctx.r30.u64=0x1122334455667788;ctx.r31.u64=0x8877665544332211;
       sub_82386158(ctx,base);
       Check(base[kDofSettings]==(dof?0:1),"DOF flag reaches native renderer settings");
-      Check(base[kSpeedBlurSettings]==(blur?0:1),"Speed blur flag reaches native renderer settings");
+      Check(base[kSpeedBlurSettings]==1,"The shared speed-FX enable byte remains available to independent vignette rendering");
       for(int offset=1;offset<64;++offset)if(offset!=32)Check(base[kDofSettings+offset]==0x5A,"Focus/blur parameters are preserved");
       Check(ctx.r1.u32==stack+2048 && ctx.lr==0x11223344 && ctx.r30.u64==0x1122334455667788 && ctx.r31.u64==0x8877665544332211,"Native FSFX hook preserves calling convention");
     }
@@ -55,6 +55,28 @@ int main(int argc,char** argv){
     Check(read(kShadowDistance+16)==original,"Exception restores track distance");
     write(kShadowDistance+12,0);
     {PropertyOverride uninitialized(base,kShadowDistance,0,false,true);Check(read(kShadowDistance+16)==original,"Uninitialized registry is not modified");}
+    // Strength overrides must not compound across frames or overwrite camera
+    // presets. The renderer sees the scaled word only within its consuming pass.
+    const auto strength_word=stack+768;
+    write(strength_word,std::bit_cast<uint32_t>(.8f));
+    for(int frame=0;frame<3;++frame){
+      {FloatScale scaled(base,strength_word,50);Check(std::abs(std::bit_cast<float>(read(strength_word))-.4f)<.00001f,"Strength scales the actual big-endian float for one pass");}
+      Check(read(strength_word)==std::bit_cast<uint32_t>(.8f),"Repeated passes preserve original strength bits");
+    }
+    {FloatScale unchanged(base,strength_word,-1);Check(read(strength_word)==std::bit_cast<uint32_t>(.8f),"Game default leaves strength untouched");}
+    try{FloatScale off(base,strength_word,0);Check(read(strength_word)==0,"Off removes the effect strength");throw 1;}catch(int){}
+    Check(read(strength_word)==std::bit_cast<uint32_t>(.8f),"Strength restores on an exception");
+    const auto property=stack+800;
+    write(property+12,property+16);write(property+16,std::bit_cast<uint32_t>(.8f));
+    write(property+20,0);write(property+24,std::bit_cast<uint32_t>(1.f));
+    {ScaledPropertyOverride scaled(base,property,150);Check(read(property+16)==std::bit_cast<uint32_t>(1.f),"Draw distance respects the native property maximum");}
+    Check(read(property+16)==std::bit_cast<uint32_t>(.8f),"Draw distance restores the track value");
+    write(property+12,0);
+    {ScaledPropertyOverride uninitialized(base,property,50);Check(read(property+16)==std::bit_cast<uint32_t>(.8f),"Uninitialized draw-distance properties remain untouched");}
+    for(const auto* key:{"engine_vignette","engine_bloom","engine_shadow_filter","engine_soft_shadow_distance","engine_particle_density","engine_draw_distance"}){
+      Check(rex::cvar::SetFlagByName(key,"game"),"New native settings support the unchanged game default");
+      Check(!rex::cvar::SetFlagByName(key,"999"),"Unsupported native setting choices are rejected");
+    }
     Check(!rex::cvar::SetFlagByName("engine_shadow_distance","181"),"Distance range enforced");
     Check(!rex::cvar::SetFlagByName("engine_speed_blur","on"),"Unsupported forced-enable mode rejected");
     // Verify the native shadow renderer reads the identified registry value.

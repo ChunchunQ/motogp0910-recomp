@@ -16,7 +16,7 @@ section and no changes to physics, session membership or game files.
 | General | Automatic / Xbox / PS3 / keyboard prompts | Existing per-frame prompt selection |
 | Graphics | FPS limit, VSync, keep aspect ratio | Existing frame scheduler / GPU timing / presenter reads |
 | Graphics | Bilinear, CAS, FSR 1, experimental FSR 2/3; quality, sharpness and color dithering | Actual `Presenter::SetGuestOutputPaintConfigFromUIThread`, not just startup CVars |
-| Advanced | Speed blur, depth of field, dynamic shadows, shadow distance | Existing scoped native engine hooks |
+| Advanced | Speed blur, depth of field, dynamic shadows, shadow distance, vignette, bloom, shadow filtering, soft-shadow distance, particle density and experimental instance draw distance | Scoped native engine hooks; the same choices and JSON values as the launcher |
 | Audio | Master volume, mute | Real output-gain callback and output mute |
 | Controls | All 25 mappings, key capture / alternatives / unbind / per-action default | SDK MnK reads current mappings; prompt labels use the same values |
 

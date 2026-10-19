@@ -298,6 +298,10 @@ if(TARGET motogp0910_recomp)
     target_include_directories(engine_settings_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(engine_settings_probe PRIVATE motogp0910_recomp rex::runtime)
     rexglue_apply_target_settings(engine_settings_probe)
+    add_executable(engine_advanced_probe EXCLUDE_FROM_ALL tools/engine_advanced_probe.cpp src/engine_settings.cpp)
+    target_include_directories(engine_advanced_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
+    target_link_libraries(engine_advanced_probe PRIVATE motogp0910_recomp rex::runtime)
+    rexglue_apply_target_settings(engine_advanced_probe)
     add_executable(physics_asset_probe EXCLUDE_FROM_ALL tools/physics_asset_probe.cpp src/physics_assets.cpp)
     target_include_directories(physics_asset_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
     target_link_libraries(physics_asset_probe PRIVATE motogp0910_recomp rex::runtime)
@@ -360,7 +364,7 @@ endforeach()
 if(WIN32 AND MOTOGP_STAGE_RUNTIME)
     if(CMAKE_CROSSCOMPILING)
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
-        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe engine_advanced_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/stage-spatial-runtime.py
@@ -370,7 +374,7 @@ if(WIN32 AND MOTOGP_STAGE_RUNTIME)
         endforeach()
     else()
         find_program(MOTOGP_POWERSHELL NAMES powershell pwsh REQUIRED)
-        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
+        foreach(stage_target file_compat_probe online_guest_probe localization_probe localization_asset_tool adaptive_triggers_probe in_game_settings_probe quit_menu_probe launcher_layout_probe lan_guest_probe lan_import_probe runtime_stability_probe motogp0910 motogp_headless_probe button_prompt_probe button_prompt_input_probe button_prompt_window_probe button_prompt_gpu_probe physics_asset_probe game_language_probe engine_settings_probe engine_advanced_probe livery_readback_probe input_defaults_probe nightly_input_probe launcher_runtime_probe fsr_provider_probe launcher_probe display_settings_probe)
             if(TARGET ${stage_target})
                 add_custom_command(TARGET ${stage_target} POST_BUILD
                     COMMAND ${MOTOGP_POWERSHELL} -NoProfile -ExecutionPolicy Bypass -File
@@ -399,7 +403,7 @@ endif()
 
 set(MOTOGP_RUNTIME_LIBRARY "" CACHE FILEPATH "Matching custom Linux runtime library")
 if(NOT WIN32 AND MOTOGP_RUNTIME_LIBRARY)
-    foreach(stage_target motogp0910 engine_settings_probe button_prompt_probe launcher_runtime_probe)
+    foreach(stage_target motogp0910 engine_settings_probe engine_advanced_probe button_prompt_probe launcher_runtime_probe)
         if(TARGET ${stage_target})
             add_custom_command(TARGET ${stage_target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MOTOGP_RUNTIME_LIBRARY}"
@@ -412,7 +416,7 @@ endif()
 if(WIN32 AND TARGET motogp0910_recomp)
     add_custom_target(windows_validation_probes DEPENDS
         motogp0910 localization_probe runtime_stability_probe nightly_input_probe fsr_provider_probe
-        engine_settings_probe game_language_probe physics_asset_probe
+        engine_settings_probe engine_advanced_probe game_language_probe physics_asset_probe
         button_prompt_probe livery_readback_probe motogp_headless_probe
         launcher_runtime_probe display_settings_probe button_prompt_input_probe
         launcher_probe launcher_layout_probe input_defaults_probe achievement_ui_probe quit_menu_probe in_game_settings_probe adaptive_triggers_probe)

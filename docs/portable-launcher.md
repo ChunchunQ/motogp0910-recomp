@@ -64,10 +64,12 @@ dimensions, excluding sizes larger than the physical display. Internal rendering
 adds 4x (5120×2880). The pinned renderer requires integer scale factors, so a
 fractional 1.5x internal option is not exposed. This update adds
 an explicit **1.5x - 1080p (Experimental)** FSR output preset: 720p internal
-rendering, the selected FSR 1 / 2 / 3 mode and a 1080p fullscreen mode or window.
+rendering, the selected FSR 1 / 2 / 3 mode and a 1080p window-size setting.
 Bilinear/CAS selections default to FSR 1 when this preset is chosen. FSR 2/3
-retains its existing temporal-input limitations. The preset does not use desktop borderless, which
-would override the requested output size. The preset passed targeted launcher
+retains its existing temporal-input limitations. The preset preserves the
+selected mode, including default Borderless. Borderless uses desktop resolution;
+windowed/fullscreen targets the 1080p setting. This behavior passed the targeted
+real-control graphics checks. The original preset passed targeted launcher
 and CPU runtime checks under Wine; native Windows GPU upscaling remains
 unverified. FSR labels omit the Experimental suffix;
 this is a label change, and temporal reconstruction limitations remain described
@@ -160,6 +162,17 @@ SDK command-line/environment/runtime overrides are preserved. Reset uses the
 new single-key defaults. See [native action mapping](pc-menu-cleanup.md).
 
 ## Validation
+
+The Advanced settings update passed 78,241 real launcher UI checks, 240 native
+consumer checks for the six new settings and independent blur/vignette control,
+661 native engine/scope checks, 392 live-settings checks, 112 launcher integration
+checks and 93 targeted graphics checks under Wine. The UI includes both
+languages, four scales, 58 dropdowns, all Advanced choice values, label/field
+tooltips, save/restore and single forwarding of launch arguments. Native tests
+execute the production wrappers and actual recompiled consumers with explicit
+CPU observers around unrelated GPU, lighting and allocation work. They do not
+execute shaders or validate native Windows race visuals. The shadow filter is
+observed at the native GPU-entry boundary. See [the exact test scope](advanced-settings-validation.md).
 
 The 1080p update passed 93 targeted real-control Windows/Wine assertions in
 English and Turkish, covering FSR 1/2/3 preservation, real JSON save/reload,

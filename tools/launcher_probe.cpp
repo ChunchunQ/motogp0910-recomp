@@ -53,7 +53,7 @@ int wmain(int argc,wchar_t** argv) {
     }
     settings.backend="xinput";settings.keyboard=false;settings.mute=true;
     settings.debug_overlay_enabled=true;Put(config.table,"allow_intro_skip",false);
-    settings.engine_effects={"off","off","off"};settings.shadow_distance=90;
+    for(size_t i=0;i<kEngineEffects.size();++i)settings.engine_effects[i]=EngineValues(kEngineEffects[i])[1];settings.shadow_distance=90;
     settings.effect="fsr";settings.scale_x=2;settings.scale_y=3;settings.volume=37;
     settings.fsr_reduction=0.54;settings.anisotropic=5;settings.post_effect="fxaa";settings.adapter=0;
     settings.Store(config.table);Put(config.table,"game_data_root",Utf8(unicode));config.Save();
@@ -101,7 +101,7 @@ int wmain(int argc,wchar_t** argv) {
     Check(rex::cvar::Query<bool>("native_2x_msaa"), "Actual SDK native MSAA flag");
     Check(rex::cvar::Query<std::string>("swap_post_effect")=="fxaa" && rex::cvar::Query<bool>("store_shaders"), "Actual SDK FXAA/cache flags");
     Check(rex::cvar::Query<int32_t>("audio_master_volume")==37, "Game volume cvar loaded");
-    for(const auto& effect:kEngineEffects)Check(rex::cvar::Query<std::string>(effect.key)=="off","Actual engine effect cvar loaded from config");
+    for(size_t i=0;i<kEngineEffects.size();++i)Check(rex::cvar::Query<std::string>(kEngineEffects[i].key)==settings.engine_effects[i],"Actual engine effect cvar loaded from config");
     Check(rex::cvar::Query<bool>("debug_overlay_enabled")&&rex::cvar::Query<bool>("allow_intro_skip"),"Actual diagnostic cvars retain debug choice and enabled intro skipping");
     Check(rex::cvar::Query<int32_t>("engine_shadow_distance")==90,"Actual shadow distance cvar loaded from config");
     Write(file,"custom_flag = 77\n"); bool rejected=false;

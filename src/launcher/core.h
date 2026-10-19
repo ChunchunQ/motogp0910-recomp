@@ -149,7 +149,7 @@ struct Settings {
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
   std::string backend = "sdl", effect = "bilinear", post_effect = "none", prompt_style = "auto", display_mode = "auto", fsr_quality = "auto";
   std::array<std::string,kBindings.size()> bindings{};
-  std::array<std::string,kEngineEffects.size()> engine_effects{"game","game","game"};
+  std::array<std::string,kEngineEffects.size()> engine_effects=[]{std::array<std::string,kEngineEffects.size()> values;values.fill("game");return values;}();
   int shadow_distance=0;
   Settings() { for(size_t i=0;i<bindings.size();++i) bindings[i]=kBindings[i].defaults; }
   static Settings Load(const toml::table& t) {
@@ -224,7 +224,8 @@ struct Settings {
           L"LAN: oyuncu adı 1-15 UTF-8 bayt, oda adı 1-31 bayt olmalı; geçerli IPv4 yaz veya boş bırak.");
     Wide(lan_player_name);Wide(lan_room_name);
     if(aspect!="auto" && aspect!="16:9" && aspect!="21:9" && aspect!="32:9")throw Error(L"Unsupported aspect ratio.",L"Desteklenmeyen en-boy oranı.");
-    for(const auto& effect:engine_effects)if(effect!="game" && effect!="off")throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");
+    for(size_t i=0;i<engine_effects.size();++i){const auto values=EngineValues(kEngineEffects[i]);
+      if(std::find(values.begin(),values.end(),engine_effects[i])==values.end())throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");}
     if(shadow_distance<0 || shadow_distance>180)throw Error(L"Shadow distance must be 0 to 180.",L"Gölge mesafesi 0 ile 180 arasında olmalı.");
     if(width<0 || height<0 || width>8192 || height>8192 ||
        guest_width<0 || guest_height<0 || guest_width>8192 || guest_height>8192 ||

@@ -225,10 +225,11 @@
     vsync=check(0,0,438,kColumnWidth,kVsync);msaa=check(0,kColumnX,438,kColumnWidth,kMsaa);
     letterbox=check(0,0,480,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,480,kColumnWidth,kAspect);
     dither=check(0,0,522,kColumnWidth,kDither);shader_cache=check(0,kColumnX,522,kColumnWidth,kShaderCache);
-    for(size_t i=0;i<engine_choices.size();++i)engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(i%2)*kColumnX,(i/2)*82,kEngineBase+i);
+    for(size_t i=0;i<engine_choices.size();++i){const auto slot=i<3?i:i+1;
+      engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(slot%2)*kColumnX,(slot/2)*82,kEngineBase+i);}
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",kColumnX,82,kShadowDistance);
-    debug_overlay=check(4,0,186,kFormWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
-    crash_diagnostics=check(4,0,230,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(config.table,"launcher_crash_monitor",true));
+    debug_overlay=check(4,0,432,kFormWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
+    crash_diagnostics=check(4,0,476,kFormWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(config.table,"launcher_crash_monitor",true));
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",0,0,kFormWidth-104);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,kFormWidth-80,0,80,22);
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,kFormWidth,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
     mute=check(1,0,100,kFormWidth,kMute);

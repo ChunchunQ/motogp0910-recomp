@@ -519,7 +519,7 @@ void Check1080Graphics(App& app,const fs::path& game,const fs::path& pictures){
       auto s=app.GetControls();const auto expected=std::array{"fsr","fsr2","fsr3"}[mode-2];
       CheckUI(s.effect==expected && s.width==1920 && s.height==1080,"1080p selection preserves each FSR mode and chooses exact output dimensions");
       CheckUI(s.scale_x==1 && s.scale_y==1 && s.guest_width==1280 && s.guest_height==720,"1080p upscaling retains a real 720p source");
-      CheckUI(s.aspect=="16:9" && s.display_mode!="borderless","1080p preset avoids desktop sizing and wide aspect overrides");
+      CheckUI(s.aspect=="16:9" && s.display_mode=="borderless","1080p preset preserves the default Borderless display mode");
       app.SaveSettings();Config saved(app.config.path);const auto loaded=Settings::Load(saved.table);
       CheckUI(loaded.effect==expected && MatchingRenderPreset(loaded)==kUpscaled1080Preset,"Real JSON file round-trips the selected FSR mode and 1080p preset");
       const auto args=Arguments(game,loaded,saved.table);
@@ -530,7 +530,7 @@ void Check1080Graphics(App& app,const fs::path& game,const fs::path& pictures){
       choose(app.effect,kEffect,1);
       CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==0 && app.GetControls().effect=="cas","Selecting CAS exits the FSR preset without overwriting the user's choice");
       choose(app.render_resolution,kRenderResolution,kUpscaled1080Preset);choose(app.fullscreen,kFullscreen,1);
-      CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==0 && app.GetControls().display_mode=="borderless","Choosing borderless exits the fixed-output preset");
+      CheckUI(SendMessageW(app.render_resolution,CB_GETCURSEL,0,0)==kUpscaled1080Preset && app.GetControls().display_mode=="borderless","Choosing Borderless retains the upscaling preset");
     }
     choose(app.render_resolution,kRenderResolution,kUpscaled1080Preset);PumpUI();
     RedrawWindow(app.window,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_UPDATENOW);
@@ -572,6 +572,7 @@ int wmain(int argc,wchar_t** argv){
     CheckUI(!app.Checked(app.debug_overlay)&&!GetDlgItem(app.page_content,164),"Debug defaults off and the former intro-skip checkbox is absent");
     CheckUI(!IsWindowVisible(app.crash_diagnostics),"General no longer contains crash diagnostics");
     app.ShowPage(4);CheckUI(IsWindowVisible(app.crash_diagnostics),"Extended crash diagnostics appears in Advanced");
+    app.Reveal(app.crash_diagnostics);PumpUI();
     const bool crash=app.Checked(app.crash_diagnostics);ClickControl(app.crash_diagnostics,app.S(14));CheckUI(app.Checked(app.crash_diagnostics)!=crash,"Relocated crash checkbox retains native mouse input");app.SetCheck(app.crash_diagnostics,crash);
     ClickControl(app.debug_overlay,app.S(14));
     {auto pending=app.GetControls();CheckUI(pending.debug_overlay_enabled,"Actual Advanced checkbox updates managed settings");toml::table saved;Put(saved,"allow_intro_skip",false);pending.Store(saved);auto loaded=Settings::Load(saved);app.SetControls(loaded);CheckUI(app.Checked(app.debug_overlay)&&Get(saved,"allow_intro_skip",false),"Debug choice survives a round trip while intro skipping stays enabled");}
@@ -905,10 +906,16 @@ int wmain(int argc,wchar_t** argv){
     app.Running(false);CheckUI(!IsWindowEnabled(app.refresh_rate),"Game exit keeps borderless Hz disabled");
     app.SetControls(Settings{});
     for(size_t field=0;field<kEngineEffects.size();++field){
-      SendMessageW(app.engine_choices[field],CB_SETCURSEL,1,0);auto chosen=app.GetControls();toml::table table;chosen.Store(table);
-      CheckUI(Settings::Load(table).engine_effects[field]=="off","Engine effect saved and restored");
-      auto args=Arguments(game,chosen,table);CheckUI(std::count(args.begin(),args.end(),L"--"+Wide(kEngineEffects[field].key)+L"=off")==1,"Engine effect forwarded exactly once");
-      app.turkish=!app.turkish;app.Localize();CheckUI(app.GetControls().engine_effects[field]=="off","Language change preserves engine override");
+      const auto values=EngineValues(kEngineEffects[field]);
+      CheckUI(!TooltipText(app.help.window,app.engine_choices[field]).empty() &&
+          TooltipText(app.help.window,app.engine_choices[field])==TooltipText(app.help.window,app.help_labels.at(app.engine_choices[field])),"Each Advanced setting explains itself on both its label and field");
+      for(size_t selection=0;selection<values.size();++selection){
+        SendMessageW(app.engine_choices[field],CB_SETCURSEL,selection,0);auto chosen=app.GetControls();toml::table table;chosen.Store(table);
+        const auto expected=values[selection];
+        CheckUI(Settings::Load(table).engine_effects[field]==expected,"Every Advanced choice is saved and restored");
+        auto args=Arguments(game,chosen,table);CheckUI(std::count(args.begin(),args.end(),L"--"+Wide(kEngineEffects[field].key)+L"="+Wide(expected))==1,"Every Advanced choice is forwarded exactly once");
+        app.turkish=!app.turkish;app.Localize();CheckUI(app.GetControls().engine_effects[field]==expected,"Language change preserves every Advanced choice");
+      }
     }
     for(size_t distance=0;distance<kShadowDistances.size();++distance){
       SendMessageW(app.shadow_distance,CB_SETCURSEL,distance,0);auto chosen=app.GetControls();toml::table table;chosen.Store(table);

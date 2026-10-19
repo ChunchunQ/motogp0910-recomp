@@ -98,6 +98,10 @@ int main(int argc,char** argv){try{
   Check(model->Set("button_prompt_style","playstation")&&model->Set("button_prompt_style","keyboard")&&model->Set("button_prompt_style","auto"),"Prompt styles can switch live");
   for(auto key:{"engine_speed_blur","engine_depth_of_field","engine_dynamic_shadows"})Check(model->Set(key,"off")&&model->Set(key,"game"),"Native engine hook choices remain live");
   Check(model->Set("engine_shadow_distance","45"),"Shadow distance accepted live");
+  for(const auto& spec:Catalog())if(spec.key.starts_with("engine_") && spec.kind==Kind::Choice){
+    for(const auto& choice:spec.choices)Check(model->Set(spec.key,choice.value)&&model->Value(spec.key)==choice.value,"Every Advanced choice reaches its actual runtime setting");
+    Check(model->Set(spec.key,"game"),"Advanced choices restore Game default");
+  }
   const auto* effect=std::find_if(Catalog().begin(),Catalog().end(),[](const Spec& s){return s.key=="present_effect";}).operator->();
   PaintPlanner::GuestOutputProperties props;props.frontbuffer_width=1280;props.frontbuffer_height=720;props.display_aspect_ratio_x=16;props.display_aspect_ratio_y=9;props.is_8bpc=true;
   int index=0;for(const auto& c:effect->choices){Check(model->Set("present_effect",c.value),"Actual live upscale selection accepted");auto paint=planner.GetGuestOutputPaintConfigFromUIThread();Check(int(paint.GetEffect())==index++,"Presenter receives new effect immediately, not just CVar");

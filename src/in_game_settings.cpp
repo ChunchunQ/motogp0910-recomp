@@ -72,6 +72,12 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
     {"engine_depth_of_field","Depth of field","Alan derinliği",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"}}},
     {"engine_dynamic_shadows","Dynamic shadows","Dinamik gölgeler",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"}}},
     {"engine_shadow_distance","Shadow distance (0 = game)","Gölge mesafesi (0 = oyun)",P::Advanced,K::Integer,0,180},
+    {"engine_vignette","Vignette intensity","Kenar kararması şiddeti",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"},{"25","25%","25%"},{"50","50%","50%"},{"75","75%","75%"},{"100","100%","100%"}}},
+    {"engine_bloom","Bloom intensity","Işık yayılması şiddeti",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"},{"25","25%","25%"},{"50","50%","50%"},{"75","75%","75%"},{"100","100%","100%"}}},
+    {"engine_shadow_filter","Shadow filtering","Gölge filtreleme",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"},{"on","On","Açık"}}},
+    {"engine_soft_shadow_distance","Soft shadow distance","Yumuşak gölge mesafesi",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"45","45","45"},{"90","90","90"},{"180","180","180"}}},
+    {"engine_particle_density","Particle density","Parçacık yoğunluğu",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"off","Off","Kapalı"},{"25","25%","25%"},{"50","50%","50%"},{"75","75%","75%"},{"100","100%","100%"}}},
+    {"engine_draw_distance","Draw distance (Experimental)","Çizim mesafesi (Deneysel)",P::Advanced,K::Choice,0,0,{{"game","Game default","Oyun varsayılanı"},{"50","50%","50%"},{"75","75%","75%"},{"100","100%","100%"},{"125","125%","125%"},{"150","150%","150%"}}},
     {"audio_master_volume","Master volume","Ana ses düzeyi",P::Audio,K::Integer,0,100},
     {"audio_mute","Mute","Sessiz",P::Audio,K::Toggle},
   };

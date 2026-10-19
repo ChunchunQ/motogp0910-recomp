@@ -20,7 +20,7 @@
     Tip(game_language,L"Changes game text and subtitles. Original voices are preserved.",L"Oyun metinlerini ve altyazıları değiştirir. Özgün seslendirmeler korunur.");
     Tip(prompt_style,L"Automatic follows your input device. Choose PlayStation, Xbox or keyboard to force the button symbols.",L"Otomatik, giriş aygıtını izler. Tuş simgelerini sabitlemek için PlayStation, Xbox veya klavye seç.");
     Tip(crash_diagnostics,L"Collects an additional local crash report if the game fails. Reports are saved in Logs.",L"Oyun çökerse ek bir yerel çökme raporu toplar. Raporlar Loglar klasörüne kaydedilir.");
-    Tip(render_resolution,L"1.5x upscales 720p to 1080p using FSR 1, 2 or 3; internal rendering stays at 720p. FSR 2 / 3 has limited temporal inputs.",L"1.5x, FSR 1, 2 veya 3 ile 720p görüntüyü 1080p'ye yükseltir; iç çizim 720p kalır. FSR 2 / 3'ün zamansal girdileri sınırlıdır.");
+    Tip(render_resolution,L"1.5x uses a 720p source and FSR 1, 2 or 3. Windowed/fullscreen targets 1080p; Borderless uses desktop resolution. FSR 2 / 3 has limited temporal inputs.",L"1.5x, 720p kaynak ve FSR 1, 2 veya 3 kullanır. Pencereli/tam ekran 1080p'yi hedefler; Kenarlıksız masaüstü çözünürlüğünü kullanır. FSR 2 / 3'ün zamansal girdileri sınırlıdır.");
     Tip(size,L"Common and monitor-reported window sizes that fit the selected display. Borderless uses your desktop resolution.",L"Seçili ekrana sığan yaygın ve monitörün bildirdiği pencere boyutları. Kenarlıksız mod masaüstü çözünürlüğünü kullanır.");
     Tip(refresh_rate,L"Exclusive fullscreen only. Borderless and windowed modes use the desktop refresh rate.",L"Yalnızca özel tam ekranda kullanılır. Kenarlıksız ve pencereli modlar masaüstünün yenileme hızını kullanır.");
     Tip(fps_limit,L"Adds a maximum frame rate. This does not remove the game's own limit.",L"En yüksek kare hızına sınır ekler. Oyunun kendi sınırını kaldırmaz.");
@@ -29,9 +29,17 @@
     Tip(letterbox,L"Preserves the aspect ratio, adding black bars when needed.",L"Görüntü oranını korur; gerektiğinde siyah kenarlar ekler.");
     Tip(dither,L"Adds subtle dithering to reduce banding in color gradients.",L"Renk geçişlerindeki bantlaşmayı hafif dithering ile azaltır.");
     Tip(shader_cache,L"Reuses saved shaders to reduce stutter on later runs.",L"Kaydedilen shader'ları tekrar kullanarak sonraki açılışlarda takılmaları azaltır.");
-    for(auto control:engine_choices)Tip(control,L"Game default preserves the original effect. Off disables this effect.",L"Oyunun ayarı, özgün efekti korur. Kapalı, bu efekti devre dışı bırakır.");
+    Tip(engine_choices[0],L"Adds motion blur as speed increases. Off removes this blur.",L"Hız arttıkça hareket bulanıklığı ekler. Kapalı, bu bulanıklığı kaldırır.");
+    Tip(engine_choices[1],L"Blurs areas outside the camera's focus. Off keeps them sharp.",L"Kameranın odak noktası dışındaki alanları bulanıklaştırır. Kapalı, bunları net tutar.");
+    Tip(engine_choices[2],L"Draws real-time rider and bike shadows.",L"Sürücü ve motosikletin gerçek zamanlı gölgelerini çizer.");
+    Tip(engine_choices[3],L"Controls speed-related darkening at the screen edges; percentages scale the game strength.",L"Hıza bağlı ekran kenarı kararmasını ayarlar; yüzdeler oyunun şiddetine göre uygulanır.");
+    Tip(engine_choices[4],L"Controls glow around bright areas; percentages scale the game's bloom strength.",L"Parlak alanların etrafındaki ışık yayılmasını oyunun şiddetine göre ayarlar.");
+    Tip(engine_choices[5],L"Filters shadow edges for a softer appearance.",L"Gölge kenarlarını daha yumuşak görünmeleri için filtreler.");
+    Tip(engine_choices[6],L"Sets the soft-shadow range, within the overall shadow render distance.",L"Genel gölge çizim mesafesi içindeki yumuşak gölge mesafesini ayarlar.");
+    Tip(engine_choices[7],L"Controls the density of particles such as smoke, sparks and rain.",L"Duman, kıvılcım ve yağmur gibi parçacıkların yoğunluğunu ayarlar.");
+    Tip(engine_choices[8],L"Scales instance visibility distance within the engine's limits. Higher values can increase GPU load.",L"Nesnelerin görünme mesafesini motorun sınırları içinde değiştirir. Yüksek değerler GPU yükünü artırabilir.");
     Tip(debug_overlay,L"Enables F3 to show performance, display and runtime diagnostics. Off by default; applies on the next launch.",L"F3 ile performans, görüntü ve çalışma bilgilerini açar. Varsayılan kapalıdır; sonraki açılışta uygulanır.");
-    Tip(shadow_distance,L"Game default preserves each track's shadow distance. A higher distance can increase GPU load.",L"Oyunun ayarı, her pistin özgün gölge mesafesini korur. Yüksek mesafe GPU yükünü artırabilir.");
+    Tip(shadow_distance,L"Sets how far rider and bike shadows are drawn. Higher values can increase GPU load.",L"Sürücü ve motosiklet gölgelerinin çizim mesafesini ayarlar. Yüksek değerler GPU yükünü artırabilir.");
     Tip(backend,L"SDL supports native PlayStation and other controllers. DualSense adaptive triggers require SDL.",L"SDL, doğal PlayStation ve diğer kontrolcüleri destekler. DualSense adaptif tetikler için SDL gerekir.");
     Tip(keyboard,L"Enable keyboard input in addition to your controller. Edit individual keys below.",L"Kontrolcünün yanında klavye girişini etkinleştirir. Tuşları aşağıdan düzenleyebilirsin.");
     Tip(adaptive_triggers,L"Experimental fixed trigger resistance for DualSense / Edge using SDL. Other controllers keep their normal triggers.",L"SDL kullanan DualSense / Edge için deneysel sabit tetik direnci. Diğer kontrolcülerin tetikleri normal çalışır.");
