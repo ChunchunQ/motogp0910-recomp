@@ -21,6 +21,13 @@ PREFIX = '/api/motogp/'
 STALE = 30  # seconds before a live snapshot counts as offline
 
 
+# Native race boards store the total race time in 1/20 s units, scaled by 100 and
+# negated: rating = -(time_in_20ths * 100). Column 2 holds the unscaled 1/20 s count.
+# Checked against reported laps (Mugello 250cc 3 laps ~5:41 -> column 2 about 6800).
+def race_ms(value):
+    return abs(int(value)) // 2
+
+
 def fmt_time(ms):
     ms = int(ms)
     minutes, rest = divmod(ms, 60000)
@@ -67,7 +74,7 @@ class Api:
         if fmt is None:
             fmt = 'time_ms' if value < 0 else 'score'
         if fmt == 'time_ms':
-            return {'kind': 'time', 'text': fmt_time(abs(value)), 'ms': abs(int(value))}
+            return {'kind': 'time', 'text': fmt_time(race_ms(value)), 'ms': race_ms(value)}
         return {'kind': 'score', 'text': f'{int(value):,}'.replace(',', '.')}
 
     @staticmethod
@@ -143,7 +150,7 @@ class Api:
         for i, (pid, name, value, cols, upd) in enumerate(rows):
             r = self.row(view, offset + i + 1, pid, name, value, cols, upd)
             if best is not None and r['display']['kind'] == 'time' and i:
-                r['gap_ms'] = abs(value - best)
+                r['gap_ms'] = race_ms(value - best)
             out.append(r)
         return {**self.meta(view), 'total': total, 'offset': offset, 'rows': out}
 
