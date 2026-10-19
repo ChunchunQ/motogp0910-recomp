@@ -27,4 +27,8 @@ class Client {
   Page Read(uint32_t view,uint32_t start,uint32_t count,
                         std::span<const uint64_t> users={},uint64_t around=0)const;
 };
+// Binds this PC's online profile for `url` to a NOBK Online site account, using
+// the launcher token from the site's sign-in API. Returns the account name the
+// server will use for this player. The launcher calls it before starting the game.
+std::string LinkAccount(std::string url,const std::string& launcher_token,const std::filesystem::path& profile={});
 }

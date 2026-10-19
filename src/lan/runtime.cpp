@@ -17,7 +17,7 @@ REXCVAR_DEFINE_BOOL(lan_enabled,false,"LAN","Experimental LAN multiplayer; offli
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REXCVAR_DEFINE_STRING(network_mode,"legacy","Network","offline, lan or online; legacy respects the existing lan_enabled setting")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
-REXCVAR_DEFINE_STRING(online_server,"","Network","Community server HTTPS origin; used only in online mode")
+REXCVAR_DEFINE_STRING(online_server,"https://motogp.nobkonline.com","Network","Community server HTTPS origin; used only in online mode")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REXCVAR_DEFINE_STRING(lan_bind_ip,"","LAN","Local adapter IPv4; empty automatically prefers Radmin VPN")
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);

@@ -855,7 +855,7 @@ int wmain(int argc,wchar_t** argv){
           SendMessageW(app.network_mode,WM_MOUSEWHEEL,MAKEWPARAM(0,static_cast<WORD>(-WHEEL_DELTA)),0);
           CheckUI(SendMessageW(app.network_mode,CB_GETCURSEL,0,0)==mode,"Closed Online connection selector ignores the mouse wheel");
           for(auto control:{app.network_player,app.network_room,app.network_adapter,app.network_host,app.network_server}){
-            const bool relevant=control==app.network_server?mode==2:(control==app.network_adapter||control==app.network_host)?mode==1:mode>0;
+            const bool relevant=control==app.network_server?false:control==app.network_player?mode==1:(control==app.network_adapter||control==app.network_host)?mode==1:mode>0;
             CheckUI(bool(IsWindowVisible(control))==relevant&&bool(IsWindowVisible(app.help_labels.at(control)))==relevant&&bool(IsWindowEnabled(control))==relevant,"Each mode shows and enables only its relevant fields and labels");
           }
           LayoutCheck(app);

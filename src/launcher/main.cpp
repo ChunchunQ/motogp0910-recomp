@@ -1,4 +1,5 @@
 #include "core.h"
+#include "nobk_account.h"
 #include "file_verification.h"
 #include "notices_dialog.h"
 #include "scroll_rail.h"
@@ -52,6 +53,8 @@ struct App {
        adapter{},msaa{},post_effect{},shader_cache{},render_resolution{},effect{},sharpness{},sharp_value{},
        anisotropic{},letterbox{},dither{},volume{},volume_value{},prompt_style{},game_language{},refresh_rate{},fps_limit{},fsr_quality{},aspect{};
   HWND network_mode{},network_player{},network_room{},network_adapter{},network_host{},network_server{};
+  HWND account_label{},account_status{},account_user{},account_pass{},account_signin{},account_register{},account_signout{};
+  std::optional<NobkAccount> account=LoadAccount();
   Tooltips help;
   std::map<HWND,HWND> help_labels;
   std::array<HWND,7> navigation{};
@@ -620,10 +623,13 @@ struct App {
           case kResetBinding:CancelCapture();SetBinding(binding_index,kBindings[binding_index].defaults);break;
           case kResetBindings:CancelCapture();for(size_t i=0;i<kBindings.size();++i)SetBinding(i,kBindings[i].defaults);break;
           case kVerifyFiles:StartVerification();break;
+          case kSignIn:AccountSignIn();break;
+          case kSignOut:AccountSignOut();break;
+          case kRegister:ShellExecuteW(window,L"open",kAccountRegister,nullptr,nullptr,SW_SHOWNORMAL);break;
           case kBrowse:Browse();break;case kSave:SaveSettings();break;
           case kDefaults:settings=Settings{};SetControls(settings);Status(L"Defaults selected. Save or press PLAY to apply.",L"Varsayılanlar seçildi. Kaydet veya oyunu başlat.");break;
           case kLogs:OpenFolder(exe/L"logs");break;case kReport:CreateReport();break;
-          case kPlay:if(process || verifying)break;Validate(exe,GameRoot());SaveSettings();process=Start(exe,Arguments(GameRoot(),settings,config.table),Checked(crash_diagnostics));Running(true);SetTimer(window,1,700,nullptr);
+          case kPlay:if(process || verifying)break;Validate(exe,GameRoot());PrepareOnlineLaunch();SaveSettings();process=Start(exe,Arguments(GameRoot(),settings,config.table),Checked(crash_diagnostics));Running(true);SetTimer(window,1,700,nullptr);
             Status(L"Game running. Closing the launcher leaves the game open.",L"Oyun çalışıyor. Launcher'ı kapatman oyunu kapatmaz.");break;
         }
       }

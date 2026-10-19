@@ -135,12 +135,15 @@ class Config {
     original = std::move(bytes);
   }
 };
+// NOBK Online community server. Fixed: players never type or change it, and the
+// exact spelling keeps every player on the same per-server identity profile.
+inline constexpr const char* kCommunityServer="https://motogp.nobkonline.com";
 struct Settings {
   motogp::adaptive::Profile adaptive;
   std::string aspect="auto";
   bool debug_overlay_enabled=false;
   bool lan_enabled=false;
-  std::string network_mode="offline",online_server;
+  std::string network_mode="online",online_server=kCommunityServer;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = -1, volume = 100, adapter = -1;
   int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
@@ -161,9 +164,9 @@ struct Settings {
     }
     s.lan_enabled=Get(t,"lan_enabled",false);
     s.network_mode=Get(t,"network_mode",std::string("legacy"));
-    if(s.network_mode=="legacy")s.network_mode=s.lan_enabled?"lan":"offline";
+    if(s.network_mode=="legacy")s.network_mode=s.lan_enabled?"lan":"online";
     s.lan_enabled=s.network_mode=="lan";
-    s.online_server=Get(t,"online_server",std::string{});
+    s.online_server=kCommunityServer;
     s.lan_player_name=Get(t,"lan_player_name",std::string("Player"));
     s.lan_room_name=Get(t,"lan_room_name",std::string("MotoGP room"));
     s.lan_bind_ip=Get(t,"lan_bind_ip",std::string{});s.lan_host_ip=Get(t,"lan_host_ip",std::string{});

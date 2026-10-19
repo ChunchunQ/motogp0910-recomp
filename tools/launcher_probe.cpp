@@ -48,8 +48,9 @@ int wmain(int argc,wchar_t** argv) {
     {toml::table old;Put(old,"lan_enabled",true);Check(Settings::Load(old).network_mode=="lan","Legacy enabled LAN migrates to explicit LAN mode");
       Put(old,"network_mode",std::string("offline"));Check(Settings::Load(old).network_mode=="offline","Explicit Offline takes precedence over legacy LAN");
       for(const auto* mode:{"offline","lan","online"}){Settings network;network.network_mode=mode;network.online_server="https://play.example.com";toml::table t;network.Store(t);auto loaded=Settings::Load(t);
-        Check(loaded.network_mode==mode && loaded.lan_enabled==(loaded.network_mode=="lan") && loaded.online_server==network.online_server,"Three network modes round-trip without conflating LAN and Online");}
-      Settings missing;missing.network_mode="online";bool rejected=false;try{missing.Validate();}catch(const Error&){rejected=true;}Check(rejected,"Online cannot launch without a community endpoint");
+        Check(loaded.network_mode==mode && loaded.lan_enabled==(loaded.network_mode=="lan") && loaded.online_server==kCommunityServer,"Three network modes round-trip without conflating LAN and Online; the server stays fixed");}
+      Check(Settings{}.network_mode=="online" && Settings::Load(toml::table{}).network_mode=="online" && Settings::Load(toml::table{}).online_server==kCommunityServer,"New installs start Online with the fixed NOBK server");
+      Settings missing;missing.network_mode="online";missing.online_server.clear();bool rejected=false;try{missing.Validate();}catch(const Error&){rejected=true;}Check(rejected,"Online cannot launch without a community endpoint");
     }
     settings.backend="xinput";settings.keyboard=false;settings.mute=true;
     settings.debug_overlay_enabled=true;Put(config.table,"allow_intro_skip",false);
