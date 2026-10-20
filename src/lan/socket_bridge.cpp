@@ -242,7 +242,7 @@ struct SocketBridge::Impl {
         // succeed: the game measures every member before a race starts.
         if(!results[i] && peer && (guest.Network().Connected(peer) || peer==guest.Network().Identity()))reachable[i]=true;
         static std::atomic<uint64_t> logged{0};
-        if(Noteworthy(logged))REXLOG_INFO("LAN_QOS: lookup peer={:016X} session={:016X} room={} member={} (count={})",peer,id,results[i].has_value(),reachable[i],logged.load());
+        if(Noteworthy(logged))REXLOG_INFO("LAN_QOS: lookup peer={:016X} session={:016X} room={} member={} (count={})",peer,id,results[i].has_value(),static_cast<bool>(reachable[i]),logged.load());
       }
     }
     uint32_t size=8+count*24;for(const auto& room:results)if(room)size+=static_cast<uint32_t>((room->qos.size()+3)&~size_t(3));
