@@ -218,15 +218,25 @@ class Store:
         own = self.player_for(digest)
         linked = self.db.execute('SELECT id FROM players WHERE account=?', (account,)).fetchone()
         with self.db:
+            # A PC follows the account that signed in last: when someone else signs
+            # in on a PC that was linked to another account, the PC's credential is
+            # pointed at this account's player; the other account keeps its records.
             if linked:
                 number = linked[0]
                 if not own or own[0] != number:
-                    if own and own[1]: raise Invalid('this PC is linked to another NOBK Online account')
                     self.db.execute('INSERT OR REPLACE INTO credential_alias(credential,player) VALUES(?,?)', (digest, number))
-            elif own:
-                if own[1]: raise Invalid('this PC is linked to another NOBK Online account')
+            elif own and not own[1]:
                 number = own[0]
                 self.db.execute('UPDATE players SET account=? WHERE id=?', (account, number))
+            elif own:
+                if self.player_count >= self.max_players: raise Limited('registered player capacity reached')
+                # The credential column is unique, so a new player gets a derived
+                # placeholder and the real credential maps to it through an alias.
+                placeholder = hashlib.sha256(b'account:%d' % account).hexdigest()
+                number = self.db.execute('INSERT INTO players(credential,name,account) VALUES(?,?,?)', (placeholder, username, account)).lastrowid
+                if not 0 < number <= 0xFFFFFF: raise Limited('player limit reached')
+                self.player_count += 1
+                self.db.execute('INSERT OR REPLACE INTO credential_alias(credential,player) VALUES(?,?)', (digest, number))
             else:
                 if self.player_count >= self.max_players: raise Limited('registered player capacity reached')
                 number = self.db.execute('INSERT INTO players(credential,name,account) VALUES(?,?,?)', (digest, username, account)).lastrowid

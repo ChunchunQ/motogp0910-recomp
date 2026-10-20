@@ -168,9 +168,12 @@ class AccountLinkTests(unittest.TestCase):
         self.assertEqual(self.store.connect(pc2,'Whatever')&0xFFFFFF,anon)
         self.assertEqual(self.store.owner(pc2),anon)
         self.assertEqual(self.store.read(1,1,10)[0],1)
-        with self.assertRaises(Invalid):self.store.link(pc2,8,'OCALEX')           # a PC cannot switch accounts silently
-        fresh=self.store.link(other,8,'OCALEX');self.assertNotEqual(fresh,anon)   # new account, new player
-        self.assertEqual(self.store.connect(other,'x')&0xFFFFFF,fresh)
+        switched=self.store.link(pc2,8,'OCALEX');self.assertNotEqual(switched,anon)  # another account on a PC gets its own player
+        self.assertEqual(self.store.connect(pc2,'x')&0xFFFFFF,switched)                # the PC now plays as that account
+        self.assertEqual(self.store.connect(pc1,'x')&0xFFFFFF,anon)                    # the first account keeps its PC and records
+        self.assertEqual(self.store.link(other,8,'OCALEX'),switched)                   # the same account on a third PC shares it
+        self.assertEqual(self.store.link(pc2,7,'NOBK'),anon)                           # signing back in moves the PC back
+        self.assertEqual(self.store.connect(pc2,'x')&0xFFFFFF,anon)
         with self.assertRaises(Invalid):self.store.connect(secrets.token_bytes(32),'Anon',require_account=True)
         self.assertEqual(self.store.connect(pc1,'NOBK',require_account=True)&0xFFFFFF,anon)
     def test_schema_migrates_an_existing_database(self):
