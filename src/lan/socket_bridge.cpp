@@ -232,22 +232,28 @@ struct SocketBridge::Impl {
     rex::system::object_ref<rex::system::XEvent> notify;
     if(event){notify=kernel->object_table()->LookupObject<rex::system::XEvent>(event);if(!notify)return kInvalid;}
     std::vector<std::optional<Room>> results(count);
+    std::vector<bool> reachable(count,false);
     if(!service){auto rooms=guest.KnownRooms();
       for(unsigned i=0;i<count;++i){const auto xnaddr=U32(Ptr(ctx.r5.u32+i*4)),kid=U32(Ptr(ctx.r6.u32+i*4)),key=U32(Ptr(ctx.r7.u32+i*4));
         if(!Valid(xnaddr,36) || !Valid(kid,8) || !Valid(key,16))return kFault;
         const auto peer=U64(Ptr(xnaddr+16)),id=U64(Ptr(kid));
         for(const auto& room:rooms)if(room.host==peer && room.id==id && std::equal(room.key.begin(),room.key.end(),Ptr(key))){results[i]=room;break;}
+        // Probes to other riders of the current room (not only room hosts) must
+        // succeed: the game measures every member before a race starts.
+        if(!results[i] && peer && (guest.Network().Connected(peer) || peer==guest.Network().Identity()))reachable[i]=true;
+        static std::atomic<uint64_t> logged{0};
+        if(Noteworthy(logged))REXLOG_INFO("LAN_QOS: lookup peer={:016X} session={:016X} room={} member={} (count={})",peer,id,results[i].has_value(),reachable[i],logged.load());
       }
     }
     uint32_t size=8+count*24;for(const auto& room:results)if(room)size+=static_cast<uint32_t>((room->qos.size()+3)&~size_t(3));
     const auto allocation=memory->SystemHeapAlloc(size);if(!allocation)return 10055;
     qos_allocations.insert(allocation);auto* base=Ptr(allocation);std::memset(base,0,size);W32(base,count);uint32_t cursor=allocation+8+count*24;
-    for(unsigned i=0;i<count;++i){auto* q=base+8+i*24;const auto& room=results[i];q[0]=service?3:room?3:5;
-      W16(q+2,service?0:1);W16(q+4,room?1:0);
+    for(unsigned i=0;i<count;++i){auto* q=base+8+i*24;const auto& room=results[i];const bool ok=room || reachable[i];q[0]=service?3:ok?3:5;
+      W16(q+2,service?0:1);W16(q+4,ok?1:0);
       // XNQOSINFO: wRttMinInMsecs, wRttMedInMsecs, dwUpBitsPerSec, dwDnBitsPerSec.
       // The game sizes its lobby from these; zeros made hosts drop joiners once
       // a handful of riders were in. Report a typical broadband connection.
-      if(service || room){W16(q+12,kQosRttMin);W16(q+14,kQosRttMed);W32(q+16,kQosUpBits);W32(q+20,kQosDownBits);}
+      if(service || ok){W16(q+12,kQosRttMin);W16(q+14,kQosRttMed);W32(q+16,kQosUpBits);W32(q+20,kQosDownBits);}
       if(room && !room->qos.empty()){q[0]|=8;W16(q+6,static_cast<uint16_t>(room->qos.size()));W32(q+8,cursor);std::copy(room->qos.begin(),room->qos.end(),Ptr(cursor));cursor+=static_cast<uint32_t>((room->qos.size()+3)&~size_t(3));}
     }
     W32(Ptr(output),allocation);if(notify)notify->Set(0,false);return 0;
