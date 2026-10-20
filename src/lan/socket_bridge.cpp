@@ -15,6 +15,8 @@ namespace motogp::lan {
 namespace {std::atomic<uint64_t> title_bytes_sent{0};}
 uint64_t TitleBytesSent(){return title_bytes_sent.load(std::memory_order_relaxed);}
 namespace {
+constexpr uint16_t kQosRttMin=30,kQosRttMed=45;
+constexpr uint32_t kQosUpBits=20'000'000,kQosDownBits=50'000'000;
 constexpr uint32_t kPending=0x103,kFault=10014,kInvalid=10022,kNotSocket=10038,
     kTooLarge=10040,kNotSupported=10045,kWouldBlock=10035,kAborted=995,kIncomplete=996;
 thread_local uint32_t socket_error=0;
@@ -236,6 +238,10 @@ struct SocketBridge::Impl {
     qos_allocations.insert(allocation);auto* base=Ptr(allocation);std::memset(base,0,size);W32(base,count);uint32_t cursor=allocation+8+count*24;
     for(unsigned i=0;i<count;++i){auto* q=base+8+i*24;const auto& room=results[i];q[0]=service?3:room?3:5;
       W16(q+2,service?0:1);W16(q+4,room?1:0);
+      // XNQOSINFO: wRttMinInMsecs, wRttMedInMsecs, dwUpBitsPerSec, dwDnBitsPerSec.
+      // The game sizes its lobby from these; zeros made hosts drop joiners once
+      // a handful of riders were in. Report a typical broadband connection.
+      if(service || room){W16(q+12,kQosRttMin);W16(q+14,kQosRttMed);W32(q+16,kQosUpBits);W32(q+20,kQosDownBits);}
       if(room && !room->qos.empty()){q[0]|=8;W16(q+6,static_cast<uint16_t>(room->qos.size()));W32(q+8,cursor);std::copy(room->qos.begin(),room->qos.end(),Ptr(cursor));cursor+=static_cast<uint32_t>((room->qos.size()+3)&~size_t(3));}
     }
     W32(Ptr(output),allocation);if(notify)notify->Set(0,false);return 0;
