@@ -40,6 +40,11 @@ void Original(const char* name,PPCContext& ctx,uint8_t* base){
   target(ctx,base);
 }
 bool Message(PPCContext& ctx,uint8_t* base,bool async){
+  if(bridge && ctx.r3.u32==0xFC){
+    // XLIVEBASE requests the game makes while in an online room (diagnostics).
+    static std::atomic<uint64_t> seen{0};const auto n=seen.fetch_add(1,std::memory_order_relaxed)+1;
+    if(n<=64 || (n&(n-1))==0)REXLOG_INFO("LAN_XLIVE: message={:08X} async={} p1={:08X} p2={:08X} (count={})",ctx.r4.u32,async,ctx.r5.u32,ctx.r6.u32,n);
+  }
   if(!bridge || ctx.r3.u32!=0xFB)return false;
   const auto kernel=rex::system::kernel_state();
   const auto overlapped=async?ctx.r5.u32:0;
