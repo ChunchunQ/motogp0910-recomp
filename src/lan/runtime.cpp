@@ -2,6 +2,7 @@
 #include "socket_bridge.h"
 #include "online/client.h"
 #include "online/stats.h"
+#include "local_splitscreen.h"
 #include <rex/cvar.h>
 #include <rex/hook.h>
 #include <rex/system/xevent.h>
@@ -193,6 +194,7 @@ REX_HOOK_RAW(__imp__XamEnumerate){
   Original("__imp__XamEnumerate",ctx,base);
 }
 REX_HOOK_RAW(__imp__XamUserGetSigninState){
+  if(splitscreen::HandleUserQuery(splitscreen::UserQuery::SigninState,ctx,base))return;
   std::shared_lock lock(bridge_mutex);if(bridge && ctx.r3.u32==0)ctx.r3.u64=2;else Original("__imp__XamUserGetSigninState",ctx,base);
 }
 REX_HOOK_RAW(__imp__XamUserCheckPrivilege){
@@ -203,6 +205,7 @@ REX_HOOK_RAW(__imp__XamUserCheckPrivilege){
   }else Original("__imp__XamUserCheckPrivilege",ctx,base);
 }
 REX_HOOK_RAW(__imp__XamUserGetXUID){
+  if(splitscreen::HandleUserQuery(splitscreen::UserQuery::Xuid,ctx,base))return;
   std::shared_lock lock(bridge_mutex);
   if(bridge && ctx.r3.u32==0 && NetworkXuidCaller(ctx,base)){
     if(!bridge->Valid(ctx.r5.u32,8,true)){ctx.r3.u64=0x80070057;return;}
@@ -210,6 +213,7 @@ REX_HOOK_RAW(__imp__XamUserGetXUID){
   }else Original("__imp__XamUserGetXUID",ctx,base);
 }
 REX_HOOK_RAW(__imp__XamUserGetSigninInfo){
+  if(splitscreen::HandleUserQuery(splitscreen::UserQuery::SigninInfo,ctx,base))return;
   std::shared_lock lock(bridge_mutex);const auto user=ctx.r3.u32,flags=ctx.r4.u32,info=ctx.r5.u32;
   if(bridge && !bridge->Valid(info,40,true)){ctx.r3.u64=0x80070057;return;}
   const bool network=bridge && ((flags&2) || (ctx.lr==0x8239C480 && Parent(ctx,base)==0x8230382C));
@@ -220,6 +224,7 @@ REX_HOOK_RAW(__imp__XamUserGetSigninInfo){
   }
 }
 REX_HOOK_RAW(__imp__XamUserGetName){
+  if(splitscreen::HandleUserQuery(splitscreen::UserQuery::Name,ctx,base))return;
   std::shared_lock lock(bridge_mutex);
   if(bridge && ctx.r3.u32==0){const auto name=PlayerName();if(ctx.r5.u32<=name.size() || !bridge->Valid(ctx.r4.u32,ctx.r5.u32,true)){ctx.r3.u64=87;return;}std::copy(name.begin(),name.end(),base+ctx.r4.u32);base[ctx.r4.u32+name.size()]=0;ctx.r3.u64=0;}
   else Original("__imp__XamUserGetName",ctx,base);

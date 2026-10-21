@@ -1,6 +1,7 @@
 #include "core.h"
 #include "achievements.h"
 #include "../turkish_achievements.h"
+#include "../user_data_paths.h"
 #include <rex/runtime.h>
 #include <rex/kernel/init.h>
 #include <rex/system/util/xdbf_utils.h>
@@ -29,7 +30,8 @@ std::vector<uint8_t> Image(rex::Runtime& runtime,const rex::system::AchievementI
 fs::path UserRoot(const fs::path& exe,const std::string& configured) {
   auto root=Root(exe,configured,L"REX_USER_DATA_ROOT");if(!root.empty())return root;
   PWSTR documents=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_Documents,KF_FLAG_DEFAULT,nullptr,&documents)))throw std::runtime_error("Could not locate Windows Documents");
-  root=fs::path(documents)/"motogp0910";CoTaskMemFree(documents);return root;
+  const fs::path parent(documents);CoTaskMemFree(documents);
+  return motogp::user_data::DefaultRoot(parent);
 }
 fs::path MetadataRoot(const fs::path& exe,const std::string& configured){return Root(exe,configured,L"REX_METADATA_ROOT");}
 Catalog LoadCatalog(const fs::path& game,const fs::path& metadata,int language) {

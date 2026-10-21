@@ -77,7 +77,7 @@ std::unique_ptr<rex::ui::ImGuiDialog> CreateMenu(rex::ui::ImGuiDrawer* drawer,
 void SetGuestGate(InputGate* gate);
 void PollGuestInput();
 bool GuestInputBlocked();
-// SDK MnK reads mapping strings in guest polling and in UI key-up handlers.
-// UI edits and guest reads share this lock; UI handlers run on the edit thread.
+// Compatibility access to InputStateMutex: serialize device polling and MnK
+// binding edits. UI key handlers and binding edits run on the same UI thread.
 std::mutex& InputValueMutex();
 }

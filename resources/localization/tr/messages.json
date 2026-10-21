@@ -118,7 +118,7 @@
   {
     "id": 22,
     "en": "TRANSMISSION",
-    "tr": "VİTES"
+    "tr": "VİTES GEÇİŞİ"
   },
   {
     "id": 23,
@@ -163,7 +163,7 @@
   {
     "id": 31,
     "en": "Transmission",
-    "tr": "Vites"
+    "tr": "Vites geçişi"
   },
   {
     "id": 32,
@@ -539,7 +539,7 @@
   {
     "id": 105,
     "en": "You have lost your connection to the game host.",
-    "tr": "Oturum sahibine bağlantınız kesildi."
+    "tr": "Oturum sahibiyle bağlantınız kesildi."
   },
   {
     "id": 106,
@@ -594,7 +594,7 @@
   {
     "id": 116,
     "en": "AI bikes",
-    "tr": "Yapay zekâ motosikletleri"
+    "tr": "Yapay zekâ sürücüleri"
   },
   {
     "id": 117,
@@ -649,7 +649,7 @@
   {
     "id": 127,
     "en": "No matches were found.",
-    "tr": "Eşleşme bulunamadı."
+    "tr": "Aramanıza uygun yarış bulunamadı."
   },
   {
     "id": 128,
@@ -669,7 +669,7 @@
   {
     "id": 131,
     "en": "Unlockables",
-    "tr": "Kilitli içerikler"
+    "tr": "Açılabilir içerikler"
   },
   {
     "id": 132,
@@ -3519,7 +3519,8 @@
   {
     "id": 637,
     "en": "LOSAIL INT. CIRCUIT",
-    "tr": "LOSAIL ULUSLARARASI PİSTİ"
+    "tr": "LOSAIL INT. CIRCUIT",
+    "unchanged": true
   },
   {
     "id": 638,
@@ -3584,7 +3585,8 @@
   {
     "id": 648,
     "en": "SUZUKA CIRCUIT",
-    "tr": "SUZUKA PİSTİ"
+    "tr": "SUZUKA CIRCUIT",
+    "unchanged": true
   },
   {
     "id": 649,
@@ -3594,7 +3596,8 @@
   {
     "id": 650,
     "en": "SHANGHAI INT. CIRCUIT",
-    "tr": "ŞANGHAY ULUSLARARASI PİSTİ"
+    "tr": "SHANGHAI INT. CIRCUIT",
+    "unchanged": true
   },
   {
     "id": 651,
@@ -3609,7 +3612,7 @@
   {
     "id": 653,
     "en": "The Phillip Island Grand Prix Circuit is located on Phillip Island, Victoria, Australia.",
-    "tr": "Phillip Island Grand Prix Pisti, Avustralya'nın Victoria eyaletindeki Phillip Island'da yer alır."
+    "tr": "Phillip Island Grand Prix Circuit, Avustralya'nın Victoria eyaletindeki Phillip Island'da yer alır."
   },
   {
     "id": 654,
@@ -3619,7 +3622,7 @@
   {
     "id": 655,
     "en": "The Bugatti Circuit is located in Le Mans, France.",
-    "tr": "Bugatti Pisti, Fransa'nın Le Mans kentinde yer alır."
+    "tr": "Bugatti Circuit, Fransa'nın Le Mans kentinde yer alır."
   },
   {
     "id": 656,
@@ -3629,17 +3632,17 @@
   {
     "id": 657,
     "en": "The Mugello Circuit is located in the Mugello region of Italy near Florence.",
-    "tr": "Mugello Pisti, İtalya'da Floransa yakınlarındaki Mugello bölgesinde yer alır."
+    "tr": "Mugello Circuit, İtalya'da Floransa yakınlarındaki Mugello bölgesinde yer alır."
   },
   {
     "id": 658,
     "en": "The Twin Ring Motegi Circuit is located at Motegi, Japan.",
-    "tr": "Twin Ring Motegi Pisti, Japonya'nın Motegi kentinde yer alır."
+    "tr": "Twin Ring Motegi Circuit, Japonya'nın Motegi kentinde yer alır."
   },
   {
     "id": 659,
     "en": "The Sepang International Circuit (SIC) is located in Sepang, Selangor, Malaysia.",
-    "tr": "Sepang Uluslararası Pisti (SIC), Malezya'nın Selangor eyaletindeki Sepang'da yer alır."
+    "tr": "Sepang International Circuit (SIC), Malezya'nın Selangor eyaletindeki Sepang'da yer alır."
   },
   {
     "id": 660,
@@ -3649,7 +3652,7 @@
   {
     "id": 661,
     "en": "The Losail International Circuit is located just outside Doha in the Persian Gulf State of Qatar.",
-    "tr": "Losail Uluslararası Pisti, Basra Körfezi ülkesi Katar'ın başkenti Doha'nın hemen dışında yer alır."
+    "tr": "Losail International Circuit, Basra Körfezi ülkesi Katar'ın başkenti Doha'nın hemen dışında yer alır."
   },
   {
     "id": 662,
@@ -3659,7 +3662,7 @@
   {
     "id": 663,
     "en": "TT Circuit Assen is located in Assen, Netherlands.",
-    "tr": "TT Assen Pisti, Hollanda'nın Assen kentinde yer alır."
+    "tr": "TT Circuit Assen, Hollanda'nın Assen kentinde yer alır."
   },
   {
     "id": 664,
@@ -3669,7 +3672,7 @@
   {
     "id": 665,
     "en": "The Circuit de Valencia is located in Cheste (Valencia, Spain).",
-    "tr": "Valencia Pisti, İspanya'nın Valencia bölgesindeki Cheste'de yer alır."
+    "tr": "Circuit de Valencia, İspanya'nın Valencia bölgesindeki Cheste'de yer alır."
   },
   {
     "id": 666,
@@ -3679,7 +3682,7 @@
   {
     "id": 667,
     "en": "Brno Circuit is located close to the city of Brno at Kohoutovice, Czech Republic.",
-    "tr": "Brno Pisti, Çek Cumhuriyeti'nin Brno kenti yakınlarındaki Kohoutovice'de yer alır."
+    "tr": "Brno Circuit, Çek Cumhuriyeti'nin Brno kenti yakınlarındaki Kohoutovice'de yer alır."
   },
   {
     "id": 668,
@@ -3689,22 +3692,22 @@
   {
     "id": 669,
     "en": "The Misano World Circuit is located next to the town of Misano Adriatico (Province of Rimini) in the frazione of Santamonica, Italy.",
-    "tr": "Misano Dünya Pisti, İtalya'nın Rimini ilinde, Misano Adriatico kasabası yakınlarındaki Santamonica'da yer alır."
+    "tr": "Misano World Circuit, İtalya'nın Rimini ilinde, Misano Adriatico kasabası yakınlarındaki Santamonica'da yer alır."
   },
   {
     "id": 670,
     "en": "The Balatonring Circuit is located near Savoly near Lake Balaton, Hungary.",
-    "tr": "Balatonring Pisti, Macaristan'da Balaton Gölü yakınlarındaki Savoly civarında yer alır."
+    "tr": "Balatonring Circuit, Macaristan'da Balaton Gölü yakınlarındaki Savoly civarında yer alır."
   },
   {
     "id": 671,
     "en": "The Silverstone Circuit is located in Northamptonshire and Buckinghamshire, England.",
-    "tr": "Silverstone Pisti, İngiltere'nin Northamptonshire ve Buckinghamshire bölgelerinde yer alır."
+    "tr": "Silverstone Circuit, İngiltere'nin Northamptonshire ve Buckinghamshire bölgelerinde yer alır."
   },
   {
     "id": 672,
     "en": "The Suzuka Circuit is located in Ino, Suzuka City, Mie Prefecture, Japan.",
-    "tr": "Suzuka Pisti, Japonya'nın Mie ilindeki Suzuka kentinin Ino bölgesinde yer alır."
+    "tr": "Suzuka Circuit, Japonya'nın Mie ilindeki Suzuka kentinin Ino bölgesinde yer alır."
   },
   {
     "id": 673,
@@ -3714,7 +3717,7 @@
   {
     "id": 674,
     "en": "The Shanghai International Circuit is situated in the district of Jaiding near Shanghai in the People's Republic of China.",
-    "tr": "Şanghay Uluslararası Pisti, Çin Halk Cumhuriyeti'nde Şanghay yakınlarındaki Jiading bölgesinde yer alır."
+    "tr": "Shanghai International Circuit, Çin Halk Cumhuriyeti'nde Şanghay yakınlarındaki Jiading bölgesinde yer alır."
   },
   {
     "id": 675,
@@ -4129,7 +4132,7 @@
   {
     "id": 753,
     "en": "RACE WEEKEND",
-    "tr": "YARIŞ HAFTASI"
+    "tr": "YARIŞ HAFTA SONU"
   },
   {
     "id": 754,
@@ -4720,7 +4723,7 @@
   {
     "id": 871,
     "en": "New tyre compounds that will improve the consistency duration of your tyres.",
-    "tr": "Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni lastik hamurları."
+    "tr": "Lastiklerin performansını daha uzun süre korumasını sağlayan yeni lastik hamurları."
   },
   {
     "id": 872,
@@ -4750,7 +4753,7 @@
   {
     "id": 877,
     "en": "New soft compound that improves the consistency and duration of your tyres.",
-    "tr": "Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni yumuşak hamur."
+    "tr": "Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni yumuşak hamur."
   },
   {
     "id": 878,
@@ -4780,7 +4783,7 @@
   {
     "id": 883,
     "en": "New hard compound that improves the consistency and duration of your tyres.",
-    "tr": "Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni sert hamur."
+    "tr": "Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni sert hamur."
   },
   {
     "id": 884,
@@ -4835,7 +4838,7 @@
   {
     "id": 894,
     "en": "Squeezes slightly more performance out of the engine by smoothing the power curve throughout the rev' range.",
-    "tr": "Devir aralığı boyunca güç eğrisini düzgünleştirerek motordan biraz daha fazla performans elde eder."
+    "tr": "Tüm devir aralığında daha düzenli bir güç dağılımı sağlayarak motorun performansını biraz artırır."
   },
   {
     "id": 895,
@@ -5160,7 +5163,7 @@
   {
     "id": 959,
     "en": "Very high quality clutch tuning, vastly reduces juddering and slipping for maximum stability when acceleration through the gears.",
-    "tr": "Son derece kaliteli debriyaj ayarı, vitesler boyunca hızlanırken en yüksek dengeyi sağlamak için sarsıntıyı ve kaydırmayı büyük ölçüde azaltır."
+    "tr": "Hassas debriyaj ayarı, vites değiştirerek hızlanırken sarsıntıyı ve debriyajın kaçırmasını büyük ölçüde azaltarak dengeyi artırır."
   },
   {
     "id": 960,
@@ -6172,7 +6175,7 @@
   {
     "id": 1159,
     "en": "Catch-Up",
-    "tr": "Yakalama Desteği"
+    "tr": "Yetişme Desteği"
   },
   {
     "id": 1160,
@@ -6668,7 +6671,7 @@
   {
     "id": 1257,
     "en": "Firing this employee will lose their research done so far!",
-    "tr": "Bu personeli işten çıkarırsanız şimdiye kadarki araştırma ilerlemesi kaybolacak!"
+    "tr": "Bu personeli işten çıkarırsanız şimdiye kadar yaptığı araştırmalar kaybolacak!"
   },
   {
     "id": 1258,
@@ -6788,7 +6791,7 @@
   {
     "id": 1281,
     "en": "No sponsorship offers currently available.",
-    "tr": "Şu anda kullanılabilir sponsorluk teklifi yok."
+    "tr": "Şu anda sponsorluk teklifi yok."
   },
   {
     "id": 1282,
@@ -6863,7 +6866,7 @@
   {
     "id": 1296,
     "en": "Qualify for the race",
-    "tr": "Yarışa katılma hakkı kazan"
+    "tr": "Sıralama turlarında yarışa katılma hakkı kazanın"
   },
   {
     "id": 1297,
@@ -6978,7 +6981,7 @@
   {
     "id": 1319,
     "en": "Applied skill",
-    "tr": "Uygulanan beceri"
+    "tr": "Kullanılan beceri"
   },
   {
     "id": 1320,
@@ -7013,7 +7016,7 @@
   {
     "id": 1326,
     "en": "STAFF FREE",
-    "tr": "BOŞTA PERSONEL"
+    "tr": "GÖREV BEKLEYEN PERSONEL"
   },
   {
     "id": 1327,
@@ -7133,22 +7136,22 @@
   {
     "id": 1350,
     "en": "SFX Volume",
-    "tr": "Efekt Sesi"
+    "tr": "Efekt Ses Düzeyi"
   },
   {
     "id": 1351,
     "en": "Speech Volume",
-    "tr": "Konuşma Sesi"
+    "tr": "Konuşma Ses Düzeyi"
   },
   {
     "id": 1352,
     "en": "Headset Volume",
-    "tr": "Kulaklık Sesi"
+    "tr": "Kulaklık Ses Düzeyi"
   },
   {
     "id": 1353,
     "en": "Music Volume",
-    "tr": "Müzik Sesi"
+    "tr": "Müzik Ses Düzeyi"
   },
   {
     "id": 1354,
@@ -7363,12 +7366,12 @@
   {
     "id": 1396,
     "en": "ARCADE TIME LEFT",
-    "tr": "ARCADE KALAN SÜRE"
+    "tr": "ARCADE KALAN SÜRESİ"
   },
   {
     "id": 1397,
     "en": "ALL TIME GHOST",
-    "tr": "TÜM ZAMANLAR HAYALETİ"
+    "tr": "TÜM ZAMANLARIN HAYALETİ"
   },
   {
     "id": 1398,
@@ -7398,12 +7401,12 @@
   {
     "id": 1403,
     "en": "Arcade time left",
-    "tr": "Arcade kalan süre"
+    "tr": "Arcade kalan süresi"
   },
   {
     "id": 1404,
     "en": "All time ghosts",
-    "tr": "Tüm zamanlar hayaletleri"
+    "tr": "Tüm zamanların hayaletleri"
   },
   {
     "id": 1405,
@@ -7438,7 +7441,7 @@
   {
     "id": 1411,
     "en": "Invite friends to play",
-    "tr": "Arkadaşlarını oynamaya davet et"
+    "tr": "Arkadaşlarınızı yarışa davet edin"
   },
   {
     "id": 1412,
@@ -7448,7 +7451,7 @@
   {
     "id": 1413,
     "en": "Indicate you are ready to race",
-    "tr": "Yarışa hazır olduğunu belirt"
+    "tr": "Yarışa hazır olduğunuzu belirtin"
   },
   {
     "id": 1414,
@@ -7473,7 +7476,7 @@
   {
     "id": 1418,
     "en": "Toggle mute on/off",
-    "tr": "Susturmayı aç/kapat"
+    "tr": "Sesli sohbeti sustur/aç"
   },
   {
     "id": 1419,
@@ -7538,7 +7541,7 @@
   {
     "id": 1431,
     "en": "Catch-Up",
-    "tr": "Yakalama Desteği"
+    "tr": "Yetişme Desteği"
   },
   {
     "id": 1432,
@@ -7568,7 +7571,7 @@
   {
     "id": 1437,
     "en": "Tuck in",
-    "tr": "Eğil"
+    "tr": "Kapan"
   },
   {
     "id": 1438,
@@ -7788,7 +7791,7 @@
   {
     "id": 1481,
     "en": "Full Length",
-    "tr": "Tam Uzunluk"
+    "tr": "Tam Yarış Mesafesi"
   },
   {
     "id": 1482,
@@ -7833,7 +7836,7 @@
   {
     "id": 1490,
     "en": "Full length race",
-    "tr": "Tam uzunlukta yarış"
+    "tr": "Tam yarış mesafesinde yarış"
   },
   {
     "id": 1491,
@@ -8003,12 +8006,12 @@
   {
     "id": 1524,
     "en": "Brake Input Sensitivity",
-    "tr": "Fren Giriş Hassasiyeti"
+    "tr": "Fren Hassasiyeti"
   },
   {
     "id": 1525,
     "en": "The brake input sensitivity allows you to fine-tune how much control you have over the brakes. At high sensitivity, pressing the brake handle only slightly will fully apply the brakes, whereas at low sensitivity, there is greater fidelity, but the maximum potential of the brakes may be lost if the input sensitivity is too low. Therefore, it's important to get the right balance so that you get maximum stopping power without locking the wheels.",
-    "tr": "Fren giriş hassasiyeti, frenler üzerindeki kontrolünüzü ayarlar. Yüksek hassasiyette fren koluna hafifçe basmak bile tam fren uygular. Düşük hassasiyette daha hassas kontrol sağlanır; ancak değer çok düşükse frenlerin tam gücüne ulaşılamayabilir. Tekerlekleri kilitlemeden en yüksek fren gücünü elde etmek için doğru dengeyi bulmak önemlidir."
+    "tr": "Fren hassasiyeti, fren kuvvetinin kol hareketine nasıl tepki verdiğini ayarlar. Yüksek hassasiyette fren koluna hafifçe basmak bile tam fren uygular. Düşük hassasiyette daha kademeli kontrol sağlanır; ancak değer çok düşükse frenlerin tam gücüne ulaşılamayabilir. Tekerlekleri kilitlemeden en yüksek fren gücünü elde etmek için doğru dengeyi bulmak önemlidir."
   },
   {
     "id": 1526,
@@ -8243,7 +8246,7 @@
   {
     "id": 1572,
     "en": "Your Best Time",
-    "tr": "En İyi Zamanınız"
+    "tr": "En İyi Süreniz"
   },
   {
     "id": 1573,
@@ -8330,7 +8333,7 @@
   {
     "id": 1589,
     "en": "Poles",
-    "tr": "Pol Pozisyonu"
+    "tr": "Pol Pozisyonları"
   },
   {
     "id": 1590,
@@ -8461,7 +8464,7 @@
   {
     "id": 1615,
     "en": "Provide proper engine ventilation whilst keeping it free of contaminates to make sure no power goes to waste.",
-    "tr": "Hiçbir gücün boşa gitmemesi için motoru kirleticilerden korurken yeterli hava almasını sağlayın."
+    "tr": "Güç kaybını önlemek için motorun yeterli hava almasını ve içine kir girmemesini sağlayın."
   },
   {
     "id": 1616,
@@ -8476,12 +8479,12 @@
   {
     "id": 1618,
     "en": "Hire a new staff member to fill this empty slot.",
-    "tr": "Bu boş yuvaya yeni bir personel alın."
+    "tr": "Bu boş pozisyona yeni bir personel alın."
   },
   {
     "id": 1619,
     "en": "Sign on a new sponsor to fill this empty slot.",
-    "tr": "Bu boş yuvaya yeni bir sponsorla anlaşın."
+    "tr": "Yeni bir sponsorla anlaşarak bu boş alanı doldurun."
   },
   {
     "id": 1620,
@@ -8526,7 +8529,7 @@
   {
     "id": 1628,
     "en": "Choose your home track.",
-    "tr": "Kendi pistinizi seçin."
+    "tr": "Ana pistinizi seçin."
   },
   {
     "id": 1629,
@@ -8661,7 +8664,7 @@
   {
     "id": 1655,
     "en": "Select an Empty Slot.",
-    "tr": "Boş bir yuva seçin."
+    "tr": "Boş bir pozisyon seçin."
   },
   {
     "id": 1656,
@@ -8696,7 +8699,7 @@
   {
     "id": 1662,
     "en": "Select an Empty Slot.",
-    "tr": "Boş bir yuva seçin."
+    "tr": "Boş bir sponsor alanı seçin."
   },
   {
     "id": 1663,
@@ -8721,7 +8724,7 @@
   {
     "id": 1667,
     "en": "Select an Empty Slot.",
-    "tr": "Boş bir yuva seçin."
+    "tr": "Boş bir pozisyon seçin."
   },
   {
     "id": 1668,
@@ -9194,7 +9197,7 @@
   {
     "id": 1759,
     "en": "Private Slots",
-    "tr": "Özel Yuvalar"
+    "tr": "Davetli Kontenjanı"
   },
   {
     "id": 1760,
@@ -9309,22 +9312,22 @@
   {
     "id": 1782,
     "en": "Xbox 360 Controller removed!",
-    "tr": "Xbox 360 Kontrolcüsü'nün bağlantısı kesildi!"
+    "tr": "Xbox 360 kontrolcüsünün bağlantısı kesildi!"
   },
   {
     "id": 1783,
     "en": "Search session failed.",
-    "tr": "Oturum araması başarısız."
+    "tr": "Oturumlar aranamadı."
   },
   {
     "id": 1784,
     "en": "Leave session failed.",
-    "tr": "Oturumdan ayrılma başarısız."
+    "tr": "Oturumdan ayrılınamadı."
   },
   {
     "id": 1785,
     "en": "Join session failed.",
-    "tr": "Oturuma katılma başarısız."
+    "tr": "Oturuma katılınamadı."
   },
   {
     "id": 1786,
@@ -9489,7 +9492,7 @@
   {
     "id": 1818,
     "en": "No gamer profile is signed in. Without signing in a gamer profile, progress cannot be saved.\\n\\nContinue without saving progress?",
-    "tr": "Hiçbir oyuncu profili oturum açmadı. Oyuncu profiliyle oturum açmadan ilerleme kaydedilemez.\\n\\nİlerlemeyi kaydetmeden devam edilsin mi?"
+    "tr": "Hiçbir oyuncu profiliyle oturum açılmadı. Bir oyuncu profiliyle oturum açmadan ilerleme kaydedilemez.\\n\\nİlerlemeyi kaydetmeden devam edilsin mi?"
   },
   {
     "id": 1819,
@@ -9745,7 +9748,7 @@
   {
     "id": 1869,
     "en": "Are you sure you want to return to the pits? Any incomplete laps will not be saved.",
-    "tr": "Pit alanına dönmek istediğinizden emin misiniz? Tamamlanmamış turlar kaydedilmeyecek."
+    "tr": "Pite dönmek istediğinizden emin misiniz? Tamamlanmamış turlar kaydedilmeyecek."
   },
   {
     "id": 1870,
@@ -9977,7 +9980,7 @@
   {
     "id": 1915,
     "en": "Please reconnect Xbox 360 Controller %d",
-    "tr": "Lütfen %d numaralı Xbox 360 Kontrolcüsü'nü yeniden bağlayın"
+    "tr": "Lütfen %d numaralı Xbox 360 kontrolcüsünü yeniden bağlayın"
   },
   {
     "id": 1916,
@@ -10067,7 +10070,7 @@
   {
     "id": 1933,
     "en": "You really need to push your bike for the Top Speed objective. Get a good exit from the corner and tuck-in to go as fast as possible.",
-    "tr": "Azami Hız hedefi için motosikletinizi gerçekten zorlamalısınız. Virajdan iyi çıkın ve en yüksek hıza ulaşmak için kapanın."
+    "tr": "Azami Hız hedefi için motosikletinizin sınırlarını zorlamalısınız. Virajdan iyi çıkın ve en yüksek hıza ulaşmak için kapanın."
   },
   {
     "id": 1934,
@@ -10162,7 +10165,7 @@
   {
     "id": 1952,
     "en": "The crankshaft upgrade is an optional tradeoff. It allows the bike to be more responsive in the corners by making the crank rotate in the opposite direction to the wheels, counteracting gyroscopic forces acting on it. However, some of the engine power is sacrificed to achieve this.",
-    "tr": "Krank mili geliştirmesi, isteğe bağlı bir ödünleşimdir. Krankın tekerleklere ters yönde dönmesini sağlayarak jiroskopik kuvvetleri dengeler ve motosikletin viraj tepkisini iyileştirir. Ancak bunu sağlamak için motor gücünün bir kısmından vazgeçilir."
+    "tr": "Krank mili geliştirmesi, bir miktar motor gücü karşılığında virajlarda daha hızlı tepki almanızı sağlar. Krankın tekerleklerin ters yönünde dönmesi, motosiklete etki eden jiroskopik kuvvetleri dengeler. Bu geliştirmeyi yapıp yapmamak size bağlıdır."
   },
   {
     "id": 1953,
@@ -10172,7 +10175,7 @@
   {
     "id": 1954,
     "en": "The Timed Overtake objective is simply that - you have a limited amount of time to get past the target rider.",
-    "tr": "Süreli Geçiş hedefi tam da adının söylediğidir: Hedef sürücüyü geçmek için sınırlı süreniz vardır."
+    "tr": "Süreli Sollama hedefinde, hedef sürücüyü verilen süre içinde geçmelisiniz."
   },
   {
     "id": 1955,
@@ -10192,7 +10195,7 @@
   {
     "id": 1958,
     "en": "Press <9> to look behind you. Make sure nobody is slipstreaming you for a sneaky overtake.",
-    "tr": "Arkanıza bakmak için <9> tuşuna basın. Kimsenin hava koridorunuzdan yararlanarak gizlice geçiş hazırlamadığından emin olun."
+    "tr": "Arkanıza bakmak için <9> tuşuna basın. Başka bir sürücünün rüzgâr koridorunuzdan yararlanıp sizi geçmeye hazırlanmadığından emin olun."
   },
   {
     "id": 1959,
@@ -10222,12 +10225,12 @@
   {
     "id": 1964,
     "en": "In Championship Mode you can play as any existing rider and take part in a full season of straight-forward racing.",
-    "tr": "Şampiyona Modu'nda mevcut sürücülerden biriyle tam bir sezon boyunca doğrudan yarışlara katılabilirsiniz."
+    "tr": "Şampiyona Modu'nda mevcut sürücülerden birini seçerek tam bir sezon boyunca yarışabilirsiniz."
   },
   {
     "id": 1965,
     "en": "In Arcade Mode, you race against the clock for a whole season. Earn more time by riding with style. The rider with the most time left at the end of the season wins.",
-    "tr": "Arcade Modu'nda bütün sezon zamana karşı yarışırsınız. Şık sürerek ek süre kazanın. Sezon sonunda en fazla süresi kalan sürücü kazanır."
+    "tr": "Arcade Modu'nda bütün sezon zamana karşı yarışırsınız. Başarılı sürüş hareketleriyle ek süre kazanın. Sezon sonunda en fazla süresi kalan sürücü kazanır."
   },
   {
     "id": 1966,
@@ -10247,7 +10250,7 @@
   {
     "id": 1969,
     "en": "In Career Mode, you'll get a double reputation bonus whenever you race at your home track.",
-    "tr": "Kariyer Modu'nda kendi pistinizde yarıştığınızda iki kat itibar bonusu kazanırsınız."
+    "tr": "Kariyer Modu'nda ana pistinizde yarıştığınızda iki kat itibar bonusu kazanırsınız."
   },
   {
     "id": 1970,
@@ -10257,12 +10260,12 @@
   {
     "id": 1971,
     "en": "Come off the track for too long and not only will you lose your Clean Section bonus, you'll start to accumulate Red Time. Red Time is a penalty that is added on to your lap when you complete it.",
-    "tr": "Pistin dışında çok uzun süre kalırsanız Temiz Bölüm bonusunuzu kaybetmekle kalmaz, Ceza Süresi biriktirmeye de başlarsınız. Ceza Süresi, turu tamamladığınızda tur zamanınıza eklenir."
+    "tr": "Pistin dışında çok uzun süre kalırsanız Hatasız Bölüm bonusunuzu kaybetmekle kalmaz, Ceza Süresi biriktirmeye de başlarsınız. Ceza Süresi, turu tamamladığınızda tur sürenize eklenir."
   },
   {
     "id": 1972,
     "en": "Perfect your racing line by aiming for the three gates on the racing line for each corner which show the entry, apex and exit points.",
-    "tr": "Her virajın girişini, tepe noktasını ve çıkışını gösteren üç ideal çizgi kapısını hedefleyerek yarış çizginizi mükemmelleştirin."
+    "tr": "Her virajın girişini, apeksini ve çıkışını gösteren üç ideal çizgi kapısını hedefleyerek ideal çizginizi mükemmelleştirin."
   },
   {
     "id": 1973,
@@ -10412,12 +10415,12 @@
   {
     "id": 2002,
     "en": "Create or search for an online multiplayer match.",
-    "tr": "Çevrim içi çok oyunculu bir maç oluşturun veya arayın."
+    "tr": "Çevrim içi çok oyunculu bir yarış oluşturun veya arayın."
   },
   {
     "id": 2003,
     "en": "Search for online matches that fit a given criteria.",
-    "tr": "Belirli ölçütlere uyan çevrim içi maçları arayın."
+    "tr": "Belirli ölçütlere uyan çevrim içi yarışları arayın."
   },
   {
     "id": 2004,
@@ -10427,32 +10430,32 @@
   {
     "id": 2005,
     "en": "Search for matches due to start or already in progress.",
-    "tr": "Başlamak üzere olan veya devam eden maçları arayın."
+    "tr": "Başlamak üzere olan veya devam eden yarışları arayın."
   },
   {
     "id": 2006,
     "en": "Host an online match and play against other gamers.",
-    "tr": "Çevrim içi bir maç kurup diğer oyunculara karşı oynayın."
+    "tr": "Çevrim içi bir yarış kurup diğer oyunculara karşı yarışın."
   },
   {
     "id": 2007,
     "en": "Host an online match.",
-    "tr": "Çevrim içi maç kurun."
+    "tr": "Çevrim içi bir yarış kurun."
   },
   {
     "id": 2008,
     "en": "Join an existing online match.",
-    "tr": "Mevcut bir çevrim içi maça katılın."
+    "tr": "Mevcut bir çevrim içi yarışa katılın."
   },
   {
     "id": 2009,
     "en": "Quickly locate online matches to join and play.",
-    "tr": "Katılıp oynayabileceğiniz çevrim içi maçları hızlıca bulun."
+    "tr": "Katılabileceğiniz çevrim içi yarışları hızlıca bulun."
   },
   {
     "id": 2010,
     "en": "Quickly locate an online multiplayer match to play.",
-    "tr": "Oynayabileceğiniz çevrim içi çok oyunculu bir maçı hızlıca bulun."
+    "tr": "Katılabileceğiniz çevrim içi çok oyunculu bir yarışı hızlıca bulun."
   },
   {
     "id": 2011,
@@ -10462,7 +10465,7 @@
   {
     "id": 2012,
     "en": "Search for online matches that fit a given criteria.",
-    "tr": "Belirli ölçütlere uyan çevrim içi maçları arayın."
+    "tr": "Belirli ölçütlere uyan çevrim içi yarışları arayın."
   },
   {
     "id": 2013,
@@ -10492,12 +10495,12 @@
   {
     "id": 2018,
     "en": "Waiting for host to start the match",
-    "tr": "Ev sahibinin maçı başlatması bekleniyor"
+    "tr": "Oturum sahibinin yarışı başlatması bekleniyor"
   },
   {
     "id": 2019,
     "en": "Are you sure you want to kick %ls from the match?",
-    "tr": "%ls adlı oyuncuyu maçtan atmak istediğinizden emin misiniz?"
+    "tr": "%ls adlı oyuncuyu yarıştan çıkarmak istediğinizden emin misiniz?"
   },
   {
     "id": 2020,
@@ -10507,12 +10510,12 @@
   {
     "id": 2021,
     "en": "Match ready to launch",
-    "tr": "Maç başlamaya hazır"
+    "tr": "Yarış başlamaya hazır"
   },
   {
     "id": 2022,
     "en": "You can't start the match until you have an opponent.",
-    "tr": "Bir rakip olmadan maçı başlatamazsınız."
+    "tr": "Bir rakip olmadan yarışı başlatamazsınız."
   },
   {
     "id": 2023,
@@ -10537,7 +10540,7 @@
   {
     "id": 2027,
     "en": "Joining this match may result in an unpredictable online experience.",
-    "tr": "Bu maça katılmak, öngörülemeyen bir çevrim içi deneyime yol açabilir."
+    "tr": "Bu yarışa katılırsanız bağlantı sorunları yaşayabilirsiniz."
   },
   {
     "id": 2028,
@@ -10547,7 +10550,7 @@
   {
     "id": 2029,
     "en": "Cannot connect to game host.",
-    "tr": "Ev sahibine bağlanılamıyor."
+    "tr": "Oturum sahibine bağlanılamıyor."
   },
   {
     "id": 2030,
@@ -10557,7 +10560,7 @@
   {
     "id": 2031,
     "en": "No games found that match the search criteria. Would you like to host a game?",
-    "tr": "Arama ölçütlerine uyan oyun bulunamadı. Bir oyun kurmak ister misiniz?"
+    "tr": "Arama ölçütlerine uyan yarış bulunamadı. Bir yarış kurmak ister misiniz?"
   },
   {
     "id": 2032,
@@ -10612,7 +10615,7 @@
   {
     "id": 2042,
     "en": "You have lost your connection to the game host. Returning to the main menu.",
-    "tr": "Ev sahibiyle bağlantınız kesildi. Ana menüye dönülüyor."
+    "tr": "Oturum sahibiyle bağlantınız kesildi. Ana menüye dönülüyor."
   },
   {
     "id": 2043,
@@ -10698,7 +10701,7 @@
   {
     "id": 2059,
     "en": "Match Type",
-    "tr": "Maç Türü"
+    "tr": "Yarış Türü"
   },
   {
     "id": 2060,
@@ -10733,7 +10736,7 @@
   {
     "id": 2066,
     "en": "You must have at least 2 connected Xbox 360 Controllers to play this game-mode.",
-    "tr": "Bu oyun modunu oynamak için en az 2 Xbox 360 Kontrolcüsü bağlı olmalı."
+    "tr": "Bu oyun modunu oynamak için en az 2 Xbox 360 kontrolcüsü bağlı olmalı."
   },
   {
     "id": 2067,

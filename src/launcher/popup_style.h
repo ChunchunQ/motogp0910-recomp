@@ -3,19 +3,19 @@
 #include <commctrl.h>
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include "buffered_paint.h"
 #include "popup_scroll.h"
 #include "accent.h"
 
 namespace launcher {
 inline constexpr COLORREF kPopupBackground=RGB(32,36,45);
-inline void DrawPopupItemContents(const DRAWITEMSTRUCT& item,HFONT font,double scale){
-  const auto dc=item.hDC;const int saved=SaveDC(dc);
+inline void DrawPopupText(HDC dc,RECT r,std::wstring_view text,HFONT font,double scale,
+    bool selected,bool disabled,bool closed=false){
+  const int saved=SaveDC(dc);
   auto size=[&](int value){return std::max(1,static_cast<int>(value*scale+.5));};
-  const bool closed=bool(item.itemState&ODS_COMBOBOXEDIT);
-  auto r=item.rcItem;SetDCBrushColor(dc,kPopupBackground);
+  SetDCBrushColor(dc,kPopupBackground);
   FillRect(dc,&r,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-  const bool selected=!closed&&bool(item.itemState&ODS_SELECTED),disabled=bool(item.itemState&ODS_DISABLED);
   if(selected){
     RECT highlight=r;InflateRect(&highlight,-size(3),-size(2));
     const auto brush=CreateSolidBrush(RGB(43,48,59));const auto old_brush=SelectObject(dc,brush);
@@ -25,14 +25,18 @@ inline void DrawPopupItemContents(const DRAWITEMSTRUCT& item,HFONT font,double s
   }
   SetBkMode(dc,TRANSPARENT);SelectObject(dc,font);
   SetTextColor(dc,disabled?RGB(117,125,138):selected?kLauncherAccent:RGB(242,244,247));
+  r.left+=size(closed?8:12);r.right-=size(12);
+  DrawTextW(dc,text.data(),static_cast<int>(text.size()),&r,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
+  RestoreDC(dc,saved);
+}
+inline void DrawPopupItemContents(const DRAWITEMSTRUCT& item,HFONT font,double scale){
   std::wstring text;
   if(item.itemID!=UINT(-1)){
     const auto length=SendMessageW(item.hwndItem,CB_GETLBTEXTLEN,item.itemID,0);
     if(length>=0){text.resize(length+1);SendMessageW(item.hwndItem,CB_GETLBTEXT,item.itemID,reinterpret_cast<LPARAM>(text.data()));text.resize(length);}
   }
-  r.left+=size(closed?8:12);r.right-=size(12);
-  DrawTextW(dc,text.c_str(),-1,&r,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
-  RestoreDC(dc,saved);
+  const bool closed=bool(item.itemState&ODS_COMBOBOXEDIT);
+  DrawPopupText(item.hDC,item.rcItem,text,font,scale,!closed&&bool(item.itemState&ODS_SELECTED),bool(item.itemState&ODS_DISABLED),closed);
 }
 inline void DrawPopupItem(const DRAWITEMSTRUCT& item,HFONT font,double scale){
   auto bounds=item.rcItem;

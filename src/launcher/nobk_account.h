@@ -14,8 +14,17 @@ namespace launcher {
 inline constexpr const wchar_t* kAccountHost = L"play.nobkonline.com";
 inline constexpr const wchar_t* kAccountPath = L"/api/account/launcher";
 inline constexpr const wchar_t* kAccountRegister = L"https://nobkonline.com/register/";
+inline constexpr const wchar_t* kAccountForgotPassword = L"https://nobkonline.com/sifremi-unuttum/";
+inline constexpr const wchar_t* kAccountMyAccount = L"https://nobkonline.com/hesabim/";
 
-struct NobkAccount {std::string username, token;};
+struct NobkAccount {std::string username, token, country;};
+inline std::string AccountCountry(std::string value) {
+  // FIFA's launcher receives an optional country code in the account response.
+  // Do not infer it from Windows language, IP address or the player's name.
+  if(value.size()!=2)return {};
+  for(auto& ch:value){if(ch>='a'&&ch<='z')ch-=32;if(ch<'A'||ch>'Z')return {};}
+  return value;
+}
 // The site answered and refused the sign-in (wrong password, expired token, banned).
 struct SignInRejected : Error {using Error::Error;};
 
@@ -26,13 +35,14 @@ inline fs::path AccountTokenPath() {
   return fs::path(local) / L"MotoGP0910" / L"Online" / L"nobk-account.bin";
 }
 
-// Stored as "username\ntoken", protected with DPAPI for this Windows user.
+// The optional third line adds country without invalidating old two-line files.
+// All three fields stay DPAPI-protected for this Windows user.
 inline void SaveAccount(const NobkAccount& account) {
-  std::string plain = account.username + "\n" + account.token;
+  std::string plain = account.username + "\n" + account.token + "\n" + AccountCountry(account.country);
   DATA_BLOB input{static_cast<DWORD>(plain.size()), reinterpret_cast<BYTE*>(plain.data())}, output{};
   const bool ok = CryptProtectData(&input, L"NOBK Online launcher sign-in", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &output);
   SecureZeroMemory(plain.data(), plain.size());
-  if (!ok) throw Error(L"Could not protect the sign-in for this Windows user.", L"Giriş bilgisi bu Windows kullanıcısı için korunamadı.");
+  if (!ok) throw Error(L"Could not protect the sign-in for this Windows user.", L"Oturum bilgisi bu Windows kullanıcısı için şifrelenemedi.");
   const auto path = AccountTokenPath();
   std::error_code error;
   fs::create_directories(path.parent_path(), error);
@@ -41,11 +51,11 @@ inline void SaveAccount(const NobkAccount& account) {
     std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
     file.write(reinterpret_cast<const char*>(output.pbData), output.cbData);
     LocalFree(output.pbData);
-    if (!file) throw Error(L"Could not save the sign-in.", L"Giriş bilgisi kaydedilemedi.");
+    if (!file) throw Error(L"Could not save the sign-in.", L"Oturum bilgisi kaydedilemedi.");
   }
   if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
     fs::remove(temporary, error);
-    throw Error(L"Could not save the sign-in.", L"Giriş bilgisi kaydedilemedi.");
+    throw Error(L"Could not save the sign-in.", L"Oturum bilgisi kaydedilemedi.");
   }
   SetFileAttributesW(path.c_str(), FILE_ATTRIBUTE_HIDDEN);
 }
@@ -64,7 +74,12 @@ inline std::optional<NobkAccount> LoadAccount() {
     SecureZeroMemory(output.pbData, output.cbData); LocalFree(output.pbData);
     const auto split = plain.find('\n');
     if (split == std::string::npos || !split || split + 1 >= plain.size()) return std::nullopt;
-    return NobkAccount{plain.substr(0, split), plain.substr(split + 1)};
+    const auto country_split=plain.find('\n',split+1);
+    NobkAccount result{plain.substr(0,split),plain.substr(split+1,country_split==std::string::npos?std::string::npos:country_split-split-1),
+        country_split==std::string::npos?std::string{}:AccountCountry(plain.substr(country_split+1))};
+    SecureZeroMemory(plain.data(),plain.size());
+    if(result.token.empty())return std::nullopt;
+    return result;
   } catch (const std::exception&) { return std::nullopt; }
 }
 
@@ -111,7 +126,7 @@ inline NobkAccount SiteSignIn(const nlohmann::json& request, bool turkish) {
     const auto code = GetLastError();
     if (code == ERROR_WINHTTP_TIMEOUT || code == ERROR_WINHTTP_CANNOT_CONNECT)
       throw Error(L"Could not reach NOBK Online in time (" + std::to_wstring(code) + L"). Check that a firewall, antivirus or VPN does not block the launcher, then try again.",
-                  L"NOBK Online'a zamanında ulaşılamadı (" + std::to_wstring(code) + L"). Güvenlik duvarı, antivirüs veya VPN'in launcher'ı engellemediğini kontrol et ve tekrar dene.");
+                  L"NOBK Online bağlantısı zaman aşımına uğradı (" + std::to_wstring(code) + L"). Güvenlik duvarı, antivirüs veya VPN'in Launcher'ı engellemediğini kontrol et ve yeniden dene.");
     throw fail(L"(" + std::to_wstring(code) + L")");
   }
   DWORD status = 0, length = sizeof(status);
@@ -131,30 +146,34 @@ inline NobkAccount SiteSignIn(const nlohmann::json& request, bool turkish) {
   }
   if (!data.is_object() || !data.contains("gamertag") || !data["gamertag"].is_string() || !data.contains("token") || !data["token"].is_string())
     throw fail(L"(answer)");
-  return NobkAccount{data["gamertag"].get<std::string>(), data["token"].get<std::string>()};
+  auto username=data["gamertag"].get<std::string>(),token=data["token"].get<std::string>();
+  if(username.empty()||token.empty()||username.find('\n')!=std::string::npos||token.find('\n')!=std::string::npos)throw fail(L"(answer)");
+  const auto country=data.find("country");
+  return NobkAccount{std::move(username),std::move(token),country!=data.end()&&country->is_string()?AccountCountry(country->get<std::string>()):std::string{}};
 }
 
-inline NobkAccount SignIn(const std::string& username, const std::string& password, bool turkish) {
+inline NobkAccount SignIn(const std::string& username, const std::string& password, bool turkish, bool remember) {
   if (username.empty() || password.empty())
     throw Error(L"Enter your NOBK Online username and password.", L"NOBK Online kullanıcı adını ve şifreni gir.");
   auto account = SiteSignIn({{"username", username}, {"password", password}}, turkish);
-  SaveAccount(account);
+  // Same lifetime as FIFA: unchecked keeps the token only in this process.
+  if(remember)SaveAccount(account);else ForgetAccount();
   return account;
 }
 
 // Before each Online launch: refresh the 90-day token (sliding), then link this
 // PC's game profile to the account on the community server. Returns the name
 // the game must use.
-inline std::string PrepareOnline(const std::string& server, bool turkish) {
-  auto saved = LoadAccount();
-  if (!saved) throw Error(L"Sign in with your NOBK Online account on the Online page first.",
-                          L"Önce Online sayfasından NOBK Online hesabınla giriş yap.");
+inline std::string PrepareOnline(std::optional<NobkAccount>& session, bool remember, const std::string& server, bool turkish) {
+  if (!session || session->token.empty()) throw Error(L"Sign in with your NOBK Online account on the Online page first.",
+                          L"Önce Online sekmesinden NOBK Online hesabınla giriş yap.");
   NobkAccount account;
-  try { account = SiteSignIn({{"token", saved->token}}, turkish); }
-  catch (const SignInRejected&) { ForgetAccount(); throw; }
-  SaveAccount(account);
+  try { account = SiteSignIn({{"token", session->token}}, turkish); }
+  catch (const SignInRejected&) { session.reset();ForgetAccount();throw; }
+  if(remember)SaveAccount(account);else ForgetAccount();
+  session=std::move(account);
   try {
-    return motogp::online::LinkAccount(server, account.token);
+    return motogp::online::LinkAccount(server, session->token);
   } catch (const std::exception& e) {
     throw Error(L"The MotoGP server could not link your account: " + Wide(e.what()),
                 L"MotoGP sunucusu hesabını bağlayamadı: " + Wide(e.what()));

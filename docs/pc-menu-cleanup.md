@@ -6,10 +6,16 @@ SDK's Party UI returns a failure; no community party implementation replaces it.
 The Game Settings storage selector is omitted because the SDK always returns
 the same virtual storage device. Existing save paths and save data are preserved.
 
-Create Match and Custom Match omit Premium Content. Their native action-order
-arrays are compacted, preserving AI and Private Slots rather than hiding only
-the label. The backing premium selection uses its first choice: Off for hosting
+Create Match and Custom Match omit Premium Content and Private Slots. Their
+native action-order arrays are compacted, preserving AI rather than hiding only
+the labels. The backing premium selection uses its first choice: Off for hosting
 and Any for searching. Console DLC ownership is not unlocked or emulated.
+Private capacity is reset to zero at defaults load and in the native match
+menu handlers. The native private-count field is offset 136, copied by
+`sub_8224E428` into the session's private capacity. New host sessions and host
+capacity updates also convert any requested private slots into public slots,
+preserving total capacity. Protocol fields and support for joining compatible
+existing hosts are retained; no server deployment or wire-format change is needed.
 
 All edits are guarded by the supported title's native vtables. Unknown layouts,
 duplicate IDs and missing terminators are rejected before any list is changed.
@@ -20,8 +26,8 @@ clamp to a remaining row. Original disc files and message banks are not rewritte
 | --- | --- | --- |
 | Multiplayer modes | `0x8203A0C4` | `1` (Party) |
 | Game Settings | `0x820338B4` | `5` (storage selector) |
-| Create Match | `0x82035884`, `0x8203C464` | `7` (Premium Content) |
-| Custom Match | `0x82035E0C` | `7` (Premium Content) |
+| Create Match | `0x82035884`, `0x8203C464` | `7` (Premium Content), `8` (Private Slots) |
+| Custom Match | `0x82035E0C` | `7` (Premium Content), `8` (Private Slots) |
 
 The scoped Online override targets message handle `0x8288D258` (ID 731).
 Other Xbox LIVE error/help messages retain their original meaning. Offline,

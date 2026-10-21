@@ -1,13 +1,13 @@
 #include "quit_menu.h"
-#include "overlay_theme.h"
+#include "input_synchronization.h"
 #include "localization.h"
 #include <rex/hook.h>
 #include "diagnostic_options.h"
 #include <rex/memory.h>
 #include <rex/runtime.h>
+#include <rex/system/function_dispatcher.h>
 #include <rex/graphics/xenos.h>
 #include <rex/input/input_system.h>
-#include <imgui.h>
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -43,17 +43,28 @@ uint64_t title_consumed=0;
 bool held_blocker=false,back_was_down=false;
 std::atomic<uint32_t> label_address{0};
 std::atomic<bool(*)()> other_menu{nullptr};
+rex::Runtime* quit_runtime=nullptr;
+std::function<void()> exit_handler;
+std::atomic<bool> native_open{false};
+uint32_t native_storage=0,native_callback=0,native_record=0;
+uint64_t native_focus_epoch=0;
+bool exit_scheduled=false;
+constexpr uint32_t kNativePopup=0x8336E274;
+constexpr uint32_t kNativeCurrent=0x8336F4C0,kNativeClosing=0x8336F4E0;
 uint32_t Read(uint8_t* base,uint32_t address){return rex::memory::load_and_swap<uint32_t>(base+address);}
 void Write(uint8_t* base,uint32_t address,uint32_t value){rex::memory::store_and_swap<uint32_t>(base+address,value);}
 void SynchronizeBlocker() {
-  // Called only on the guest frontend thread; device/assignment state isn't
-  // polled by the ImGui thread. SDK release masks held dismissal buttons.
+  // Called only on the guest frontend thread. SDK release masks held
+  // dismissal buttons before the underlying menu receives input again.
+  const std::lock_guard lock(motogp::InputStateMutex());
   auto* system=input.load(std::memory_order_acquire);
   if(!system)return;
-  const bool wanted=pending.load(std::memory_order_acquire);
+  // The real game dialog needs guest input. Block only while waiting for the
+  // opening press/focus transition to return to neutral, not while it is active.
+  const bool wanted=pending.load(std::memory_order_acquire)&&
+      (!native_open.load(std::memory_order_acquire)||!input_armed.load(std::memory_order_acquire));
   if(wanted&&!held_blocker){system->AddUIInputBlocker();held_blocker=true;}
   else if(!wanted&&held_blocker){
-    input_armed.store(false,std::memory_order_release);
     system->RemoveUIInputBlocker();held_blocker=false;
   }
 }
@@ -61,6 +72,7 @@ void Poll() {
   // F1 may be editing MnK bindings on the UI thread. Its gate also keeps
   // held dismissal inputs from becoming a new quit request.
   if(auto check=other_menu.load(std::memory_order_acquire);check&&check()){buttons=0;input_armed=false;return;}
+  const std::lock_guard lock(motogp::InputStateMutex());
   uint16_t merged=0;
   auto* system=input.load(std::memory_order_acquire);
   if(system && focused.load(std::memory_order_acquire))for(uint32_t user=0;user<4;++user){
@@ -105,6 +117,7 @@ void PollIntroInput(uint8_t* base){
   if((key||fresh)&&BeginIntroSkip(base)){
     // Use the SDK's held-release mask so the accepting button cannot enter the
     // next menu or skip another entry until released. Do not rewrite mappings.
+    const std::lock_guard lock(motogp::InputStateMutex());
     if(auto* system=input.load()){system->AddUIInputBlocker();system->RemoveUIInputBlocker();}
   }
 }
@@ -153,25 +166,17 @@ bool ObserveTitleDraw(uint8_t* base,uint32_t startup,double alpha,uint64_t calle
   return boot||frontend;
 }
 void PollFrontendInput(){Poll();SynchronizeBlocker();}
-void Confirmation::Open(uint16_t held){previous_=held;armed_=false;exit_selected_=false;}
-InputDecision Confirmation::Update(uint16_t current,bool suppress_direction) {
-  using namespace rex::input;
-  const auto rising=static_cast<uint16_t>(current&~previous_);previous_=current;
-  if(!armed_){if(!current)armed_=true;return {};}
-  if(!suppress_direction&&(rising&(X_INPUT_GAMEPAD_DPAD_LEFT|X_INPUT_GAMEPAD_DPAD_RIGHT|X_INPUT_GAMEPAD_DPAD_UP|X_INPUT_GAMEPAD_DPAD_DOWN)))exit_selected_=!exit_selected_;
-  if(rising&X_INPUT_GAMEPAD_B)return {.cancel=true};
-  if(rising&X_INPUT_GAMEPAD_A)return {.accept=exit_selected_,.cancel=!exit_selected_};
-  return {};
-}
 void Initialize(rex::Runtime* runtime) {
   intro_keyboard=false;intro_pending_index=-1;intro_old_request=0;intro_held=false;
   input=static_cast<rex::input::InputSystem*>(runtime->input_system());
   ResetAccent(runtime->memory());
-  const auto address=runtime->memory()->SystemHeapAlloc(32);
+  const auto address=runtime->memory()->SystemHeapAlloc(128);
   if(!address)throw std::runtime_error("Could not allocate the PC quit menu label");
   label_address=address;const char* label=motogp::localization::Turkish()?"OYUNDAN ÇIK":"QUIT GAME";
   // The title's 826EC558 decoder consumes UTF-8 bytes, not Xbox WCHAR data.
   std::memcpy(runtime->virtual_membase()+address,label,std::strlen(label)+1);
+  quit_runtime=runtime;native_storage=address+32;native_callback=0;native_record=0;
+  native_open=false;exit_scheduled=false;native_focus_epoch=focus_epoch.load();
   pending=false;buttons=0;title_serial=0;observed_title_mode=0;title_trace_mask=0;back_trace_count=0;title_consumed=0;held_blocker=false;back_was_down=false;
 }
 uint32_t LabelAddress(){return label_address;}
@@ -181,74 +186,79 @@ void SetFocused(bool value){
     focus_epoch.fetch_add(1,std::memory_order_release);
   }
 }
-void Stop(){ResetAccent(nullptr);pending=false;/* The runtime owns the stable guest label allocation. */input=nullptr;label_address=0;}
+void Stop(){ResetAccent(nullptr);pending=false;native_open=false;exit_handler={};quit_runtime=nullptr;
+  /* The runtime owns guest labels, dialog storage and the callback thunk. */
+  input=nullptr;label_address=0;native_storage=0;native_callback=0;native_record=0;}
 bool Pending(){return pending.load(std::memory_order_acquire);}
 void SetOtherMenuCheck(bool (*check)()){other_menu.store(check,std::memory_order_release);}
 void Request(){if(auto check=other_menu.load(std::memory_order_acquire);check&&check())return;if(focused.load(std::memory_order_acquire)&&input_armed.load(std::memory_order_acquire))pending.store(true,std::memory_order_release);}
 namespace {
-class Dialog final:public rex::ui::ImGuiDialog {
- public:
-  Dialog(rex::ui::ImGuiDrawer* drawer,ImFont* font,bool tr,std::function<void()> exit)
-      :ImGuiDialog(drawer),font_(font),turkish_(tr),exit_(std::move(exit)){}
- protected:
-  void OnDraw(ImGuiIO& io) override {
-    if(!Pending()){open_=false;return;}
-    const auto epoch=focus_epoch.load(std::memory_order_acquire);
-    if(!open_||epoch_!=epoch){
-      model_.Open(buttons.load());keyboard_armed_=false;keyboard_direction_active_=false;epoch_=epoch;
-      if(!open_){open_=true;ImGui::OpenPopup("##motogp_quit_confirmation");}
+void CancelNative() {
+  pending=false;native_open=false;native_record=0;input_armed=false;
+  // Consume the native dismissal input before the underlying menu resumes.
+  const std::lock_guard lock(motogp::InputStateMutex());
+  if(auto* system=input.load()){system->AddUIInputBlocker();system->RemoveUIInputBlocker();}
+}
+void NativeResult(PPCContext& ctx,uint8_t* base) {
+  // The real screen manager passes its copied payload in r3, result in r4.
+  // Validate our cookie so stale callbacks cannot close the application.
+  if(!pending.load()||!native_open.load()||!ctx.r3.u32||
+      Read(base,ctx.r3.u32+16)!=native_storage+64)return;
+  if(ctx.r4.s32==0&&focused.load()&&input_armed.load()&&exit_handler){
+    if(!exit_scheduled){exit_scheduled=true;exit_handler();}
+  }else CancelNative();
+}
+}
+void SetExitHandler(std::function<void()> exit){exit_handler=std::move(exit);}
+void TickConfirmation(PPCContext& ctx,uint8_t* base) {
+  if(!pending.load()||!quit_runtime||exit_scheduled)return;
+  const auto epoch=focus_epoch.load(std::memory_order_acquire);
+  if(native_open.load()){
+    if(Read(base,kNativeCurrent)!=native_record&&Read(base,kNativeClosing)!=native_record){CancelNative();return;}
+    if(native_focus_epoch!=epoch){
+      // Native payload +28/+48 hold the choice and its animated position.
+      Write(base,native_record+8+28,1);
+      rex::memory::store_and_swap<float>(base+native_record+8+48,1.f);
+      native_focus_epoch=epoch;
     }
-    if(!focused.load())return;
-    const auto current=buttons.load(std::memory_order_acquire);
-    constexpr uint16_t directions=rex::input::X_INPUT_GAMEPAD_DPAD_LEFT|rex::input::X_INPUT_GAMEPAD_DPAD_RIGHT;
-    // MnK can report Shift+Arrow after ImGui receives the physical key. Keep
-    // keyboard ownership until BOTH channels release, including later frames.
-    if(ImGui::IsKeyDown(ImGuiKey_LeftArrow)||ImGui::IsKeyDown(ImGuiKey_RightArrow))keyboard_direction_active_=true;
-    else if(!(current&directions))keyboard_direction_active_=false;
-    const auto decision=model_.Update(current,keyboard_direction_active_);bool confirm=decision.accept,cancel=decision.cancel;
-    if(!ImGui::IsKeyDown(ImGuiKey_Enter)&&!ImGui::IsKeyDown(ImGuiKey_Space)&&!ImGui::IsKeyDown(ImGuiKey_Escape)&&!ImGui::IsKeyDown(ImGuiKey_Backspace))keyboard_armed_=true;
-    const auto tr=[&](const char* en,const char* turkish){return turkish_?turkish:en;};
-    if(font_)ImGui::PushFont(font_,17);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(26,24));ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,12);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(18,10));ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,6);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(.055f,.064f,.08f,1));
-    ImGui::PushStyleColor(ImGuiCol_PopupBg,ImVec4(.055f,.064f,.08f,1));
-    ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(.19f,.21f,.26f,1));
-    ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(.94f,.95f,.97f,1));
-    ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.13f,.15f,.19f,1));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,motogp::overlay::AccentTint(.24f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,motogp::overlay::AccentTint(.36f));
-    ImGui::PushStyleColor(ImGuiCol_ModalWindowDimBg,ImVec4(0,0,0,.6f));
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x*.5f,io.DisplaySize.y*.5f),ImGuiCond_Always,ImVec2(.5f,.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(490.f,io.DisplaySize.x-32),0),ImGuiCond_Always);
-    if(ImGui::BeginPopupModal("##motogp_quit_confirmation",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize)){
-      ImGui::TextColored(motogp::overlay::orange,"%s",tr("QUIT GAME","OYUNDAN ÇIK"));
-      ImGui::Spacing();ImGui::TextWrapped("%s",tr("Are you sure you want to quit?","Oyundan çıkmak istiyor musunuz?"));ImGui::Spacing();
-      const float width=(ImGui::GetContentRegionAvail().x-12)*.5f;
-      if(!model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,motogp::overlay::AccentTint(.24f));
-      if(ImGui::Button(tr("Cancel","Vazgeç"),ImVec2(width,0)))cancel=true;
-      if(!model_.exit_selected())ImGui::PopStyleColor();ImGui::SameLine();
-      if(model_.exit_selected())ImGui::PushStyleColor(ImGuiCol_Button,motogp::overlay::AccentTint(.36f));
-      if(ImGui::Button(tr("Quit game","Oyundan çık"),ImVec2(width,0)))confirm=true;
-      if(model_.exit_selected())ImGui::PopStyleColor();
-      if(keyboard_armed_){
-        if(ImGui::IsKeyPressed(ImGuiKey_Escape,false)||ImGui::IsKeyPressed(ImGuiKey_Backspace,false))cancel=true;
-        if(ImGui::IsKeyPressed(ImGuiKey_LeftArrow,false)||ImGui::IsKeyPressed(ImGuiKey_RightArrow,false)||ImGui::IsKeyPressed(ImGuiKey_Tab,false))model_.SelectExit(!model_.exit_selected());
-        if(ImGui::IsKeyPressed(ImGuiKey_Enter,false)){if(model_.exit_selected())confirm=true;else cancel=true;}
-      }
-      if(cancel)ImGui::CloseCurrentPopup();
-      ImGui::EndPopup();
-    }
-    ImGui::PopStyleColor(8);ImGui::PopStyleVar(4);if(font_)ImGui::PopFont();
-    if(cancel){pending.store(false,std::memory_order_release);open_=false;}
-    else if(confirm&&!exit_scheduled_){exit_scheduled_=true;exit_();}
+    SynchronizeBlocker();return;
   }
- private:
-  ImFont* font_;bool turkish_,open_=false,keyboard_armed_=false,exit_scheduled_=false,keyboard_direction_active_=false;uint64_t epoch_=0;Confirmation model_;std::function<void()> exit_;
-};
+  if(!focused.load()||!input_armed.load()||buttons.load()!=0)return;
+  // Do not replace another native dialog, including its closing animation.
+  if(!Read(base,kNativePopup)||Read(base,kNativeCurrent)||Read(base,kNativeClosing))return;
+  auto* dispatcher=quit_runtime->function_dispatcher();
+  if(!native_callback){
+    native_callback=dispatcher->AllocateThunk(NativeResult,0x821FC650);
+    if(!native_callback){CancelNative();REXLOG_WARN("PC_QUIT: native callback allocation failed");return;}
+  }
+  PPCContext call=ctx;
+  const auto message=[&](uint32_t handle){
+    PPCContext lookup=ctx;lookup.r3.u64=handle;
+    dispatcher->GetFunction(0x826EDB38)(lookup,base);return lookup.r3.u32;
+  };
+  const auto question=message(0x8288DB18),yes=message(0x8288C870),no=message(0x8288C874);
+  if(!question||!yes||!no)return; // Message bank is not ready yet.
+  std::memset(base+native_storage,0,80);
+  Write(base,native_storage,question);
+  // Explicit native Yes/No strings avoid the default Accept/Cancel labels.
+  Write(base,native_storage+32,yes);Write(base,native_storage+36,no);
+  // Keep Back cancellation. Native setup initially selects the last row; set
+  // the requested first choice after setup, before any input/draw can run.
+  Write(base,native_storage+32+12,0x0D);
+  call=ctx;call.r3.u64=native_storage;call.r4.u64=label_address.load();
+  call.r5.u64=native_storage+32;call.r6.u64=native_callback;
+  call.r7.u64=4;call.r8.s64=-1;call.r9.u64=native_storage+64;
+  dispatcher->GetFunction(0x82356E40)(call,base);
+  native_record=Read(base,kNativeCurrent);
+  if(!native_record||Read(base,native_record+4)!=native_callback){
+    CancelNative();REXLOG_WARN("PC_QUIT: native confirmation could not be opened");return;
+  }
+  Write(base,native_record+8+28,0);
+  rex::memory::store_and_swap<float>(base+native_record+8+48,0.f);
+  native_focus_epoch=epoch;native_open=true;SynchronizeBlocker();
 }
-std::unique_ptr<rex::ui::ImGuiDialog> CreateConfirmationDialog(rex::ui::ImGuiDrawer* drawer,ImFont* font,bool turkish,std::function<void()> exit){return std::make_unique<Dialog>(drawer,font,turkish,std::move(exit));}
 }
+
 REX_HOOK_RAW(sub_821FC650) {
   const auto menu=ctx.r3.u32;
   __imp__sub_821FC650(ctx,base);
@@ -259,9 +269,9 @@ REX_HOOK_RAW(sub_821FCCA8) {
   using namespace motogp::quit;
   PollFrontendInput();
   back_was_down=(buttons.load()&rex::input::X_INPUT_GAMEPAD_B)!=0;
-  if(Pending()){ctx.r3.s64=-1;return;}
+  if(Pending()){TickConfirmation(ctx,base);ctx.r3.s64=-1;return;}
   if(IsQuitSelection(base,ctx.r3.u32,ctx.r4.u32,ctx.r5.u32)){
-    Request();SynchronizeBlocker();ctx.r3.s64=-1;return;
+    Request();SynchronizeBlocker();TickConfirmation(ctx,base);ctx.r3.s64=-1;return;
   }
   __imp__sub_821FCCA8(ctx,base);
 }
@@ -290,13 +300,13 @@ bool PollTitleInput(uint8_t* base,uint32_t expected_mode) {
 }
 }
 REX_HOOK_RAW(sub_8229C2C0) {
-  if(motogp::quit::PollTitleInput(base,11))return;
+  if(motogp::quit::PollTitleInput(base,11)){motogp::quit::TickConfirmation(ctx,base);return;}
   motogp::quit::PollIntroInput(base);
   __imp__sub_8229C2C0(ctx,base);
   motogp::quit::FinishIntroSkip(base);
 }
 REX_HOOK_RAW(sub_822AE9F8) {
-  if(motogp::quit::PollTitleInput(base,15))return;
+  if(motogp::quit::PollTitleInput(base,15)){motogp::quit::TickConfirmation(ctx,base);return;}
   __imp__sub_822AE9F8(ctx,base);
 }
 

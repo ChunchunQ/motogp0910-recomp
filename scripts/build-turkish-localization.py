@@ -81,8 +81,12 @@ def main():
         expected = {'text/english.msg', *(f'scripts/{name}.english.lua' for name in (*FIELDS, 'credits')),
                     *(f'fonts/{name}.font' for name in ('impact_17pt', 'impact_small', 'arial_bold_17pt', 'arial_bold_small'))}
         assert {r['path'] for r in manifest['files']} == expected and len(manifest['files']) == 10
+        assert manifest['message_count'] == len(rows)
+        assert manifest['translated_messages'] == sum(r['en'] != r['tr'] for r in rows)
         for r in manifest['files']:
-            assert hashlib.sha256((output / r['path']).read_bytes()).hexdigest() == r['sha256']
+            data = (output / r['path']).read_bytes()
+            assert len(data) == r['size']
+            assert hashlib.sha256(data).hexdigest() == r['sha256']
         print(f"Validated {len(rows)} messages and {len(manifest['files'])} overlay files")
         return
     assert args.decoded, '--decoded is required to rebuild'
@@ -94,6 +98,17 @@ def main():
         generated[f'scripts/{name}.english.lua'] = data, translate_script(data, fields, lookup)
     data = (args.decoded / 'unpacked/credits.english.lua').read_bytes()
     generated['scripts/credits.english.lua'] = data, translate_credits(data)
+    # Text revisions do not require rebuilding the separately generated fonts.
+    # Retain only verified, known font records from an existing complete overlay.
+    font_paths = {f'fonts/{name}.font' for name in ('impact_17pt', 'impact_small', 'arial_bold_17pt', 'arial_bold_small')}
+    font_records = []
+    old_manifest = RESOURCES / 'manifest.json'
+    if old_manifest.exists():
+        for record in json.loads(old_manifest.read_text())['files']:
+            if record['path'] in font_paths:
+                font = (output / record['path']).read_bytes()
+                assert len(font) == record['size'] and hashlib.sha256(font).hexdigest() == record['sha256'], 'Rebuild or restore the existing font overlay first'
+                font_records.append(record)
     manifest = {'schema': 1, 'language': 'tr', 'voice_language': 'english', 'message_count': len(rows),
                 'translated_messages': sum(r['en'] != r['tr'] for r in rows), 'files': []}
     for relative, (data, translated) in generated.items():
@@ -102,6 +117,7 @@ def main():
         path.write_bytes(translated)
         manifest['files'].append({'path': relative, 'source_decoded_sha256': hashlib.sha256(data).hexdigest(),
                                   'sha256': hashlib.sha256(translated).hexdigest(), 'size': len(translated)})
+    manifest['files'].extend(font_records)
     (RESOURCES / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f"Built {len(rows)} messages, {manifest['translated_messages']} translated; {len(generated)} files")
 

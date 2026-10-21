@@ -1,4 +1,5 @@
-  // A client-drawn title bar provides exactly minimize + close. Standard
+  // A client-drawn title bar provides minimize + close. The optional update
+  // button is a separate native child control. Standard
   // Windows captions retain a disabled maximize slot even without MAXIMIZEBOX.
   int caption_hover=0,caption_pressed=0;
   struct CaptionArea {int width,height,border;};

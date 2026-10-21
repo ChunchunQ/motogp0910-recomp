@@ -34,9 +34,25 @@ exclusive temporary-file path. The pinned SDK receives a private, temporary
 format adapter, removed after startup; all user-facing edits target JSON.
 
 Default logs and configuration stay in the installation root, including direct
-`bin/motogp0910.exe` starts. Saves, achievement unlock data and cache retain their
-existing user-data location. Explicit command-line/environment overrides retain
-their SDK priority. Turkish paths remain supported.
+`bin/motogp0910.exe` starts. On Windows, the default user-data folder is now
+`Documents/MotoGP 09-10`, including saves, achievements, preferences and the
+default cache. Redirected/OneDrive Documents paths are honored. When the new
+folder is absent, existing `Documents/motogp0910` data is copied into a temporary
+sibling, verified byte for byte and published as one complete directory. The old
+folder is deleted only after every original file has a verified matching copy
+in the published destination. Copy/verification failures leave the destination
+unpublished and report an error rather than starting with empty saves. Close
+other game instances before this first migration.
+
+An existing new folder always wins: no merge or overwrite is attempted. A
+one-time cleanup also checks legacy folders retained by earlier releases. It
+removes an old folder only if all its files match the new copies byte for byte;
+conflicting or unverifiable data is retained. A `.legacy-migration-cleanup`
+marker records the attempt, so normal startup does not rescan the old tree.
+Launcher and game share a migration lock so simultaneous starts cannot publish
+partial copies. Explicit configuration, command-line/environment user-data and cache
+overrides retain their existing behavior; custom locations are not migrated.
+Linux defaults are unchanged. Turkish paths remain supported.
 
 Keyboard bindings are rounded buttons. Left-click captures a key or chord,
 Esc cancels, and right-click clears the binding. Keyboard-only reset preserves

@@ -73,13 +73,13 @@ class AdaptiveDialog {
       auto mode=Add(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,x,144,300,180,id);
       for(auto text:{T(L"Off",L"Kapalı"),T(L"Constant resistance",L"Sabit direnç"),T(L"Resistance zone",L"Direnç aralığı")})SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(text));
       SendMessageW(mode,CB_SETITEMHEIGHT,static_cast<WPARAM>(-1),S(24));SendMessageW(mode,CB_SETITEMHEIGHT,0,S(32));
-      help_.Set(mode,T(L"Constant resistance holds a single resistance level. Resistance zone limits it to the selected start and end positions.",L"Sabit direnç, tek bir direnç düzeyi uygular. Direnç aralığı, başlangıç ve bitiş konumları arasına sınırlar."));
+      help_.Set(mode,T(L"Constant resistance holds a single resistance level. Resistance zone limits it to the selected start and end positions.",L"Sabit direnç tek bir direnç düzeyi uygular. Direnç aralığı, direnci seçilen başlangıç ve bitiş konumları arasında uygular."));
       SendMessageW(mode,CB_SETCURSEL,p.mode=="weapon"?2:p.mode=="feedback"?1:0,0);
       const int values[]{p.start,p.end,p.strength};
       for(int row=0;row<3;++row){const int y=190+row*48;
         const auto label=Add(L"STATIC",row==0?T(L"Start position",L"Başlangıç konumu"):row==1?T(L"End (zone only)",L"Bitiş (direnç aralığı)"):T(L"Strength · 0 = off",L"Güç · 0 = kapalı"),0,x,y,250,21);
         auto bar=Add(TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,x-5,y+20,260,26,id+row+1);
-        const auto tip=row==2?T(L"Zero strength releases resistance. Supported strength: 0–8.",L"Sıfır güç direnci kaldırır. Desteklenen güç: 0–8."):T(L"Positions 0–9 run from released to fully pressed. Resistance-zone end must be greater than start.",L"Konum 0–9, serbestten tam basılıya uzanır. Direnç aralığının bitişi başlangıçtan büyük olmalı.");
+        const auto tip=row==2?T(L"Zero strength releases resistance. Supported strength: 0–8.",L"Sıfır güç direnci kaldırır. Desteklenen güç: 0–8."):T(L"Positions 0–9 run from released to fully pressed. Resistance-zone end must be greater than start.",L"0–9 konumları, tetiğin tamamen serbest olduğu noktadan tamamen basılı olduğu noktaya uzanır. Direnç aralığının bitiş değeri başlangıçtan büyük olmalı.");
         help_.Set(bar,tip);help_.Set(label,tip);
         SendMessageW(bar,TBM_SETRANGE,TRUE,MAKELPARAM(0,row==2?8:9));SendMessageW(bar,TBM_SETPOS,TRUE,values[row]);
         Add(L"STATIC",std::to_wstring(values[row]).c_str(),SS_RIGHT,x+265,y+21,35,24,id+row+4);

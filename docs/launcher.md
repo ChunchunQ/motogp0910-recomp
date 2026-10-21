@@ -9,6 +9,124 @@ The launcher opens on **General** every time. The default language is English; *
 interface immediately and retains the choice in the shared root `config.json`.
 File names stay English. No CMD file is required.
 
+## Importing an Xbox 360 ISO
+
+General uses one game-file action in the existing button position:
+**Select ISO → Select title update → Verify game files**. The base-game check
+requires the supported stock executable and a nonempty `xenondata` directory;
+full data hash verification remains separate. A bold cyan notice beside the
+button says **Game files are missing** first, then **Title update is missing**
+or **Title update is invalid**. It disappears when the game and update are ready.
+The footer stays **Game is not ready** until normal launch validation succeeds;
+the existing green ready message is preserved. Progress appears on the action
+button; detailed errors and verification results remain in dialogs/reports.
+
+Select ISO opens only the image picker. Its destination is always the launcher's
+own `game` directory; there is no destination picker or additional game subfolder.
+The launcher reads raw Xbox 360 XDVDFS images, including the known full-disc
+partition offsets and game-partition images. It does not mount the image,
+download game data, decrypt unsupported images or run a separate extractor.
+The parser bounds image reads, rejects directory cycles, duplicate Windows
+paths, traversal and reserved filenames, and limits directory depth/count/size.
+Non-ASCII disc filenames and split/compressed image formats are unsupported.
+
+Extraction runs in a worker with progress and cancellation. It creates a new
+staging directory, checks the stock executable first, then validates extracted
+data against the embedded file hashes. A verified extraction is installed
+directly into `game`. If that directory exists, matching files are preserved,
+conflicting files cause an error, and only absent files are moved in. The merge
+journals new files/directories and removes them if interrupted cooperatively.
+Existing installations and the ISO are never overwritten. Cancellation or failure removes the staging directory;
+the active game path changes only after successful extraction. A process kill
+or power failure can leave a temporary staging directory for manual removal.
+
+The disc is not assumed to contain title update 0.0.1.1. A matching update or
+patch already in the previously selected folder is copied into the new folder
+when absent there. Otherwise **Select title update** opens a file picker for
+the supported TU container or `default.xexp`. The picker shows **All files**;
+the file's contents, not its extension, must match a known hash before installation.
+For a TU container, the launcher immediately extracts `default.xexp` with the
+same pinned STFS reader used by the game's startup path and verifies the
+extracted patch's size and SHA-256. The original TU and verified patch are
+installed together; an already extracted, verified patch is also accepted.
+Replaced update files are retained with a `.previous-...` suffix. If installing
+the pair fails, earlier replacements are rolled back. This replaces the earlier
+behavior that copied only the container and deferred extraction to game startup.
+The imported folder is saved independently of
+other pending settings. ISO import is unavailable while the game, verification
+or launcher update is running.
+
+The optional launcher probe contains synthetic XDVDFS parser, malformed-image,
+cleanup and adaptive-button/notice checks. The Windows release cross-build and
+**23 targeted Windows/Wine checks** passed for the earlier revision on
+20 October 2026. The subsequent direct-folder installation, step-by-step update
+selection and persistent-footer revision is built locally without running tests
+at the user's request. A real supported ISO import and native Windows UI
+validation remain pending.
+
+The subsequent All files picker and immediate TU-patch extraction changes are
+local source edits only; no new build or tests were run for that revision.
+
+## Required DLC
+
+Xbox 360 DLC import is documented in [DLC installation](dlc.md).
+The single game-files action follows **Select ISO → Select title update →
+Install DLC → Verify game files**. All three supported packages are required
+before PLAY in Offline, LAN or Online; missing packages are listed inline.
+**Install DLC** replaces verification while installation is incomplete. It accepts a ZIP/RAR/7z archive or the main
+extracted folder and installs the supported packages together into
+`dlc/434307F0` beside the public launcher, without a zero-XUID parent directory.
+This is independent of the title-update import and preserves the original game.
+
+## Add to Steam
+
+**General → Steam → Add to Steam** adds `MotoGP09-10Launcher.exe` as a non-Steam
+game for the active or most recently used local Steam account. If multiple
+accounts exist and none can be identified, sign in to Steam before retrying.
+Steam launches the launcher; press **PLAY** there to start the game with the
+normal saved settings. Moving the installation requires adding its new path.
+
+Steam must be closed while its shortcuts file is edited. If it is running, the
+button asks before closing it and restarting it afterwards. Cancellation changes
+nothing. The General form uses tighter vertical spacing so Steam's button,
+hint and result remain within the existing viewport without a General scrollbar.
+One text area shows the hint, progress or result. After a successful addition,
+the green **Added to Steam** result replaces the hint for the rest of the launcher
+session, including when switching pages or languages.
+The operation runs in a worker; launching the game and installing a
+launcher update are blocked while it runs. No Steam password or network API is
+used, and no Steam game/content files are modified.
+
+The binary shortcuts reader preserves unrelated entries, tags, launch options,
+play history and unknown supported fields. Unsupported or malformed input is
+rejected. An existing `shortcuts.vdf` receives a unique `.motogp-….bak` backup;
+replacement uses a flushed temporary file and Windows atomic replacement after
+checking that Steam stayed closed and the original file did not change.
+
+Steam artwork is read only from five editable loose files in `resources/steam`:
+`icon.png`, `logo.png`, `banner.png`, `cover.png` and `wide.png`. The icon is the
+same game icon used by `motogp0910.exe`, rather than the launcher icon. Cover
+maps to Steam's portrait grid, wide to its horizontal grid, banner to the hero
+background and logo to its separate foreground logo. The supplied logo has a
+transparent background. The supplied portrait cover uses a 2:3 canvas, with
+the orange design extended into the top margin and white space below, so Steam
+can display its full width without cropping. The horizontal cover has a separate
+1840×860 composition for Steam's 92:43 library tile. No Steam images are
+embedded in an executable, cropped automatically or generated from the launcher
+background. Replacing a file and pressing **Add to Steam** again refreshes this
+shortcut's artwork. Other games' artwork is preserved. Missing optional PNGs
+are reported without generating substitutes; the loose icon remains required.
+Artwork failure does not undo a valid shortcut.
+The interface and results are localized in English and Turkish.
+
+The behavior reference is
+[ChunchunQ's FIFA 09 launcher](https://github.com/ChunchunQ/fifa09-recomp),
+`launcher/SteamShortcut.cs` at revision `711da3941d81879db06ea4f2c36c3a519ac826d9`.
+Its MIT attribution is retained in
+[the source license](../third_party/fifa09-launcher-LICENSE.txt) and the embedded
+launcher notices. Native Windows/Steam acceptance remains pending for this
+extracted integration branch.
+
 ## Graphics
 
 | Setting | Runtime behavior |
@@ -82,6 +200,12 @@ Click a button, then press a key or chord. Escape cancels capture; right-click
 clears the binding. Reset keys restores only keyboard mappings, while Defaults
 resets all launcher-managed settings. Existing alternative key lists remain
 supported and are preserved until that action is rebound.
+
+Actions labeled **Unassigned** start without keyboard bindings. The former
+shipped L3/R3 and right-stick defaults are upgraded to empty bindings when
+loaded from configuration; different custom bindings and explicit environment,
+command-line or live overrides are preserved. Empty bindings are supported by
+the SDK and do not disable a physical controller's sticks or buttons.
 
 SDL supports Xbox, PlayStation and other mapped USB/Bluetooth controllers.
 The included `gamecontrollerdb.txt` stays in `bin/`, outside `game/`.
@@ -283,3 +407,31 @@ These CPU checks do not prove every GPU rendering effect visually correct.
 FSR 2/3 experimental providers and horizontal-plus ultrawide are now available.
 See [the implementation, sources and practical limitations](experimental-rendering.md).
 Frame generation remains excluded.
+
+## Online account presentation and persistence
+
+The signed-in Online page is unframed: an orange account name, optional country
+code, **My account** and **Sign out**. The account button follows FIFA 09's
+`MyAccount_Click` and opens `https://nobkonline.com/hesabim/` in the browser.
+Country comes only from the account API's optional `country` field on login or
+token refresh; absent or invalid codes are hidden. Existing saved sign-ins without
+a country continue to load, and a successful refresh can fill it in.
+
+Username and password retain the original side-by-side 281-by-30 logical-pixel
+fields. The sign-in form adds **Remember me (sign in automatically next time)**,
+enabled by default, plus the account explanation and an accurate Online launch
+requirement. Online still refuses PLAY without a signed-in account; it does not
+fall back to Offline. Offline and LAN retain their existing account-free behavior.
+
+Remember me follows FIFA's lifetime semantics. Checked saves a token protected
+with the existing Windows DPAPI storage; unchecked keeps it only in launcher
+memory, including token refresh and account linking before PLAY. Passwords are
+never persisted. The preference is retained for subsequent sign-ins. Signing out
+clears the cached token and returns to the form. Forgot password has no hover
+help. Room name appears below the signed-in account actions in Online; LAN keeps
+its original room-name layout, and tab/mode changes preserve field values.
+
+The footer displays the configured launcher version instead of the title-update
+version. The FPS selector has room for all nine presets, including 240 FPS.
+These edits are local. No game/launcher build or gameplay test is run for this
+revision; compiler syntax checking is separate from native Windows UI validation.

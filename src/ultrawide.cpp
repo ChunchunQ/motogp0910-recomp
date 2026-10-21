@@ -14,8 +14,8 @@
 #else
 #include <dlfcn.h>
 #endif
-REXCVAR_DEFINE_STRING(aspect_ratio,"auto","Display","Camera/presentation aspect: auto, 16:9, 21:9, 32:9")
- .allowed({"auto","16:9","21:9","32:9"}).lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
+REXCVAR_DEFINE_STRING(aspect_ratio,"auto","Display","Camera/presentation aspect: auto, 4:3, 16:9, 21:9, 32:9")
+ .allowed({"auto","4:3","16:9","21:9","32:9"}).lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
 REX_EXTERN(__imp__sub_821E2108);
 REX_EXTERN(__imp__sub_82388C38);
 namespace motogp::wide {
@@ -27,7 +27,7 @@ SetAspect set_aspect=nullptr;
 void Update(rex::ui::Window* window) {
   const auto choice=rex::cvar::Query<std::string>("aspect_ratio");
   uint32_t x=16,y=9;
-  if(choice=="21:9"){x=21;y=9;}else if(choice=="32:9"){x=32;y=9;}
+  if(choice=="4:3"){x=4;y=3;}else if(choice=="21:9"){x=21;y=9;}else if(choice=="32:9"){x=32;y=9;}
   else if(choice=="auto"){
     const auto w=window->GetActualPhysicalWidth(),h=window->GetActualPhysicalHeight();
     // Preserve the 16:9 camera on narrow displays, letterboxing instead of
@@ -43,7 +43,7 @@ class Listener final:public rex::ui::WindowListener {
 } listener;
 }
 void SetRatio(uint32_t x,uint32_t y){
-  if(!x || !y || double(x)/y<16.0/9.0-0.00001 || double(x)/y>4.0)throw std::runtime_error("Invalid camera aspect ratio");
+  if(!x || !y || double(x)/y<4.0/3.0-0.00001 || double(x)/y>4.0)throw std::runtime_error("Invalid camera aspect ratio");
   horizontal_scale.store((16.f/9.f)/(float(x)/y),std::memory_order_release);
   if(set_aspect)set_aspect(x,y);
 }
@@ -65,17 +65,22 @@ void Stop(){if(active_window)active_window->RemoveListener(&listener);active_win
 void DrawUiQuad(PPCContext& ctx,uint8_t* base){
   const auto scale=HorizontalScale();
   if(scale==1){__imp__sub_82388C38(ctx,base);return;}
+  // Wide output centers the original HUD horizontally. Narrow output instead
+  // fits its full width and centers it vertically, preserving icon proportions
+  // without expanding HUD vertices past the left/right edges.
+  const uint32_t axis=scale>1?4:0;
+  const float ui_scale=scale>1?1.f/scale:scale;
   const std::array<uint32_t,4> vertices{ctx.r3.u32,ctx.r4.u32,ctx.r5.u32,ctx.r6.u32};
   static std::atomic<bool> logged{false};
   if(!logged.load(std::memory_order_relaxed) && !logged.exchange(true,std::memory_order_relaxed))REXLOG_DEBUG("ULTRAWIDE_UI: first native quad x={},{}",rex::memory::load_and_swap<float>(base+vertices[0]),rex::memory::load_and_swap<float>(base+vertices[1]));
   std::array<uint32_t,4> saved{};
-  for(unsigned i=0;i<4;++i)saved[i]=rex::memory::load_and_swap<uint32_t>(base+vertices[i]);
-  for(unsigned i=0;i<4;++i){const auto x=std::bit_cast<float>(saved[i]);
-    rex::memory::store_and_swap<float>(base+vertices[i],0.5f+(x-0.5f)*scale);
+  for(unsigned i=0;i<4;++i)saved[i]=rex::memory::load_and_swap<uint32_t>(base+vertices[i]+axis);
+  for(unsigned i=0;i<4;++i){const auto coordinate=std::bit_cast<float>(saved[i]);
+    rex::memory::store_and_swap<float>(base+vertices[i]+axis,0.5f+(coordinate-0.5f)*ui_scale);
   }
-  struct Restore {uint8_t* base;const std::array<uint32_t,4>& vertices;const std::array<uint32_t,4>& saved;
-    ~Restore(){for(unsigned i=0;i<4;++i)rex::memory::store_and_swap<uint32_t>(base+vertices[i],saved[i]);}
-  } restore{base,vertices,saved};
+  struct Restore {uint8_t* base;const std::array<uint32_t,4>& vertices;const std::array<uint32_t,4>& saved;uint32_t axis;
+    ~Restore(){for(unsigned i=0;i<4;++i)rex::memory::store_and_swap<uint32_t>(base+vertices[i]+axis,saved[i]);}
+  } restore{base,vertices,saved,axis};
   __imp__sub_82388C38(ctx,base);
 }
 }

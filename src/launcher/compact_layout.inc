@@ -58,6 +58,14 @@
       app.ScrollPage(requested);return 0;
     }
     switch(message){
+      case WM_NCHITTEST:{
+        // STATIC normally returns HTTRANSPARENT, which sends clicks past the
+        // painted rail to the launcher instead of starting thumb capture here.
+        POINT point{GET_X_LPARAM(lparam),GET_Y_LPARAM(lparam)};ScreenToClient(control,&point);
+        const auto rail=app.Rail(control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);
+        if(rail.maximum&&PtInRect(&rail.track,point))return HTCLIENT;
+        break;
+      }
       case WM_PRINTCLIENT:{const auto dc=reinterpret_cast<HDC>(wparam);app.DrawSurface(dc,control);app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);return 0;}
       case WM_PAINT:{PAINTSTRUCT ps;const auto dc=BeginPaint(control,&ps);RECT r;GetClientRect(control,&r);app.DrawSurface(dc,control);
         app.PaintRail(dc,control,app.page_extent[app.current_page],kPageHeight,app.page_scroll[app.current_page]);EndPaint(control,&ps);return 0;}
@@ -129,6 +137,7 @@
     }
   }
   void DrawSurface(HDC dc,HWND control){
+    if(update_panel&&GetParent(control)==update_panel){RECT bounds;GetClientRect(control,&bounds);FillRect(dc,&bounds,card);return;}
     EnsureBackground();RECT r;GetClientRect(control,&r);FillRect(dc,&r,background);
     if(!paint_background_bitmap)return;
     POINT origin{0,0};MapWindowPoints(control,window,&origin,1);
@@ -164,10 +173,18 @@
       PaintBuffered(target,bounds,[&](HDC dc,RECT){const int saved=SaveDC(dc);
       app.DrawSurface(dc,control);SetBkMode(dc,TRANSPARENT);
       SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(control,WM_GETFONT,0,0)));
-      SetTextColor(dc,control==app.title?kText:control==app.status&&app.status_positive?RGB(107,205,132):kMuted);
+      SetTextColor(dc,control==app.account_status?kAccent:control==app.title_update_notice?kUpdateWarning:control==app.title?kText:
+          ((control==app.status&&app.status_positive)||(control==app.steam_status&&app.steam_added))?RGB(107,205,132):kMuted);
       RECT r;GetClientRect(control,&r);const auto text=app.Text(control);const bool right=(GetWindowLongPtrW(control,GWL_STYLE)&SS_TYPEMASK)==SS_RIGHT;
       const bool centered=(GetWindowLongPtrW(control,GWL_STYLE)&SS_CENTERIMAGE)!=0;
-      DrawTextW(dc,text.c_str(),-1,&r,(centered?DT_SINGLELINE|DT_VCENTER:DT_WORDBREAK)|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT));RestoreDC(dc,saved);});
+      const UINT flags=(centered?DT_SINGLELINE|DT_VCENTER:DT_WORDBREAK)|DT_NOPREFIX|(right?DT_RIGHT:DT_LEFT);
+      const auto version=control==app.status?text.find(L" · "):std::wstring::npos;
+      if(version!=std::wstring::npos){
+        auto ready=r;DrawTextW(dc,text.c_str(),static_cast<int>(version),&ready,flags);
+        SIZE extent{};GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(version),&extent);
+        r.left+=extent.cx;SetTextColor(dc,kMuted);DrawTextW(dc,text.c_str()+version,-1,&r,flags);
+      }else DrawTextW(dc,text.c_str(),-1,&r,flags);
+      RestoreDC(dc,saved);});
       if(message==WM_PAINT)EndPaint(control,&ps);return 0;
     }
     return DefSubclassProc(control,message,wparam,lparam);
@@ -184,6 +201,25 @@
     // into different gaps. Keep logical placements only for generic rescaling.
     for(int i:order){SetWindowPos(navigation[i],nullptr,x,S(94+kCaptionHeight),widths[i],S(32),SWP_NOZORDER|SWP_NOACTIVATE);x+=widths[i]+gap;}
   }
+  void LayoutFooterActions(){
+    const std::array<HWND,4> controls{save,defaults,logs,report};
+    constexpr std::array<int,4> widths{108,128,88,104};
+    constexpr std::array<const wchar_t*,4> english{L"Save settings",L"Restore defaults",L"Open logs",L"Error report"};
+    if(!save||!defaults||!logs||!report)return;
+    const auto dc=GetDC(window);const auto previous=SelectObject(dc,bold);
+    int x=S(kPageX);
+    // Preserve the English padding and gaps as translated labels grow. Measure
+    // with the actual button font and repeat after language or DPI changes.
+    for(size_t i=0;i<controls.size();++i){
+      const auto text=Text(controls[i]);SIZE current{},reference{};
+      GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&current);
+      GetTextExtentPoint32W(dc,english[i],lstrlenW(english[i]),&reference);
+      const int width=S(widths[i])+std::max<LONG>(0,current.cx-reference.cx);
+      SetWindowPos(controls[i],nullptr,x,S(kActionsY+kCaptionHeight),width,S(32),SWP_NOZORDER|SWP_NOACTIVATE);
+      x+=width+S(10);
+    }
+    SelectObject(dc,previous);ReleaseDC(window,dc);
+  }
   void BuildControls(){
     CreateFonts();LoadCover();help.Create(window,scale);
     title=Control(L"STATIC",L"",0,28,68,1,1);subtitle=Control(L"STATIC",L"",0,30,70,1,1);
@@ -198,7 +234,11 @@
     page_content=Control(L"STATIC",L"",WS_CLIPCHILDREN,0,0,kPageWidth-22,kPageHeight,0,page_view);
     SetWindowLongPtrW(page_content,GWL_EXSTYLE,GetWindowLongPtrW(page_content,GWL_EXSTYLE)|WS_EX_CONTROLPARENT);
     SetWindowSubclass(page_content,ContentProc,1,reinterpret_cast<DWORD_PTR>(this));
-    auto combo=[&](int page,int x,int y,int w,int id){return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,310,id);};
+    auto combo=[&](int page,int x,int y,int w,int id){
+      // Fit every FPS preset, including 240, without scrolling the last row.
+      const int height=id==kFpsLimit?40+32*static_cast<int>(fps_limits.size()):310;
+      return PageControl(page,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST,x,y,w,height,id);
+    };
     auto edit=[&](int page,int x,int y,int w,int id,int limit){auto c=PageControl(page,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL|WS_BORDER,x,y,w,30,id);SendMessageW(c,EM_SETLIMITTEXT,limit,0);return c;};
     auto check=[&](int page,int x,int y,int w,int id){return PageControl(page,L"BUTTON",L"",WS_TABSTOP|BS_AUTOCHECKBOX,x,y,w,28,id);};
     auto field=[&](int page,const wchar_t* en,const wchar_t* tr,int x,int y,int id){auto label=LabelControl(page,en,tr,x,y,kColumnWidth,24);auto control=combo(page,x,y+26,kColumnWidth,id);help_labels[control]=label;return control;};
@@ -206,29 +246,34 @@
     path=edit(3,0,32,kFormWidth-106,kPath,32760);SetWindowTextW(path,ResolveGameRoot(exe,config.table).c_str());
     browse=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kFormWidth-94,32,94,30,kBrowse);
     verify_files=PageControl(3,L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,0,74,184,32,kVerifyFiles);
+    title_update_notice=PageControl(3,L"STATIC",L"",SS_CENTERIMAGE,196,74,kFormWidth-196,32);
+    BuildDlc();
     language=field(3,L"Launcher language",L"Launcher dili",0,128,kLanguage);
     SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"Türkçe"));
-    game_language=field(3,L"Game language",L"Oyun dili",0,210,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
-    prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,292,kPromptStyle);
+    game_language=field(3,L"Game language",L"Oyun dili",0,198,kGameLanguage);FillCombo(game_language,{L"English",L"Français",L"Deutsch",L"Español",L"Italiano",L"Türkçe"});
+    prompt_style=field(3,L"Button prompts",L"Tuş simgeleri",0,268,kPromptStyle);
+    BuildSteam();
     adapter=field(0,L"Graphics adapter",L"Ekran kartı",0,0,kAdapter);
-    render_resolution=field(0,L"Internal resolution",L"İç çözünürlük",kColumnX,0,kRenderResolution);
-    size=field(0,L"Window size",L"Pencere boyutu",0,68,kSize);
-    anisotropic=field(0,L"Texture filtering",L"Doku filtreleme",kColumnX,68,kAnisotropic);
-    fullscreen=field(0,L"Display mode",L"Ekran modu",0,136,kFullscreen);
-    post_effect=field(0,L"Anti-aliasing",L"Kenar yumuşatma",kColumnX,136,kPostEffect);
-    refresh_rate=field(0,L"Refresh rate",L"Yenileme hızı",0,204,kRefreshRate);
-    fps_limit=field(0,L"FPS limit",L"FPS sınırı",kColumnX,204,kFpsLimit);
-    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,272,kEffect);
-    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",kColumnX,272,kFsrQuality);
-    LabelControl(0,L"Upscaler sharpness",L"Ölçekleyici keskinliği",0,340,kFormWidth-90);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,kFormWidth-70,340,70,22);
-    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,366,kFormWidth,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
-    vsync=check(0,0,422,kColumnWidth,kVsync);msaa=check(0,kColumnX,422,kColumnWidth,kMsaa);
-    letterbox=check(0,0,464,kColumnWidth,kLetterbox);aspect=combo(0,kColumnX,464,kColumnWidth,kAspect);
-    dither=check(0,0,506,kColumnWidth,kDither);shader_cache=check(0,kColumnX,506,kColumnWidth,kShaderCache);
+    render_resolution=field(0,L"Internal resolution",L"İşleme çözünürlüğü",kColumnX,0,kRenderResolution);
+    display_monitor=field(0,L"Monitor",L"Monitör",0,68,kMonitor);
+    fps_limit=field(0,L"FPS limit",L"FPS sınırı",kColumnX,68,kFpsLimit);
+    size=field(0,L"Window size",L"Pencere boyutu",0,136,kSize);
+    anisotropic=field(0,L"Texture filtering",L"Doku filtreleme",kColumnX,136,kAnisotropic);
+    fullscreen=field(0,L"Display mode",L"Ekran modu",0,204,kFullscreen);
+    post_effect=field(0,L"Anti-aliasing",L"Kenar yumuşatma",kColumnX,204,kPostEffect);
+    refresh_rate=field(0,L"Refresh rate",L"Yenileme hızı",0,272,kRefreshRate);
+    aspect=field(0,L"Aspect ratio",L"En-boy oranı",kColumnX,272,kAspect);
+    effect=field(0,L"Upscaling / sharpening",L"Ölçekleme / keskinleştirme",0,340,kEffect);
+    fsr_quality=field(0,L"FSR quality mode",L"FSR kalite modu",kColumnX,340,kFsrQuality);
+    LabelControl(0,L"Upscaler sharpness",L"Görüntü keskinliği",0,408,kFormWidth-90);sharp_value=PageControl(0,L"STATIC",L"90%",SS_RIGHT,kFormWidth-70,408,70,22);
+    sharpness=PageControl(0,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,434,kFormWidth,30,kSharpness);SendMessageW(sharpness,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
+    vsync=check(0,0,490,kColumnWidth,kVsync);msaa=check(0,kColumnX,490,kColumnWidth,kMsaa);
+    letterbox=check(0,0,532,kColumnWidth,kLetterbox);shader_cache=check(0,kColumnX,532,kColumnWidth,kShaderCache);
+    dither=check(0,0,574,kColumnWidth,kDither);
     for(size_t i=0;i<engine_choices.size();++i){const auto slot=i<3?i:i+1;
       engine_choices[i]=field(4,kEngineEffects[i].english,kEngineEffects[i].turkish,(slot%2)*kColumnX,(slot/2)*82,kEngineBase+i);}
     shadow_distance=field(4,L"Shadow render distance",L"Gölge çizim mesafesi",kColumnX,82,kShadowDistance);
-    debug_overlay=check(4,0,410,kColumnWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Debug bilgi katmanını etkinleştir"});
+    debug_overlay=check(4,0,410,kColumnWidth,kDebugOverlay);labels.push_back({debug_overlay,L"Enable debug overlay",L"Hata ayıklama bilgilerini göster"});
     crash_diagnostics=check(4,kColumnX,410,kColumnWidth,kCrashDiagnostics);SetCheck(crash_diagnostics,Get(config.table,"launcher_crash_monitor",true));
     LabelControl(1,L"Master volume",L"Ana ses düzeyi",0,0,kFormWidth-104);volume_value=PageControl(1,L"STATIC",L"100%",SS_RIGHT,kFormWidth-80,0,80,22);
     volume=PageControl(1,TRACKBAR_CLASSW,L"",WS_TABSTOP|TBS_HORZ|TBS_NOTICKS,0,36,kFormWidth,40,kVolume);SendMessageW(volume,TBM_SETRANGE,TRUE,MAKELPARAM(0,100));
@@ -244,15 +289,15 @@
     BuildNetworkPage();
     BuildAchievements();
     status=Control(L"STATIC",L"",0,44,kStatusY,kPageWidth-16,30);SendMessageW(status,WM_SETFONT,reinterpret_cast<WPARAM>(small_font),TRUE);
-    save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,kActionsY,116,32,kSave);
-    defaults=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,154,kActionsY,116,32,kDefaults);
-    logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,280,kActionsY,82,32,kLogs);
-    report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,372,kActionsY,90,32,kReport);
+    save=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,28,kActionsY,108,32,kSave);
+    defaults=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,146,kActionsY,128,32,kDefaults);
+    logs=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,284,kActionsY,88,32,kLogs);
+    report=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,382,kActionsY,104,32,kReport);
     play=Control(L"BUTTON",L"",WS_TABSTOP|BS_PUSHBUTTON,kWidth-248,kActionsY,220,64,kPlay);
     Localize();SetControls(settings);for(auto& page:pages)for(auto c:page)ShowWindow(c,SW_HIDE);ShowPage(3);ReadyStatus();
   }
   void StartVerification(){
-    if(process)return;
+    if(process||importing_iso||update_busy||update_finishing||dlc_busy)return;
     if(verifying){verify_cancel=true;SetWindowTextW(verify_files,T(L"Cancelling…",L"İptal ediliyor…"));EnableWindow(verify_files,FALSE);return;}
     const auto references=GameFileReferences(EmbeddedBytes(103));
     verified_root=GameRoot();verify_total=references.size();verify_progress=0;verify_cancel=false;
@@ -272,20 +317,21 @@
   void PollVerification(){
     if(!verifying || !verify_future.valid())return;
     if(verify_future.wait_for(std::chrono::seconds(0))!=std::future_status::ready){
-      const auto progress=std::to_wstring(verify_progress.load())+L" / "+std::to_wstring(verify_total);
-      Status(L"Checking files: "+progress+L". You can cancel.",L"Dosyalar kontrol ediliyor: "+progress+L". İptal edebilirsin.");return;
+      RefreshGameFilesAction();return;
     }
     verifying=false;KillTimer(window,3);
     for(auto control:{path,browse,play,verify_files})EnableWindow(control,!process);
-    SetWindowTextW(verify_files,T(L"Verify game files",L"Dosyaları doğrula"));
+    RefreshSteam();
+    RefreshGameFilesAction();
     try{
       const auto result=verify_future.get();
-      if(result.cancelled){Status(L"File verification cancelled. No files were changed.",L"Dosya kontrolü iptal edildi. Hiçbir dosya değiştirilmedi.");return;}
+      if(result.cancelled){ReadyStatus();return;}
       const auto count=std::to_wstring(result.matched),issues=std::to_wstring(result.missing+result.changed+result.unreadable),missing=std::to_wstring(result.missing);
       const auto failure_en=result.missing?L"Found "+missing+(result.missing==1?L" missing file.":L" missing files.")+L" Open logs for the report.":L"Verification found "+issues+L" issue(s). Open logs for the report.";
-      const auto failure_tr=result.missing?missing+L" eksik dosya bulundu. Rapor için logları aç.":L"Doğrulamada "+issues+L" sorun bulundu. Rapor için logları aç.";
-      Status(result.Passed()?L"Verification passed: "+count+L" original data files + XEX/update checked.":failure_en,
-          result.Passed()?L"Doğrulama başarılı: "+count+L" özgün veri dosyası ve XEX/güncelleme kontrol edildi.":failure_tr,result.Passed());
+      const auto failure_tr=result.missing?missing+L" eksik dosya bulundu. Rapor için günlükleri aç.":L"Doğrulamada "+issues+L" sorun bulundu. Rapor için günlükleri aç.";
+      const auto message_en=result.Passed()?L"Verification passed: "+count+L" original data files + XEX/update checked.":failure_en;
+      const auto message_tr=result.Passed()?L"Doğrulama başarılı: "+count+L" özgün veri dosyası ve XEX/güncelleme kontrol edildi.":failure_tr;
+      ReadyStatus();if(!result.Passed()){game_ready=false;Status({},{});}
       fs::create_directories(exe/L"logs");
       SYSTEMTIME now{};GetSystemTime(&now);wchar_t filename[100];
       swprintf_s(filename,L"verification-%04u%02u%02u-%02u%02u%02u-%lu.txt",now.wYear,now.wMonth,now.wDay,now.wHour,now.wMinute,now.wSecond,GetCurrentProcessId());
@@ -295,9 +341,9 @@
           <<"\nAdditional files are permitted. No game files were changed.\n\n";
       for(const auto& problem:result.problems)report_stream<<Utf8(problem)<<'\n';
       report_stream.close();if(!report_stream)throw std::runtime_error("Could not write verification report");
-      auto message=turkish?status_tr:status_en;
+      auto message=turkish?message_tr:message_en;
       message+=T(L"\n\nNo files were changed. Report:\n",L"\n\nHiçbir dosya değiştirilmedi. Rapor:\n")+report_path.wstring();
-      MessageBoxW(window,message.c_str(),T(L"Game file verification",L"Oyun dosyası doğrulama"),MB_OK|(result.Passed()?MB_ICONINFORMATION:MB_ICONWARNING));
+      MessageBoxW(window,message.c_str(),T(L"Game file verification",L"Oyun dosyalarını doğrulama"),MB_OK|(result.Passed()?MB_ICONINFORMATION:MB_ICONWARNING));
     }catch(const std::exception& e){ErrorBox(e);}
   }
   void DrawComboControl(HDC dc,HWND control){

@@ -95,3 +95,40 @@ restart-only setting to F1. [Modes, sources and hardware limits](adaptive-trigge
 
 The updated targeted Windows/Wine settings probe passed **345 checks**, including
 all nine trigger values saved/read through the launcher and whole-profile revert.
+
+## Alt+Tab input synchronization — 20 October 2026
+
+A submitted crash after enabling adaptive triggers in F1 and switching focus
+failed in `DeviceInfo` destruction inside the pinned runtime's
+`InputSystem::RefreshDevices`, reached through `GetStateForUI`. That stack
+identifies damaged input-device bookkeeping; it does not establish that sending
+an adaptive-trigger effect caused the corruption.
+
+The application now shares one mutex across the six guest state, capabilities,
+vibration and keystroke imports, direct F1 polling, quit/title polling and blocker
+release, and live keyboard-binding edits. Previously only some of these paths
+shared the settings mutex. The runtime rebuilds its device/owner vectors during
+these calls without an internal lock, so concurrent application calls could
+invalidate the strings and device ownership being read by another call.
+
+F1 retains its input blocker and stops polling while unfocused. Focus changes
+invalidate the current sample; publication and blocker release are serialized
+with UI transitions. A fresh neutral sample after refocus is required before
+navigation or gameplay input can resume. Lock order is input mutex followed by
+the gate transition mutex; UI transitions never acquire the input mutex.
+
+This is application-side protection, not a change to the pinned runtime ABI or
+DLL. Runtime-owned XAM dialog completion can independently release an input
+blocker and remains outside this application's mutex. Full internal runtime
+thread safety would require a separate runtime correction; holding this mutex
+across a blocking XAM dialog is unsafe because it could prevent F1 input polling.
+
+The probe source now covers background polling suppression, deferred close,
+a focus round trip during a device sample, both keystroke imports, and concurrent
+real-runtime imports versus F1 polling with heap-backed device strings.
+The Windows release cross-build succeeded and the updated probe passed
+**1,598 targeted Windows/Wine checks** on 20 October 2026. Earlier check counts
+above refer to earlier revisions. Native Windows validation still needs the reported
+F1/adaptive-trigger/Alt+Tab sequence, repeated focus changes and controller
+disconnect/reconnect; source review does not establish that the reported crash
+can no longer occur.

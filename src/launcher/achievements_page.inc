@@ -10,6 +10,21 @@
   motogp::achievements::Options achievement_options;
   bool unlocks_known=false,unlocks_stale=false;
   int achievement_scroll=0;
+  bool AchievementSearchShortcut(const MSG& message){
+    if(message.message!=WM_KEYDOWN||message.hwnd!=achievement_search||GetFocus()!=achievement_search||
+       !(GetKeyState(VK_CONTROL)&0x8000)||(GetKeyState(VK_MENU)&0x8000))return false;
+    // Consume before dialog translation so no second Ctrl character is queued.
+    if(message.wParam=='A'){SendMessageW(achievement_search,EM_SETSEL,0,-1);return true;}
+    UINT command=0;
+    switch(message.wParam){
+      case 'C':command=WM_COPY;break;
+      case 'X':command=WM_CUT;break;
+      case 'V':command=WM_PASTE;break;
+      case 'Z':command=WM_UNDO;break;
+      default:return false;
+    }
+    SendMessageW(achievement_search,command,0,0);return true;
+  }
   void LocalizeAchievements(){
     if(!achievement_filter)return;
     SetWindowTextW(achievement_search_label,T(L"Search",L"Ara"));
@@ -66,7 +81,7 @@
       }catch(const std::exception&){unlocks_stale=true;}
       try {achievement_options=motogp::achievements::ReadOptions(root/"achievement-ui.toml");SetCheck(achievement_popup,achievement_options.popup);SetCheck(achievement_sound,achievement_options.sound);EnableWindow(achievement_popup,TRUE);EnableWindow(achievement_sound,TRUE);}
       catch(const std::exception&){EnableWindow(achievement_popup,FALSE);EnableWindow(achievement_sound,FALSE);}
-      const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kaydı okunamadı. Tekrar deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):L"";
+      const auto note=unlocks_stale&&!unlocks_known?T(L"Could not read your achievement save. Retrying...",L"Başarım kayıt dosyası okunamadı. Yeniden deneniyor..."):unlocks_stale?T(L"Save temporarily unavailable; showing the last known progress.",L"Kayıt dosyası geçici olarak okunamıyor; son bilinen ilerleme gösteriliyor."):L"";
       if(Text(achievement_note)!=note)SetWindowTextW(achievement_note,note);
       if(before_catalog!=catalog_key||before_error!=catalog_error||before_unlocks!=unlocks||before_known!=unlocks_known||before_stale!=unlocks_stale){
       RECT summary{0,0,S(kFormWidth),S(60)};InvalidateRect(page_content,&summary,FALSE);InvalidateRect(achievement_list,nullptr,FALSE);}

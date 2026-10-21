@@ -1,0 +1,1750 @@
+{
+  "schema_version": 1,
+  "title": "MotoGP 09/10 online DLC integration catalogue",
+  "prepared": "2026-10-21",
+  "target_branch": "nobk-online",
+  "validation": "Static native tables, decoded package metadata and public site/API were inspected. No native DLC online race or DLC statistics upload was executed.",
+  "packages": [
+    {
+      "id": "BED5A7F648EE9FEF5E279DDD21189E0B665DB3C543",
+      "name": "Free GP Class Season 2010 Update",
+      "marker": "DLCPack01.meta",
+      "payload_files": 187,
+      "content": [
+        "2010 GP rider/team/bike data",
+        "Silverstone",
+        "2010 track assets and season schedules"
+      ],
+      "rider_counts": {
+        "gp": 17
+      },
+      "container_sha256": "a1b9e79b369f7fe0440042043839b50e37c9980552ffc856816c413fdecfaf5a",
+      "container_bytes": 708038656,
+      "payload_bytes": 703278545,
+      "native_license_mask": 0
+    },
+    {
+      "id": "FBFA3148C2716C4E4ADAFC7325F7162244ECE0BE43",
+      "name": "Twin Track Pack",
+      "marker": "DLCPack02.meta",
+      "payload_files": 20,
+      "content": [
+        "Istanbul Park (2007)",
+        "Shanghai International Circuit (2008)",
+        "2009/2010 AI spline support"
+      ],
+      "container_sha256": "2044bea000da158ca863568b668544778427d1b91e78f1545063f56103129501",
+      "container_bytes": 74858496,
+      "payload_bytes": 74310655,
+      "native_license_mask": 1
+    },
+    {
+      "id": "1C2755211DB925ADFCFD6BFEFB5639A270769ABA43",
+      "name": "Free 2010 Moto2 and 125 Update",
+      "marker": "DLCPack03.meta",
+      "payload_files": 341,
+      "content": [
+        "2010 Moto2 rider/team/bike data",
+        "2010 125cc rider/team/bike data",
+        "Silverstone and 2010 track assets",
+        "2010 GP fallback rider/team/bike tables identical to package 1"
+      ],
+      "rider_counts": {
+        "gp2": 40,
+        "125": 27,
+        "gp_fallback": 17
+      },
+      "container_sha256": "2d29e3154c0441f915a3d7d045b75fa605f00d0f12ee333023afb3013a73d60a",
+      "container_bytes": 930828288,
+      "payload_bytes": 924258775,
+      "native_license_mask": 1
+    }
+  ],
+  "native_track_slots": [
+    {
+      "index": 0,
+      "key": "qatar_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 1,
+      "key": "motegi_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 2,
+      "key": "jerez_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 3,
+      "key": "lemans_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 4,
+      "key": "mugello_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 5,
+      "key": "catalunya_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 6,
+      "key": "assen_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 7,
+      "key": "lagunaseca_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 8,
+      "key": "sachsenring_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 9,
+      "key": "donington_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 10,
+      "key": "brno_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 11,
+      "key": "indianapolis_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 12,
+      "key": "misano_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 13,
+      "key": "estoril_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 14,
+      "key": "phillipisland_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 15,
+      "key": "sepang_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 16,
+      "key": "valencia_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 17,
+      "key": "balaton_2009",
+      "supplied_content_present": false
+    },
+    {
+      "index": 18,
+      "key": "silverstone_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 19,
+      "key": "shanghai_2009",
+      "supplied_content_present": true
+    },
+    {
+      "index": 20,
+      "key": "istanbul_2009",
+      "supplied_content_present": true
+    }
+  ],
+  "new_tracks": [
+    {
+      "native_track_index": 18,
+      "key": "silverstone_2009",
+      "name": "Silverstone",
+      "asset_basename": "silverstone_2010",
+      "country": "GBR",
+      "package_ids": [
+        "BED5A7F648EE9FEF5E279DDD21189E0B665DB3C543",
+        "1C2755211DB925ADFCFD6BFEFB5639A270769ABA43"
+      ],
+      "group0_views_for_existing_class_slots": {
+        "0": 19,
+        "1": 40,
+        "2": 61
+      },
+      "source_script_metrics": {
+        "length_m": 4023,
+        "turns": 11,
+        "publish_without_independent_validation": false,
+        "reason": "Values repeat base Donington/Valencia metadata and may be placeholders."
+      },
+      "source_art_containers": [
+        "frontend_track_dlc1.mgb",
+        "frontend_track_dlc3.mgb"
+      ]
+    },
+    {
+      "native_track_index": 19,
+      "key": "shanghai_2009",
+      "name": "Shanghai International Circuit (2008)",
+      "asset_basename": "shanghai_2010",
+      "country": "CHN",
+      "package_ids": [
+        "FBFA3148C2716C4E4ADAFC7325F7162244ECE0BE43"
+      ],
+      "group0_views_for_existing_class_slots": {
+        "0": 20,
+        "1": 41,
+        "2": 62
+      },
+      "source_script_metrics": {
+        "length_m": 4051,
+        "turns": 14,
+        "publish_without_independent_validation": false,
+        "reason": "Values repeat base Donington/Valencia metadata and may be placeholders."
+      },
+      "source_art_containers": [
+        "frontend_track_dlc2.mgb"
+      ]
+    },
+    {
+      "native_track_index": 20,
+      "key": "istanbul_2009",
+      "name": "Istanbul Park (2007)",
+      "asset_basename": "istanbul_2010",
+      "country": "TUR",
+      "package_ids": [
+        "FBFA3148C2716C4E4ADAFC7325F7162244ECE0BE43"
+      ],
+      "group0_views_for_existing_class_slots": {
+        "0": 21,
+        "1": 42,
+        "2": 63
+      },
+      "source_script_metrics": {
+        "length_m": 4023,
+        "turns": 11,
+        "publish_without_independent_validation": false,
+        "reason": "Values repeat base Donington/Valencia metadata and may be placeholders."
+      },
+      "source_art_containers": [
+        "frontend_track_dlc2.mgb"
+      ]
+    }
+  ],
+  "rosters": {
+    "2009": [
+      {
+        "key": "valentino_rossi",
+        "index": 0,
+        "name": "Valentino Rossi",
+        "type": "gp",
+        "team": "fiat_yamaha",
+        "number": 46,
+        "country": "ITA"
+      },
+      {
+        "key": "jorge_lorenzo",
+        "index": 1,
+        "name": "Jorge Lorenzo",
+        "type": "gp",
+        "team": "fiat_yamaha",
+        "number": 99,
+        "country": "SPA"
+      },
+      {
+        "key": "dani_pedrosa",
+        "index": 2,
+        "name": "Dani Pedrosa",
+        "type": "gp",
+        "team": "repsol_honda",
+        "number": 3,
+        "country": "SPA"
+      },
+      {
+        "key": "andrea_dovizioso",
+        "index": 3,
+        "name": "Andrea Dovizioso",
+        "type": "gp",
+        "team": "repsol_honda",
+        "number": 4,
+        "country": "ITA"
+      },
+      {
+        "key": "casey_stoner",
+        "index": 4,
+        "name": "Casey Stoner",
+        "type": "gp",
+        "team": "ducati_marlboro",
+        "number": 27,
+        "country": "AUS"
+      },
+      {
+        "key": "nicky_hayden",
+        "index": 5,
+        "name": "Nicky Hayden",
+        "type": "gp",
+        "team": "ducati_marlboro",
+        "number": 69,
+        "country": "USA"
+      },
+      {
+        "key": "chris_vermeulen",
+        "index": 6,
+        "name": "Chris Vermeulen",
+        "type": "gp",
+        "team": "rizla_suzuki",
+        "number": 7,
+        "country": "AUS"
+      },
+      {
+        "key": "loris_capirossi",
+        "index": 7,
+        "name": "Loris Capirossi",
+        "type": "gp",
+        "team": "rizla_suzuki",
+        "number": 65,
+        "country": "ITA"
+      },
+      {
+        "key": "colin_edwards",
+        "index": 8,
+        "name": "Colin Edwards",
+        "type": "gp",
+        "team": "tech_3_yamaha",
+        "number": 5,
+        "country": "USA"
+      },
+      {
+        "key": "james_toseland",
+        "index": 9,
+        "name": "James Toseland",
+        "type": "gp",
+        "team": "tech_3_yamaha",
+        "number": 52,
+        "country": "GBR"
+      },
+      {
+        "key": "alex_de_angelis",
+        "index": 10,
+        "name": "Alex de Angelis",
+        "type": "gp",
+        "team": "honda_gresini",
+        "number": 15,
+        "country": "ITA"
+      },
+      {
+        "key": "toni_elias",
+        "index": 11,
+        "name": "Toni Elias",
+        "type": "gp",
+        "team": "honda_gresini",
+        "number": 24,
+        "country": "SPA"
+      },
+      {
+        "key": "mika_kallio",
+        "index": 12,
+        "name": "Mika Kallio",
+        "type": "gp",
+        "team": "pramac_racing",
+        "number": 36,
+        "country": "FIN"
+      },
+      {
+        "key": "niccolo_canepa",
+        "index": 13,
+        "name": "Niccolo Canepa",
+        "type": "gp",
+        "team": "pramac_racing",
+        "number": 88,
+        "country": "ITA"
+      },
+      {
+        "key": "yuki_takahashi",
+        "index": 14,
+        "name": "Yuki Takahashi",
+        "type": "gp",
+        "team": "jir_scot_team",
+        "number": 72,
+        "country": "JPN"
+      },
+      {
+        "key": "marco_melandri",
+        "index": 15,
+        "name": "Marco Melandri",
+        "type": "gp",
+        "team": "hayate_racing",
+        "number": 33,
+        "country": "ITA"
+      },
+      {
+        "key": "randy_de_puniet",
+        "index": 16,
+        "name": "Randy de Puniet",
+        "type": "gp",
+        "team": "honda_lcr",
+        "number": 14,
+        "country": "FRA"
+      },
+      {
+        "key": "sete_gibernau",
+        "index": 17,
+        "name": "Sete Gibernau",
+        "type": "gp",
+        "team": "grupo_francisco_hernando",
+        "number": 59,
+        "country": "SPA"
+      },
+      {
+        "key": "dominique_aegerter",
+        "index": 18,
+        "name": "Dominique Aegerter",
+        "type": "125",
+        "team": "ajo_interwetten_125",
+        "number": 77,
+        "country": "SWI"
+      },
+      {
+        "key": "sandro_cortese",
+        "index": 19,
+        "name": "Sandro Cortese",
+        "type": "125",
+        "team": "ajo_interwetten_125",
+        "number": 11,
+        "country": "GER"
+      },
+      {
+        "key": "sergio_gadea",
+        "index": 20,
+        "name": "Sergio Gadea",
+        "type": "125",
+        "team": "bancaja_aspar_125",
+        "number": 33,
+        "country": "SPA"
+      },
+      {
+        "key": "bradley_smith",
+        "index": 21,
+        "name": "Bradley Smith",
+        "type": "125",
+        "team": "bancaja_aspar_125",
+        "number": 38,
+        "country": "GBR"
+      },
+      {
+        "key": "julian_simon",
+        "index": 22,
+        "name": "Julian Simon",
+        "type": "125",
+        "team": "bancaja_aspar_125",
+        "number": 60,
+        "country": "SPA"
+      },
+      {
+        "key": "esteve_rabat",
+        "index": 23,
+        "name": "Esteve Rabat",
+        "type": "125",
+        "team": "blusens_aprilia_125",
+        "number": 12,
+        "country": "SPA"
+      },
+      {
+        "key": "scott_redding",
+        "index": 24,
+        "name": "Scott Redding",
+        "type": "125",
+        "team": "blusens_aprilia_125",
+        "number": 45,
+        "country": "GBR"
+      },
+      {
+        "key": "danny_webb",
+        "index": 25,
+        "name": "Danny Webb",
+        "type": "125",
+        "team": "degraaf_grand_prix_125",
+        "number": 99,
+        "country": "GBR"
+      },
+      {
+        "key": "joan_olive",
+        "index": 26,
+        "name": "Joan Olive",
+        "type": "125",
+        "team": "derbi_racing_125",
+        "number": 6,
+        "country": "SPA"
+      },
+      {
+        "key": "pol_espargaro",
+        "index": 27,
+        "name": "Pol Espargaro",
+        "type": "125",
+        "team": "derbi_racing_125",
+        "number": 44,
+        "country": "SPA"
+      },
+      {
+        "key": "stefan_bradl",
+        "index": 28,
+        "name": "Stefan Bradl",
+        "type": "125",
+        "team": "grizzly_gas_kiefer_125",
+        "number": 17,
+        "country": "GER"
+      },
+      {
+        "key": "michael_ranseder",
+        "index": 29,
+        "name": "Michael Ranseder",
+        "type": "125",
+        "team": "haojue_team_125",
+        "number": 88,
+        "country": "AUT"
+      },
+      {
+        "key": "nicolas_terol",
+        "index": 30,
+        "name": "Nicolas Terol",
+        "type": "125",
+        "team": "jack_jones_wrb_125",
+        "number": 18,
+        "country": "SPA"
+      },
+      {
+        "key": "tomoyoshi_koyama",
+        "index": 31,
+        "name": "Tomoyoshi Koyama",
+        "type": "125",
+        "team": "loncin_racing_125",
+        "number": 71,
+        "country": "JPN"
+      },
+      {
+        "key": "takaaki_nakagami",
+        "index": 32,
+        "name": "Takaaki Nakagami",
+        "type": "125",
+        "team": "ongetta_team_125",
+        "number": 73,
+        "country": "JPN"
+      },
+      {
+        "key": "cameron_beaubier",
+        "index": 33,
+        "name": "Cameron Beaubier",
+        "type": "125",
+        "team": "red_bull_ktm_125",
+        "number": 16,
+        "country": "USA"
+      },
+      {
+        "key": "marc_marquez",
+        "index": 34,
+        "name": "Marc Marquez",
+        "type": "125",
+        "team": "red_bull_ktm_125",
+        "number": 93,
+        "country": "SPA"
+      },
+      {
+        "key": "johann_zarco",
+        "index": 35,
+        "name": "Johann Zarco",
+        "type": "125",
+        "team": "wtr_san_marino_125",
+        "number": 14,
+        "country": "FRA"
+      },
+      {
+        "key": "lorenzo_zanetti",
+        "index": 36,
+        "name": "Lorenzo Zanetti",
+        "type": "125",
+        "team": "ongetta_team_125",
+        "number": 8,
+        "country": "ITA"
+      },
+      {
+        "key": "andrea_iannone",
+        "index": 37,
+        "name": "Andrea Iannone",
+        "type": "125",
+        "team": "ongetta_team_125",
+        "number": 29,
+        "country": "ITA"
+      },
+      {
+        "key": "alexis_masbou",
+        "index": 38,
+        "name": "Alexis Masbou",
+        "type": "125",
+        "team": "loncin_racing_125",
+        "number": 5,
+        "country": "FRA"
+      },
+      {
+        "key": "efren_vazquez",
+        "index": 39,
+        "name": "Efren Vazquez",
+        "type": "125",
+        "team": "derbi_racing_125",
+        "number": 7,
+        "country": "SPA"
+      },
+      {
+        "key": "luca_vitali",
+        "index": 40,
+        "name": "Luca Vitali",
+        "type": "125",
+        "team": "cbc_corse_125",
+        "number": 10,
+        "country": "ITA"
+      },
+      {
+        "key": "simone_corsi",
+        "index": 41,
+        "name": "Simone Corsi",
+        "type": "125",
+        "team": "jack_jones_wrb_125",
+        "number": 24,
+        "country": "ITA"
+      },
+      {
+        "key": "lorenzo_savadori",
+        "index": 42,
+        "name": "Lorenzo Savadori",
+        "type": "125",
+        "team": "fontana_racing_125",
+        "number": 32,
+        "country": "ITA"
+      },
+      {
+        "key": "randy_krummenacher",
+        "index": 43,
+        "name": "Randy Krummenacher",
+        "type": "125",
+        "team": "degraaf_grand_prix_125",
+        "number": 35,
+        "country": "SWI"
+      },
+      {
+        "key": "jasper_iwema",
+        "index": 44,
+        "name": "Jasper Iwema",
+        "type": "125",
+        "team": "racing_team_german_125",
+        "number": 53,
+        "country": "NED"
+      },
+      {
+        "key": "matthew_hoyle",
+        "index": 45,
+        "name": "Matthew Hoyle",
+        "type": "125",
+        "team": "haojue_team_125",
+        "number": 66,
+        "country": "GBR"
+      },
+      {
+        "key": "lukas_sembera",
+        "index": 46,
+        "name": "Lukas Sembera",
+        "type": "125",
+        "team": "matteoni_racing_125",
+        "number": 69,
+        "country": "CZE"
+      },
+      {
+        "key": "luca_marconi",
+        "index": 47,
+        "name": "Luca Marconi",
+        "type": "125",
+        "team": "cbc_corse_125",
+        "number": 87,
+        "country": "ITA"
+      },
+      {
+        "key": "jonas_folger",
+        "index": 48,
+        "name": "Jonas Folger",
+        "type": "125",
+        "team": "ongetta_team_125",
+        "number": 94,
+        "country": "GER"
+      },
+      {
+        "key": "alex_debon",
+        "index": 49,
+        "name": "Alex Debon",
+        "type": "250",
+        "team": "aeropuerto_castello_blusens",
+        "number": 6,
+        "country": "SPA"
+      },
+      {
+        "key": "lukas_pesek",
+        "index": 50,
+        "name": "Lukas Pesek",
+        "type": "250",
+        "team": "auto_kelly_cp_250",
+        "number": 52,
+        "country": "CZE"
+      },
+      {
+        "key": "gabor_talmacsi",
+        "index": 51,
+        "name": "Gabor Talmacsi",
+        "type": "250",
+        "team": "balaton_racing_250",
+        "number": 28,
+        "country": "HUN"
+      },
+      {
+        "key": "karel_abraham",
+        "index": 52,
+        "name": "Karel Abraham",
+        "type": "250",
+        "team": "cardion_ab_250",
+        "number": 17,
+        "country": "CZE"
+      },
+      {
+        "key": "thomas_luthi",
+        "index": 53,
+        "name": "Thomas Luthi",
+        "type": "250",
+        "team": "emmi_caffe_latte_250",
+        "number": 12,
+        "country": "SWI"
+      },
+      {
+        "key": "alvaro_bautista",
+        "index": 54,
+        "name": "Alvaro Bautista",
+        "type": "250",
+        "team": "mapfre_aspar_250",
+        "number": 19,
+        "country": "SPA"
+      },
+      {
+        "key": "mike_di_meglio",
+        "index": 55,
+        "name": "Mike di Meglio",
+        "type": "250",
+        "team": "mapfre_aspar_250",
+        "number": 63,
+        "country": "FRA"
+      },
+      {
+        "key": "jules_cluzel",
+        "index": 56,
+        "name": "Jules Cluzel",
+        "type": "250",
+        "team": "matteoni_racing_250",
+        "number": 16,
+        "country": "FRA"
+      },
+      {
+        "key": "roberto_locatelli",
+        "index": 57,
+        "name": "Roberto Locatelli",
+        "type": "250",
+        "team": "metis_gilera_250",
+        "number": 15,
+        "country": "ITA"
+      },
+      {
+        "key": "marco_simoncelli",
+        "index": 58,
+        "name": "Marco Simoncelli",
+        "type": "250",
+        "team": "metis_gilera_250",
+        "number": 58,
+        "country": "ITA"
+      },
+      {
+        "key": "axel_pons",
+        "index": 59,
+        "name": "Axel Pons",
+        "type": "250",
+        "team": "pepe_world_team",
+        "number": 7,
+        "country": "SPA"
+      },
+      {
+        "key": "hector_barbera",
+        "index": 60,
+        "name": "Hector Barbera",
+        "type": "250",
+        "team": "pepe_world_team",
+        "number": 40,
+        "country": "SPA"
+      },
+      {
+        "key": "hiroshi_aoyama",
+        "index": 61,
+        "name": "Hiroshi Aoyama",
+        "type": "250",
+        "team": "scot_racing_team_250",
+        "number": 4,
+        "country": "JPN"
+      },
+      {
+        "key": "raffaele_de_rosa",
+        "index": 62,
+        "name": "Raffaele de Rosa",
+        "type": "250",
+        "team": "scot_racing_team_250",
+        "number": 35,
+        "country": "ITA"
+      },
+      {
+        "key": "shoya_tomizawa",
+        "index": 63,
+        "name": "Shoya Tomizawa",
+        "type": "250",
+        "team": "team_cip_250",
+        "number": 48,
+        "country": "JPN"
+      },
+      {
+        "key": "imre_toth",
+        "index": 64,
+        "name": "Imre Toth",
+        "type": "250",
+        "team": "team_toth_aprilia_250",
+        "number": 10,
+        "country": "HUN"
+      },
+      {
+        "key": "mattia_pasini",
+        "index": 65,
+        "name": "Mattia Pasini",
+        "type": "250",
+        "team": "team_toth_aprilia_250",
+        "number": 75,
+        "country": "ITA"
+      },
+      {
+        "key": "ratthapark_wilairot",
+        "index": 66,
+        "name": "Ratthapark Wilairot",
+        "type": "250",
+        "team": "thai_honda_ptt_sag_250",
+        "number": 14,
+        "country": "TAI"
+      },
+      {
+        "key": "hector_faubel",
+        "index": 67,
+        "name": "Hector Faubel",
+        "type": "250",
+        "team": "thai_honda_ptt_sag_250",
+        "number": 55,
+        "country": "SPA"
+      },
+      {
+        "key": "alex_baldolini",
+        "index": 68,
+        "name": "Alex Baldolini",
+        "type": "250",
+        "team": "wtr_san_marino_250",
+        "number": 25,
+        "country": "ITA"
+      },
+      {
+        "key": "bastien_chesaux",
+        "index": 69,
+        "name": "Bastien Chesaux",
+        "type": "250",
+        "team": "racing_team_german_250",
+        "number": 8,
+        "country": "SWI"
+      },
+      {
+        "key": "vladimir_leonov",
+        "index": 70,
+        "name": "Vladimir Leonov",
+        "type": "250",
+        "team": "viessmann_kiefer_racing_250",
+        "number": 56,
+        "country": "RUS"
+      },
+      {
+        "key": "aitor_rodriguez",
+        "index": 71,
+        "name": "Aitor Rodriguez",
+        "type": "250",
+        "team": "aprilia_madrid",
+        "number": 77,
+        "country": "SPA"
+      }
+    ],
+    "2010": [
+      {
+        "key": "valentino_rossi",
+        "index": 0,
+        "name": "Valentino Rossi",
+        "type": "gp",
+        "team": "fiat_yamaha_2010",
+        "number": 46,
+        "country": "ITA"
+      },
+      {
+        "key": "jorge_lorenzo",
+        "index": 1,
+        "name": "Jorge Lorenzo",
+        "type": "gp",
+        "team": "fiat_yamaha_2010",
+        "number": 99,
+        "country": "SPA"
+      },
+      {
+        "key": "ben_spies",
+        "index": 2,
+        "name": "Ben Spies",
+        "type": "gp",
+        "team": "tech_3_yamaha_2010",
+        "number": 11,
+        "country": "USA"
+      },
+      {
+        "key": "colin_edwards",
+        "index": 3,
+        "name": "Colin Edwards",
+        "type": "gp",
+        "team": "tech_3_yamaha_2010",
+        "number": 5,
+        "country": "USA"
+      },
+      {
+        "key": "andrea_dovizioso",
+        "index": 4,
+        "name": "Andrea Dovizioso",
+        "type": "gp",
+        "team": "repsol_honda_2010",
+        "number": 4,
+        "country": "ITA"
+      },
+      {
+        "key": "dani_pedrosa",
+        "index": 5,
+        "name": "Dani Pedrosa",
+        "type": "gp",
+        "team": "repsol_honda_2010",
+        "number": 26,
+        "country": "SPA"
+      },
+      {
+        "key": "marco_melandri",
+        "index": 6,
+        "name": "Marco Melandri",
+        "type": "gp",
+        "team": "honda_gresini_2010",
+        "number": 33,
+        "country": "ITA"
+      },
+      {
+        "key": "marco_simoncelli",
+        "index": 7,
+        "name": "Marco Simoncelli",
+        "type": "gp",
+        "team": "honda_gresini_2010",
+        "number": 58,
+        "country": "ITA"
+      },
+      {
+        "key": "randy_de_puniet",
+        "index": 8,
+        "name": "Randy de Puniet",
+        "type": "gp",
+        "team": "honda_lcr_2010",
+        "number": 14,
+        "country": "FRA"
+      },
+      {
+        "key": "hiroshi_aoyama",
+        "index": 9,
+        "name": "Hiroshi Aoyama",
+        "type": "gp",
+        "team": "interwetten_honda_2010",
+        "number": 7,
+        "country": "JPN"
+      },
+      {
+        "key": "nicky_hayden",
+        "index": 10,
+        "name": "Nicky Hayden",
+        "type": "gp",
+        "team": "ducati_marlboro_2010",
+        "number": 69,
+        "country": "USA"
+      },
+      {
+        "key": "casey_stoner",
+        "index": 11,
+        "name": "Casey Stoner",
+        "type": "gp",
+        "team": "ducati_marlboro_2010",
+        "number": 27,
+        "country": "AUS"
+      },
+      {
+        "key": "mika_kallio",
+        "index": 12,
+        "name": "Mika Kallio",
+        "type": "gp",
+        "team": "pramac_racing_2010",
+        "number": 36,
+        "country": "FIN"
+      },
+      {
+        "key": "aleix_espargaro",
+        "index": 13,
+        "name": "Aleix Espargaro",
+        "type": "gp",
+        "team": "pramac_racing_2010",
+        "number": 41,
+        "country": "SPA"
+      },
+      {
+        "key": "loris_capirossi",
+        "index": 14,
+        "name": "Loris Capirossi",
+        "type": "gp",
+        "team": "rizla_suzuki_2010",
+        "number": 65,
+        "country": "ITA"
+      },
+      {
+        "key": "alvaro_bautista",
+        "index": 15,
+        "name": "Alvaro Bautista",
+        "type": "gp",
+        "team": "rizla_suzuki_2010",
+        "number": 19,
+        "country": "SPA"
+      },
+      {
+        "key": "hector_barbera",
+        "index": 16,
+        "name": "Hector Barbera",
+        "type": "gp",
+        "team": "aspar_ducati_2010",
+        "number": 40,
+        "country": "SPA"
+      },
+      {
+        "key": "alexis_masbou_125",
+        "index": 17,
+        "name": "Alexis Masbou",
+        "type": "125",
+        "team": "worldwiderace_team_125_2010",
+        "number": 5,
+        "country": "FRA"
+      },
+      {
+        "key": "jonas_folger_125",
+        "index": 18,
+        "name": "Jonas Folger",
+        "type": "125",
+        "team": "worldwiderace_team_125_2010",
+        "number": 94,
+        "country": "GER"
+      },
+      {
+        "key": "luca_marconi_125",
+        "index": 19,
+        "name": "Luca Marconi",
+        "type": "125",
+        "team": "worldwiderace_team_125_2010",
+        "number": 87,
+        "country": "ITA"
+      },
+      {
+        "key": "marc_marquez_125",
+        "index": 20,
+        "name": "Marc Marquez",
+        "type": "125",
+        "team": "red_bull_ajo_motorsport_125_2010",
+        "number": 93,
+        "country": "SPA"
+      },
+      {
+        "key": "sandro_cortese_125",
+        "index": 21,
+        "name": "Sandro Cortese",
+        "type": "125",
+        "team": "avant_mitsubishi_125_2010",
+        "number": 11,
+        "country": "GER"
+      },
+      {
+        "key": "esteve_rabat_125",
+        "index": 22,
+        "name": "Esteve Rabat",
+        "type": "125",
+        "team": "bqr_125_2010",
+        "number": 12,
+        "country": "SPA"
+      },
+      {
+        "key": "simone_grotzkyj_125",
+        "index": 23,
+        "name": "Simone Grotzkyj",
+        "type": "125",
+        "team": "fontana_racing_125",
+        "number": 15,
+        "country": "ITA"
+      },
+      {
+        "key": "luis_salom_125",
+        "index": 24,
+        "name": "Luis Salom",
+        "type": "125",
+        "team": "molenaar_racing_125_2010",
+        "number": 39,
+        "country": "SPA"
+      },
+      {
+        "key": "lorenzo_savadori_125",
+        "index": 25,
+        "name": "Lorenzo Savadori",
+        "type": "125",
+        "team": "matteoni_cp_racing_125_2010",
+        "number": 32,
+        "country": "ITA"
+      },
+      {
+        "key": "bradley_smith_125",
+        "index": 26,
+        "name": "Bradley Smith",
+        "type": "125",
+        "team": "bancaja_aspar_team_125_2010",
+        "number": 38,
+        "country": "GBR"
+      },
+      {
+        "key": "nicolas_terol_125",
+        "index": 27,
+        "name": "Nicolas Terol",
+        "type": "125",
+        "team": "bancaja_aspar_team_125_2010",
+        "number": 40,
+        "country": "SPA"
+      },
+      {
+        "key": "pol_espargaro_125",
+        "index": 28,
+        "name": "Pol Espargaro",
+        "type": "125",
+        "team": "bainet_derbi_125_2010",
+        "number": 44,
+        "country": "SPA"
+      },
+      {
+        "key": "efren_vazquez_125",
+        "index": 29,
+        "name": "Efren Vazquez",
+        "type": "125",
+        "team": "bainet_derbi_125_2010",
+        "number": 7,
+        "country": "SPA"
+      },
+      {
+        "key": "johann_zarco_125",
+        "index": 30,
+        "name": "Johann Zarco",
+        "type": "125",
+        "team": "wtr_san_marino_team_125_2010",
+        "number": 14,
+        "country": "FRA"
+      },
+      {
+        "key": "jakub_kornfeil_125",
+        "index": 31,
+        "name": "Jakub Kornfeil",
+        "type": "125",
+        "team": "racing_team_germany_125_2010",
+        "number": 84,
+        "country": "CZE"
+      },
+      {
+        "key": "alberto_moncayo_125",
+        "index": 32,
+        "name": "Alberto Moncayo",
+        "type": "125",
+        "team": "andalucia_cajasol_125_2010",
+        "number": 23,
+        "country": "SPA"
+      },
+      {
+        "key": "marcel_schrotter_125",
+        "index": 33,
+        "name": "Marcel Schrotter",
+        "type": "125",
+        "team": "interwetten_racing_125_2010",
+        "number": 78,
+        "country": "GER"
+      },
+      {
+        "key": "adrian_martin_125",
+        "index": 34,
+        "name": "Adrian Martin",
+        "type": "125",
+        "team": "team_wrb_125_2010",
+        "number": 26,
+        "country": "SPA"
+      },
+      {
+        "key": "danny_webb_125",
+        "index": 35,
+        "name": "Danny Webb",
+        "type": "125",
+        "team": "andalucia_cajasol_125_2010",
+        "number": 99,
+        "country": "GBR"
+      },
+      {
+        "key": "randy_krummenacher_125",
+        "index": 36,
+        "name": "Randy Krummenacher",
+        "type": "125",
+        "team": "molenaar_racing_125_2010",
+        "number": 35,
+        "country": "SWI"
+      },
+      {
+        "key": "sturla_fagerhaug_125",
+        "index": 37,
+        "name": "Sturla Fagerhaug",
+        "type": "125",
+        "team": "empowerment_worldwiderace_125_2010",
+        "number": 50,
+        "country": "NOR"
+      },
+      {
+        "key": "muhammad_zulfahmi_125",
+        "index": 38,
+        "name": "Zulfahmi Khairuddin",
+        "type": "125",
+        "team": "empowerment_worldwiderace_125_2010",
+        "number": 63,
+        "country": "MYS"
+      },
+      {
+        "key": "michael_van_der_mark_125",
+        "index": 39,
+        "name": "Michael Van Der Mark",
+        "type": "125",
+        "team": "lambretta_125_2010",
+        "number": 60,
+        "country": "NED"
+      },
+      {
+        "key": "marco_ravaioli_125",
+        "index": 40,
+        "name": "Marco Ravaioli",
+        "type": "125",
+        "team": "lambretta_125_2010",
+        "number": 72,
+        "country": "ITA"
+      },
+      {
+        "key": "jasper_iwema_125",
+        "index": 41,
+        "name": "Jasper Iwema",
+        "type": "125",
+        "team": "cbc_corse_125_2010",
+        "number": 53,
+        "country": "NED"
+      },
+      {
+        "key": "louis_rossi_125",
+        "index": 42,
+        "name": "Louis Rossi",
+        "type": "125",
+        "team": "cbc_corse_125_2010",
+        "number": 69,
+        "country": "FRA"
+      },
+      {
+        "key": "tomoyoshi_koyama_125",
+        "index": 43,
+        "name": "Tomoyoshi Koyama",
+        "type": "125",
+        "team": "racing_team_germany_125_2010",
+        "number": 71,
+        "country": "JPN"
+      },
+      {
+        "key": "raffaele_de_rosa_gp2",
+        "index": 44,
+        "name": "Raffaele De Rosa",
+        "type": "gp2",
+        "team": "tech_3_racing_gp2_2010",
+        "number": 35,
+        "country": "ITA"
+      },
+      {
+        "key": "yuki_takahashi_gp2",
+        "index": 45,
+        "name": "Yuki Takahashi",
+        "type": "gp2",
+        "team": "tech_3_racing_gp2_2010",
+        "number": 72,
+        "country": "JPN"
+      },
+      {
+        "key": "toni_elias_gp2",
+        "index": 46,
+        "name": "Toni Elias",
+        "type": "gp2",
+        "team": "gresini_racing_moto2_gp2_2010",
+        "number": 24,
+        "country": "SPA"
+      },
+      {
+        "key": "vladimir_ivanov_gp2",
+        "index": 47,
+        "name": "Vladimir Ivanov",
+        "type": "gp2",
+        "team": "gresini_racing_moto2_gp2_2010",
+        "number": 61,
+        "country": "NONE"
+      },
+      {
+        "key": "jules_cluzel_gp2",
+        "index": 48,
+        "name": "Jules Cluzel",
+        "type": "gp2",
+        "team": "forward_racing_gp2_2010",
+        "number": 16,
+        "country": "FRA"
+      },
+      {
+        "key": "claudio_corti_gp2",
+        "index": 49,
+        "name": "Claudio Corti",
+        "type": "gp2",
+        "team": "forward_racing_gp2_2010",
+        "number": 71,
+        "country": "ITA"
+      },
+      {
+        "key": "mattia_pasini_gp2",
+        "index": 50,
+        "name": "Mattia Pasini",
+        "type": "gp2",
+        "team": "jir_moto2_gp2_2010",
+        "number": 75,
+        "country": "ITA"
+      },
+      {
+        "key": "simone_corsi_gp2",
+        "index": 51,
+        "name": "Simone Corsi",
+        "type": "gp2",
+        "team": "jir_moto2_gp2_2010",
+        "number": 3,
+        "country": "ITA"
+      },
+      {
+        "key": "julian_simon_gp2",
+        "index": 52,
+        "name": "Julian Simon",
+        "type": "gp2",
+        "team": "mapfre_aspar_team_gp2_2010",
+        "number": 60,
+        "country": "SPA"
+      },
+      {
+        "key": "mike_di_meglio_gp2",
+        "index": 53,
+        "name": "Mike Di Meglio",
+        "type": "gp2",
+        "team": "mapfre_aspar_team_gp2_2010",
+        "number": 63,
+        "country": "FRA"
+      },
+      {
+        "key": "joan_olive_gp2",
+        "index": 54,
+        "name": "Joan Olive",
+        "type": "gp2",
+        "team": "jack_jones_gp2_2010",
+        "number": 5,
+        "country": "SPA"
+      },
+      {
+        "key": "kenny_noyes_gp2",
+        "index": 55,
+        "name": "Kenny Noyes",
+        "type": "gp2",
+        "team": "jack_jones_gp2_2010",
+        "number": 9,
+        "country": "USA"
+      },
+      {
+        "key": "axel_pons_gp2",
+        "index": 56,
+        "name": "Axel Pons",
+        "type": "gp2",
+        "team": "pons_kalex_racing_gp2_2010",
+        "number": 80,
+        "country": "SPA"
+      },
+      {
+        "key": "sergio_gadea_gp2",
+        "index": 57,
+        "name": "Sergio Gadea",
+        "type": "gp2",
+        "team": "pons_kalex_racing_gp2_2010",
+        "number": 40,
+        "country": "SPA"
+      },
+      {
+        "key": "fonsi_nieto_gp2",
+        "index": 58,
+        "name": "Fonsi Nieto",
+        "type": "gp2",
+        "team": "g22_holidaygym_gp2_2010",
+        "number": 10,
+        "country": "SPA"
+      },
+      {
+        "key": "yannick_guerra_gp2",
+        "index": 59,
+        "name": "Yannick Guerra",
+        "type": "gp2",
+        "team": "g22_holidaygym_gp2_2010",
+        "number": 88,
+        "country": "SPA"
+      },
+      {
+        "key": "scott_redding_gp2",
+        "index": 60,
+        "name": "Scott Redding",
+        "type": "gp2",
+        "team": "marc_vds_racing_team_gp2_2010",
+        "number": 45,
+        "country": "GBR"
+      },
+      {
+        "key": "anthony_west_gp2",
+        "index": 61,
+        "name": "Anthony West",
+        "type": "gp2",
+        "team": "mz_racing_team_gp2_2010",
+        "number": 8,
+        "country": "AUS"
+      },
+      {
+        "key": "niccolo_canepa_gp2",
+        "index": 62,
+        "name": "Niccolo Canepa",
+        "type": "gp2",
+        "team": "scot_racing_team_gp2_2010",
+        "number": 59,
+        "country": "ITA"
+      },
+      {
+        "key": "alex_de_angelis_gp2",
+        "index": 63,
+        "name": "Alex de Angelis",
+        "type": "gp2",
+        "team": "scot_racing_team_gp2_2010",
+        "number": 15,
+        "country": "ITA"
+      },
+      {
+        "key": "gabor_talmacsi_gp2",
+        "index": 64,
+        "name": "Gabor Talmacsi",
+        "type": "gp2",
+        "team": "speed_up_gp2_2010",
+        "number": 2,
+        "country": "HUN"
+      },
+      {
+        "key": "andrea_iannone_gp2",
+        "index": 65,
+        "name": "Andrea Iannone",
+        "type": "gp2",
+        "team": "speed_up_gp2_2010",
+        "number": 29,
+        "country": "ITA"
+      },
+      {
+        "key": "bernat_martinez_gp2",
+        "index": 66,
+        "name": "Bernat Martinez",
+        "type": "gp2",
+        "team": "maquinza_sag_team_gp2_2010",
+        "number": 76,
+        "country": "SPA"
+      },
+      {
+        "key": "marshal_al_naimi_gp2",
+        "index": 67,
+        "name": "Mashel Al Naimi",
+        "type": "gp2",
+        "team": "blusens_bqr_gp2_2010",
+        "number": 95,
+        "country": "QAT"
+      },
+      {
+        "key": "ratthapark_wilairot_gp2",
+        "index": 68,
+        "name": "Ratthapark Wilairot",
+        "type": "gp2",
+        "team": "honda_sag_gp2_2010",
+        "number": 14,
+        "country": "TAI"
+      },
+      {
+        "key": "hector_faubel_gp2",
+        "index": 69,
+        "name": "Hector Faubel",
+        "type": "gp2",
+        "team": "marc_vds_racing_team_gp2_2010",
+        "number": 55,
+        "country": "SPA"
+      },
+      {
+        "key": "stefan_bradl_gp2",
+        "index": 70,
+        "name": "Stefan Bradl",
+        "type": "gp2",
+        "team": "viessmann_kiefer_racing_250",
+        "number": 65,
+        "country": "GER"
+      },
+      {
+        "key": "vladimir_leonov_gp2",
+        "index": 71,
+        "name": "Vladimir Leonov",
+        "type": "gp2",
+        "team": "vector_kiefer_racing_gp2_2010",
+        "number": 21,
+        "country": "RUS"
+      },
+      {
+        "key": "karel_abraham_gp2",
+        "index": 72,
+        "name": "Karel Abraham",
+        "type": "gp2",
+        "team": "cardion_ab_motoracing_gp2_2010",
+        "number": 17,
+        "country": "CZE"
+      },
+      {
+        "key": "dominique_aegerter_gp2",
+        "index": 73,
+        "name": "Dominique Aegerter",
+        "type": "gp2",
+        "team": "technomag_cip_gp2_2010",
+        "number": 77,
+        "country": "SWI"
+      },
+      {
+        "key": "shoya_tomizawa_gp2",
+        "index": 74,
+        "name": "Shoya Tomizawa",
+        "type": "gp2",
+        "team": "technomag_cip_gp2_2010",
+        "number": 48,
+        "country": "JPN"
+      },
+      {
+        "key": "yonny_hernandez_gp2",
+        "index": 75,
+        "name": "Yonny Hernandez",
+        "type": "gp2",
+        "team": "blusens_bqr_gp2_2010",
+        "number": 68,
+        "country": "NONE"
+      },
+      {
+        "key": "arne_tode_gp2",
+        "index": 76,
+        "name": "Arne Tode",
+        "type": "gp2",
+        "team": "racing_team_germany_gp2_2010",
+        "number": 41,
+        "country": "GER"
+      },
+      {
+        "key": "valentin_debise_gp2",
+        "index": 77,
+        "name": "Valentin Debise",
+        "type": "gp2",
+        "team": "wtr_san_marino_team_gp2_2010",
+        "number": 53,
+        "country": "FRA"
+      },
+      {
+        "key": "alex_debon_gp2",
+        "index": 78,
+        "name": "Alex Debon",
+        "type": "gp2",
+        "team": "red_bull_ajo_motorsport_gp2_2010",
+        "number": 6,
+        "country": "SPA"
+      },
+      {
+        "key": "lukas_pesek_gp2",
+        "index": 79,
+        "name": "Lukas Pesek",
+        "type": "gp2",
+        "team": "matteoni_racing_gp2_2010",
+        "number": 52,
+        "country": "CZE"
+      },
+      {
+        "key": "roberto_rolfo_gp2",
+        "index": 80,
+        "name": "Roberto Rolfo",
+        "type": "gp2",
+        "team": "italtrans_str_gp2_2010",
+        "number": 44,
+        "country": "ITA"
+      },
+      {
+        "key": "robertino_pietri_gp2",
+        "index": 81,
+        "name": "Robertino Pietri",
+        "type": "gp2",
+        "team": "italtrans_str_gp2_2010",
+        "number": 39,
+        "country": "NONE"
+      },
+      {
+        "key": "thomas_luthi_gp2",
+        "index": 82,
+        "name": "Thomas Luthi",
+        "type": "gp2",
+        "team": "interwetten_moriwaki_racing_gp2_2010",
+        "number": 12,
+        "country": "SWI"
+      },
+      {
+        "key": "alex_baldolini_gp2",
+        "index": 83,
+        "name": "Alex Baldolini",
+        "type": "gp2",
+        "team": "caretta_technology_race_dept_gp2_2010",
+        "number": 25,
+        "country": "ITA"
+      }
+    ]
+  },
+  "roster_notes": [
+    "2009 has 18 GP, 23 250cc and 31 125cc entries.",
+    "2010 has 17 GP, 40 gp2/Moto2 and 27 125cc entries; do not count the GP fallback twice.",
+    "Rider indices are global within the supplied season tables and are reused across seasons.",
+    "The 2010 script type gp2 is distinct from the 2009 script type 250; the online statistics normalization still needs native submission evidence."
+  ],
+  "2010_supplied_calendars": {
+    "gp_2010_gp": [
+      "qatar_2009",
+      "jerez_2009",
+      "lemans_2009",
+      "mugello_2009",
+      "silverstone_2009",
+      "assen_2009",
+      "catalunya_2009",
+      "sachsenring_2009",
+      "lagunaseca_2009",
+      "brno_2009",
+      "indianapolis_2009",
+      "misano_2009",
+      "motegi_2009",
+      "sepang_2009",
+      "phillipisland_2009",
+      "estoril_2009",
+      "valencia_2009"
+    ],
+    "gp_2010_125": [
+      "qatar_2009",
+      "jerez_2009",
+      "lemans_2009",
+      "mugello_2009",
+      "silverstone_2009",
+      "assen_2009",
+      "catalunya_2009",
+      "sachsenring_2009",
+      "brno_2009",
+      "indianapolis_2009",
+      "misano_2009",
+      "motegi_2009",
+      "sepang_2009",
+      "phillipisland_2009",
+      "estoril_2009",
+      "valencia_2009"
+    ]
+  },
+  "calendar_notes": [
+    "The supplied GP calendar has 17 rounds and uses Silverstone instead of Donington.",
+    "The supplied 125cc calendar has 16 rounds and omits Laguna Seca.",
+    "The supplied schedule files do not define a separate gp_2010_gp2 table; its runtime binding must be verified rather than invented.",
+    "Istanbul and Shanghai are historical bonus tracks, not extra rounds in these supplied season schedules.",
+    "The native slot balaton_2009 has no track definition or geometry in these three supplied packages; do not expose it as playable."
+  ],
+  "statistics": {
+    "existing_view_range": [
+      1,
+      378
+    ],
+    "formula": "1 + group*63 + class_slot*21 + native_track_index",
+    "class_slot_labels_observed_on_site": {
+      "0": "125cc",
+      "1": "250cc",
+      "2": "MotoGP"
+    },
+    "lap_ticks_property": 2,
+    "ticks_per_second": 60,
+    "rating_property": 3,
+    "timed_rating_formula": "-(lap_ticks * 100)",
+    "game_mode_property": 6,
+    "championship_flag": "0x10000000",
+    "track_property": 7,
+    "season_property": 13,
+    "critical_open_question": "Map gp2/Moto2 native writes and reads; do not assume it is a fourth website-only class or globally relabel the 250cc slot."
+  },
+  "website_observed": {
+    "url": "https://www.nobkonline.com/motogp/",
+    "javascript": "/assets/motogp.js?v=7",
+    "javascript_sha256": "ee077ae3e487095ff302e3df206f86c2bb6d8c8b249ef4c859bb4eff5d371231",
+    "track_metadata_entries": 17,
+    "track_art_index_entries": 17,
+    "missing_track_indices": [
+      18,
+      19,
+      20
+    ],
+    "dlc_board_metadata": "Public queries for views 19,20,21,40,41,42,61,62,63 returned numeric placeholder track names and zero rows.",
+    "live_samples": "The 37 populated group-0 board best rows inspected all had season property 13 equal to 0; they do not establish 2010 normalization."
+  },
+  "evidence_hashes": {
+    "native_data_section_sha256": "a43bbb138577125cf26f4d02f78f13fe40c70b685ccdf8daeaace23c60d3dbb5",
+    "native_rdata_section_sha256": "624be4534fdf111049887494a0a6a9c89a5d291d3ee0d2eea715accbedac3fb1",
+    "native_track_key_pointer_array_offset_in_data_section": "0x16358"
+  },
+  "xbox_title_id": "434307F0",
+  "marketplace_content_type": "00000002"
+}

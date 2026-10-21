@@ -1,0 +1,5 @@
+# Preserve the upstream archive-reader bytes used by the integrity manifest.
+third_party/7zip/7z.exe -text
+third_party/7zip/7z.dll -text
+third_party/7zip/7zip-source.tar.xz -text
+third_party/7zip/License.txt -text

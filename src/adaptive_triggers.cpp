@@ -107,7 +107,7 @@ void SetFocused(bool value){focused.store(value);wake.notify_all();}
 std::string Status(bool tr) {
   switch(state.load()) {
     case State::Backend:return tr?"Adaptif tetikler için SDL kontrolcü arka ucunu seç.":"Select the SDL controller backend for adaptive triggers.";
-    case State::Waiting:return tr?"Yerel DualSense bekleniyor. 8BitDo / DS3 / DS4 desteklemez.":"Waiting for a native DualSense. 8BitDo / DS3 / DS4 do not support this.";
+    case State::Waiting:return {};
     case State::Sent:return tr?"Efekt SDL tarafından kabul edildi; fiziksel direnç testi gerekli.":"SDL accepted the effect; physical resistance testing is still required.";
     case State::Failed:return tr?"Kol efekti kabul etmedi. USB / yerel SDL bağlantısını kontrol et.":"Controller rejected the effect. Check USB / native SDL access.";
     case State::Unfocused:return tr?"Oyun odakta değil: tetik direnci bırakıldı.":"Game unfocused: trigger resistance released.";

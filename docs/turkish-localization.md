@@ -7,7 +7,7 @@ Direct launch supports `--game_text_language=turkish`.
 
 ## Scope
 
-- All 2,102 native message IDs reviewed: 1,700 translated; the other 402 are
+- All 2,102 native message IDs reviewed: 1,697 translated; the other 405 are
   names, teams, motorcycle models, brands, classes, units, digits, or words
   already written identically in Turkish (for example Normal/Pastel).
 - Native menus, HUD/race messages, career tutorials, sponsors/staff UI, riding
@@ -26,6 +26,51 @@ Direct launch supports `--game_text_language=turkish`.
   repaint words embedded inside a video/logo/photograph. No separate subtitle
   files were present in the supplied dump; localized written tutorial/riding
   text comes from the native message inventory.
+
+## Context review — 20 October 2026
+
+The latest review corrects 97 message translations and five achievements.
+Race-weekend wording, online racing terminology, slipstream/catch-up descriptions,
+career staff/sponsor instructions, tyre/clutch explanations and riding advice now
+use their racing or menu context. In particular, the two identical English
+`Select an Empty Slot.` prompts have distinct staff/sponsor translations by ID.
+Official circuit names such as TT Circuit Assen and Misano World Circuit are
+preserved. Rider, team, motorcycle and company names remain names; historical
+track names are not replaced with modern sponsored names.
+
+The catalogs, generated message bank, affected display scripts, achievement
+table and manifest are synchronized. The text generator retains verified font
+manifest entries, so a prose-only revision does not require regenerating fonts.
+Catalog/token/hash checks passed for all 2,102 messages and ten overlay files.
+The independent Lua parser comparison passed 6,140 non-display checks, with
+609 translated display fields. These are data checks; this revision was not
+built or exercised in the running game. Native text wrapping remains to be
+reviewed visually.
+
+### Launcher language review
+
+The launcher has a separate source-level Turkish review covering all seven
+settings pages, help text, achievement filters/status messages, the DualSense
+editor, ISO/title-update import, Steam integration and update notifications.
+Literal translations such as “doğal PlayStation”, “oyunun şiddeti” and
+“stok default.xex” are replaced with descriptions of the actual behavior.
+The sharpening control also covers CAS, so its Turkish label is now
+“Görüntü keskinliği”. The Online tab retains its English name in Turkish, as
+requested; instructions referring to that tab use “Online” too.
+
+Turkish UI retains the product term “Launcher”, including its language label,
+version footer, tooltips and update messages. Other prose uses “günlük” and
+“oyun güncellemesi”. Footer action buttons preserve the English horizontal
+padding and spacing, growing with translated text using the rendered button
+font. Layout is refreshed after language and DPI changes without shrinking text.
+Actual filenames/folders (`default.xex`, `default.xexp`, `game`, `logs`), setting
+keys, key-binding tokens and product names such as NOBK Online, Steam, DualSense,
+PlayStation and AMD FSR stay unchanged. The update-file picker remains unrestricted
+and localizes only its All files caption. The existing ISO probe expectations
+match the revised Turkish labels. Source checks preserve the 25 binding keys,
+defaults and English controller labels. No new application build, UI run or push
+was performed; native text fitting and OS-owned dialog buttons remain separate
+from this prose review.
 
 ## Native fonts
 

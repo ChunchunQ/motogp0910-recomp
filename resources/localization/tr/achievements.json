@@ -112,9 +112,9 @@
     "en": "Boy Done Good",
     "id": 16,
     "locked": "Win on your home circuit in Career Mode.",
-    "tr": "Ev Sahibi Gururu",
-    "description_tr": "Kariyer Modu'nda kendi pistinizde kazanın.",
-    "locked_tr": "Kariyer Modu'nda kendi pistinizde kazanın."
+    "tr": "Kendi Pistinde Zafer",
+    "description_tr": "Kariyer Modu'nda ana pistinizde bir yarış kazanın.",
+    "locked_tr": "Kariyer Modu'nda ana pistinizde bir yarış kazanın."
   },
   {
     "description": "Obtain a full complement of sponsors.",
@@ -184,9 +184,9 @@
     "en": "Draughter",
     "id": 24,
     "locked": "Spend a total of 10 minutes slipstreaming in Arcade Mode.",
-    "tr": "Hava Koridoru",
-    "description_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin hava koridorundan yararlanın.",
-    "locked_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin hava koridorundan yararlanın."
+    "tr": "Rüzgâr Koridoru",
+    "description_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin rüzgâr koridorundan yararlanın.",
+    "locked_tr": "Arcade Modu'nda toplam 10 dakika başka sürücülerin rüzgâr koridorundan yararlanın."
   },
   {
     "description": "Get every type of time bonus within the same lap in Arcade Mode.",
@@ -302,8 +302,8 @@
     "id": 38,
     "locked": "Complete a lap of any track in the wrong direction, in any mode except Splitscreen.",
     "tr": "Duramıyorum",
-    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir pisti ters yönde bir tur tamamlayın.",
-    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir pisti ters yönde bir tur tamamlayın."
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda, herhangi bir pistte ters yönde bir tur tamamlayın.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda, herhangi bir pistte ters yönde bir tur tamamlayın."
   },
   {
     "description": "Win a wet-weather race in any mode except Splitscreen.",
@@ -374,8 +374,8 @@
     "id": 46,
     "locked": "Win a race against a full grid of human riders.",
     "tr": "Şampanya!",
-    "description_tr": "Başlangıç sıralarının tamamı insan oyuncularla dolu olan bir yarışı kazanın.",
-    "locked_tr": "Başlangıç sıralarının tamamı insan oyuncularla dolu olan bir yarışı kazanın."
+    "description_tr": "Başlangıç sıralarının tamamının insan oyuncularla dolu olduğu bir yarışı kazanın.",
+    "locked_tr": "Başlangıç sıralarının tamamının insan oyuncularla dolu olduğu bir yarışı kazanın."
   },
   {
     "description": "Do a wheelie lasting at least 500 feet in any mode except Splitscreen.",
@@ -437,8 +437,8 @@
     "id": 54,
     "locked": "Finish a race within 0.1 seconds of another rider in any mode except Splitscreen.",
     "tr": "Foto Finiş",
-    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücünün 0,1 saniye yakınında bitirin.",
-    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücünün 0,1 saniye yakınında bitirin."
+    "description_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücüyle aranızda en fazla 0,1 saniye fark olacak şekilde bitirin.",
+    "locked_tr": "Bölünmüş Ekran dışındaki herhangi bir modda bir yarışı başka bir sürücüyle aranızda en fazla 0,1 saniye fark olacak şekilde bitirin."
   },
   {
     "description": "Finish 10th or better in every race of a full season.",

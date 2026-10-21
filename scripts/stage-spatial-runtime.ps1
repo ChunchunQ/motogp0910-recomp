@@ -7,7 +7,11 @@ $Manifest = Get-Content -LiteralPath (Join-Path $Folder 'manifest.json') -Raw | 
 $Sdk = Get-Content -LiteralPath (Join-Path $Root 'sdk-version.json') -Raw | ConvertFrom-Json
 if ($Manifest.sdk_version -ne $Sdk.version -or $Manifest.source_commit -ne $Sdk.source_commit) { throw 'Runtime must match sdk-version.json.' }
 $Archive = Join-Path $Folder $Manifest.archive
-if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Manifest.sha256) {
+$ArchiveHash = [Security.Cryptography.SHA256]::Create()
+$ArchiveStream = [IO.File]::OpenRead($Archive)
+try { $ArchiveDigest = [BitConverter]::ToString($ArchiveHash.ComputeHash($ArchiveStream)).Replace('-', '').ToLowerInvariant() }
+finally { $ArchiveStream.Dispose(); $ArchiveHash.Dispose() }
+if ($ArchiveDigest -ne $Manifest.sha256) {
     throw 'Spatial runtime archive SHA-256 mismatch.'
 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem

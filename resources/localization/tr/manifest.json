@@ -3,13 +3,13 @@
   "language": "tr",
   "voice_language": "english",
   "message_count": 2102,
-  "translated_messages": 1700,
+  "translated_messages": 1697,
   "files": [
     {
       "path": "text/english.msg",
       "source_decoded_sha256": "d3df65ecb87a4d1378936e15a6155ed2ce8482b13c574510ad8207baa0d20e1a",
-      "sha256": "e88899180e00fac84d3b3b4e77c2903b898ec8115291d7fce718d9916aac78d7",
-      "size": 75101
+      "sha256": "21dcee42fb52f655d2b951501fca6790ac4cde3502dac3758748a107b9b67ec4",
+      "size": 75377
     },
     {
       "path": "scripts/bikes.english.lua",
@@ -20,14 +20,14 @@
     {
       "path": "scripts/tracks.english.lua",
       "source_decoded_sha256": "6d8944e4f4aed1c84dd9ce8f10bdd6a113bd5b58a48ba60ee9ae47e97a722c47",
-      "sha256": "9c93b2222400d38d7caaba157bfb0ef0e28e36a876c07799e47e31c9038551ec",
-      "size": 51275
+      "sha256": "9bb65d42188da12b159a5796dfcfa3afa49be8851c1f4fb1aeadeffa8a70e0e3",
+      "size": 51289
     },
     {
       "path": "scripts/upgrades.english.lua",
       "source_decoded_sha256": "a0e611a0af764a3952612b6f834ca4b77cde104b7845e58486ddc18e89adcdeb",
-      "sha256": "73e2bcfab433cdc5a140304de604ad940f8fba9d8a1bac6f108e2dbd05a07c21",
-      "size": 161373
+      "sha256": "bfbf62c52c355dac1f29497de71af9810133a66696fe7b75f2dcde96e4eb92a7",
+      "size": 161575
     },
     {
       "path": "scripts/unlockables.english.lua",

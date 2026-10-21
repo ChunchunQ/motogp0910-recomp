@@ -215,10 +215,14 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
     auto session=kernel_->object_table()->LookupObject<Session>(header->wait_list_blink);
     if(!session || session->guest_object()!=pointer)return kBadHandle;
     if(message==0xB0010){
-      const auto flags=Load32(b+4),pub=Load32(b+8),priv=Load32(b+12),info=Load32(b+20),nonce=Load32(b+24);
+      const auto flags=Load32(b+4),info=Load32(b+20),nonce=Load32(b+24);
+      auto pub=Load32(b+8),priv=Load32(b+12);
       if(session->room || Load32(b+16)!=0 || (!pub && !priv) || pub>20 || priv>20-pub ||
          !Valid(info,60,true) || !Valid(nonce,8,true))return kInvalid;
       if(flags&16)return Error(50); // Ranked arbitration requires Xbox Live services.
+      // PC-created rooms always expose their full capacity as public. Retain
+      // the wire fields and joining behavior for compatibility with other hosts.
+      if(flags&1){pub+=priv;priv=0;}
       const auto session_nonce=RandomId();
       Room room;
       if(online_ && !(flags&0x20)){
@@ -277,8 +281,10 @@ std::optional<uint32_t> GuestBridge::Dispatch(uint32_t message,uint32_t buffer,u
     unsigned used_public=0,used_private=0;
     for(const auto* list:{&session->local,&session->remote})for(auto [id,priv]:*list){if(priv)++used_private;else ++used_public;}
     if(message==0xB0018){
-      const auto pub=Load32(b+8),priv=Load32(b+12);
-      if((!pub && !priv) || pub>20 || priv>20-pub || pub<used_public || priv<used_private)return kInvalid;
+      auto pub=Load32(b+8),priv=Load32(b+12);
+      if((!pub && !priv) || pub>20 || priv>20-pub)return kInvalid;
+      if(session->flags&1){pub+=priv;priv=0;}
+      if(pub<used_public || priv<used_private)return kInvalid;
       auto room=session->statistics_room?session->statistics_room:node_->CurrentRoom();if(!room || room->id!=session->room)return Error(1168);
       auto flags=(Load32(b+4)&~1u)|(session->flags&1);
       if(session->flags&1){room->capacity=pub+priv;room->private_slots=priv;room->flags=flags;if(session->statistics_room)session->statistics_room=room;else node_->UpdateRoom(*room);}

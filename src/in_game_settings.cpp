@@ -1,4 +1,5 @@
 #include "in_game_settings.h"
+#include "input_synchronization.h"
 #include "config_file.h"
 #include "adaptive_triggers.h"
 #include "overlay_theme.h"
@@ -29,7 +30,7 @@
 #include <unistd.h>
 #endif
 namespace motogp::settings {
-std::mutex& InputValueMutex(){static std::mutex mutex;return mutex;}
+std::mutex& InputValueMutex(){return motogp::InputStateMutex();}
 namespace {
 using Paint=rex::ui::Presenter::GuestOutputPaintConfig;
 const Spec* Find(std::string_view key){for(const auto& s:Catalog())if(s.key==key)return &s;return nullptr;}
@@ -91,7 +92,7 @@ const std::vector<Spec>& Catalog(){static const auto all=[] {
   for(const auto& b:launcher::kBindings){
     // UTF-8 UI names come from the SDK-independent canonical binding list.
     std::string en;for(auto* p=b.english;*p;++p)en+=char(*p);
-    const char* tr[]={"Vites büyüt / Onayla (A/Cross)","Vites küçült / Geri (B/Circle)","Arka fren (X/Square)","Kutlama hareketi (Y/Triangle)","Ön fren (LT/L2)","Gaz (RT/R2)","Kapan (LB/L1)","Kamera değiştir (RB/R1)","Öne eğil (LS/Left stick)","Arkaya eğil (LS/Left stick)","Sola dön (LS/Left stick)","Sağa dön (LS/Left stick)","Arkaya bak (LS/L3)","Etrafa bak: yukarı (RS/Right stick)","Etrafa bak: aşağı (RS/Right stick)","Etrafa bak: sol (RS/Right stick)","Etrafa bak: sağ (RS/Right stick)","Atanmamış (RS/R3)","Özür hareketi (D-pad Yukarı)","Kamera değiştir (D-pad Aşağı)","Öfke hareketi (D-pad Sol)","Sonraki müzik (D-pad Sağ)","İkinci Şans (Back/Select)","Duraklat (Start/Start)","Atanmamış (Guide/PS)"};
+    const char* tr[]={"Kapan / Onayla (A/Cross)","Vites küçült / Geri (B/Circle)","Arka fren (X/Square)","Vites büyüt (Y/Triangle)","Fren (LT/L2)","Gaz (RT/R2)","Arkaya bak (LB/L1)","Kamera değiştir (RB/R1)","Sürücüyü öne eğ (LS Yukarı)","Sürücüyü arkaya eğ (LS Aşağı)","Sola dön (LS Sol)","Sağa dön (LS Sağ)","Atanmamış (LS/L3)","Atanmamış (RS Yukarı)","Atanmamış (RS Aşağı)","Atanmamış (RS Sol)","Atanmamış (RS Sağ)","Atanmamış (RS/R3)","Kutlama hareketi (D-pad Yukarı)","Kamera değiştir (D-pad Aşağı)","Özür hareketi (D-pad Sol)","Öfke hareketi (D-pad Sağ)","İkinci Şans (Back/Select)","Duraklat (Start/Start)","Atanmamış (Guide/PS)"};
     s.push_back({b.key,en,tr[&b-launcher::kBindings.data()],P::Controls,K::Binding});
   }
   return s;
@@ -220,10 +221,17 @@ void InputGate::Open(){std::lock_guard lock(transition_);if(!input_)return;neutr
   if(restore_mouse_)rex::cvar::SetFlagByName("mnk_mouse","false");
 }epoch_.fetch_add(1,std::memory_order_release);}
 void InputGate::Close(){std::lock_guard lock(transition_);open_=false;buttons_=0;neutral_epoch_=UINT64_MAX;}
-void InputGate::SetFocused(bool value){if(focused_.exchange(value)!=value){buttons_=0;neutral_epoch_=UINT64_MAX;epoch_.fetch_add(1,std::memory_order_release);}}
+void InputGate::SetFocused(bool value){std::lock_guard lock(transition_);if(focused_.exchange(value)!=value){buttons_=0;neutral_epoch_=UINT64_MAX;epoch_.fetch_add(1,std::memory_order_release);}}
 void InputGate::PollGuest(){
   if(!input_||!held_.load(std::memory_order_acquire))return;
+  // Focus loss must leave the guest blocker held without rebuilding device
+  // lists or consuming input in the background. Refocus requires a fresh,
+  // neutral sample before the UI can act or the blocker can be released.
+  if(!focused_.load(std::memory_order_acquire)){
+    buttons_=0;neutral_epoch_=UINT64_MAX;return;
+  }
   const std::lock_guard values_lock(InputValueMutex());
+  if(!focused_.load(std::memory_order_acquire))return;
   // Open/close originate on UI, but release calls poll drivers and belongs here.
   const auto sample_epoch=epoch_.load(std::memory_order_acquire);
   uint16_t buttons=0;
@@ -237,13 +245,19 @@ void InputGate::PollGuest(){
   // Drain keystrokes as well as pad states. XamInputGetKeystrokeEx is gated
   // separately because the SDK's built-in blocker covers GetState only.
   for(uint32_t user=0;user<4;++user)for(int i=0;i<256;++i){rex::input::X_INPUT_KEYSTROKE event{};if(input_->GetKeystroke(user,0,&event)!=0)break;}
-  buttons_.store(focused_.load(std::memory_order_acquire)?buttons:0,std::memory_order_release);
-  if(!buttons&&focused_.load(std::memory_order_acquire))neutral_epoch_.store(sample_epoch,std::memory_order_release);
-  if(!buttons){std::lock_guard lock(transition_);if(!open_.load(std::memory_order_acquire)&&held_.exchange(false)){
+  // Serialize publication/release with UI focus/open/close transitions. A sample
+  // spanning Alt+Tab must not rearm the UI or release its blocker on return.
+  const std::lock_guard transition_lock(transition_);
+  if(!focused_.load(std::memory_order_acquire)||epoch_.load(std::memory_order_acquire)!=sample_epoch){
+    buttons_=0;neutral_epoch_=UINT64_MAX;return;
+  }
+  buttons_.store(buttons,std::memory_order_release);
+  if(!buttons)neutral_epoch_.store(sample_epoch,std::memory_order_release);
+  if(!buttons&&!open_.load(std::memory_order_acquire)&&held_.exchange(false)){
     input_->RemoveUIInputBlocker();
     if(restore_mouse_)rex::cvar::SetFlagByName("mnk_mouse","true");
     restore_mouse_=false;
-  }}
+  }
 }
 namespace {
 std::string CaptureKey(ImGuiKey key){
@@ -343,7 +357,9 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
       ImGui::TextWrapped("%s",Tr(tr,"DualSense / Edge + native SDL required; USB or Bluetooth. Static resistance profiles. Physical hardware testing is pending.","DualSense / Edge + yerel SDL gerekir; USB veya Bluetooth. Sabit direnç profilleri. Fiziksel donanım testi henüz yapılmadı."));
       if(!adaptive::LiveAvailable())ImGui::TextWrapped("%s",Tr(tr,"Select the SDL controller backend in the launcher to enable live DualSense controls.","Canlı DualSense ayarları için launcher’dan SDL kontrolcü arka ucunu seç."));
       ImGui::TextWrapped("%s",Tr(tr,"Trigger resistance stays fixed during play; it does not follow speed, engine RPM or braking load.","Tetik direnci oyun sırasında sabit kalır; hız, motor devri veya fren yükünü takip etmez."));
-      ImGui::TextWrapped("%s",adaptive::Status(tr).c_str());ImGui::Separator();
+      const auto trigger_status=adaptive::Status(tr);
+      if(!trigger_status.empty())ImGui::TextWrapped("%s",trigger_status.c_str());
+      ImGui::Separator();
     }
     if(view.page==Page::Graphics&&(model.Value("present_effect")=="fsr2"||model.Value("present_effect")=="fsr3")){
       ImGui::TextWrapped("%s",Tr(tr,"FSR 2/3: full temporal reconstruction is incomplete. No frame generation or scene render-cost reduction.","FSR 2/3: tam zamansal yeniden oluşturma eksik. Kare üretimi veya sahne çizim yükü azalması sağlamaz."));ImGui::Separator();

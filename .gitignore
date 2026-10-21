@@ -1,5 +1,6 @@
 # Original game files and generated code stay local.
 /assets/
+/dlc/
 /out/
 /generated/*
 !/generated/rexglue.cmake

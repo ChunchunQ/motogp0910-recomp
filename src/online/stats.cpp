@@ -7,6 +7,8 @@
 #include <map>
 #include <set>
 #include <atomic>
+#include <array>
+#include <limits>
 
 namespace motogp::online {
 namespace {
@@ -16,6 +18,39 @@ void Put32(uint8_t* p,uint32_t value){rex::memory::store_and_swap<uint32_t>(p,va
 void Put64(uint8_t* p,uint64_t value){rex::memory::store_and_swap<uint64_t>(p,value);}
 constexpr uint32_t Error(uint32_t code){return 0x80070000u|code;}
 std::mutex enumerator_mutex;std::map<const rex::system::XEnumerator*,uint32_t> enumerators;
+bool TimedDisplay(const Spec& spec){
+ // 8223C9D8 selects Lap Times or the two ghost categories. 82300088 maps
+ // their class/track offsets to bases 1, 127 and 316; 82300248/822FEEC8
+ // request the same eight display columns. Arcade and internal reads stay raw.
+ constexpr std::array<uint16_t,8> columns{3,1,2,4,5,6,7,0xFFFA};
+ const bool timed=(spec.view>=1&&spec.view<=63)||(spec.view>=127&&spec.view<=189)||(spec.view>=316&&spec.view<=378);
+ return timed && spec.columns.size()==columns.size() &&
+  std::all_of(columns.begin(),columns.end(),[&](auto id){return std::find(spec.columns.begin(),spec.columns.end(),id)!=spec.columns.end();});
+}
+Column ReadColumn(const Row& row,uint16_t id,bool lap_times,uint32_t view){
+ if(id==0xFFFA)return {id,1,row.rank};
+ uint16_t property=id;
+ if(lap_times){
+  // Native read columns are not write-property IDs. 823009E8 reads these
+  // values as int32; in particular an int64 negative rating reads back as -1.
+  // 8223F300 uses the track; 8223F288 interprets the season as 2009/2010.
+  switch(id){case 3:property=2;break;case 5:property=6;break;
+   case 6:property=7;break;case 7:property=13;break;default:break;}
+ }
+ const auto found=std::find_if(row.columns.begin(),row.columns.end(),[&](const auto& c){return c.id==property;});
+ const bool projected=lap_times && property!=id;
+ if(projected){
+  constexpr auto absent=uint64_t(-1);
+  // 8223F300 indexes the 21-track table without checking the index. A missing
+  // or invalid track property must use this view's track, never the -1 sentinel.
+  if(id==6 && (found==row.columns.end() || found->type!=1 || found->bits>=21))return {id,1,(view-1)%21};
+  if(found==row.columns.end() || found->type!=1)return {id,1,absent};
+  if(id==3 && (!found->bits || found->bits>=uint64_t(std::numeric_limits<int32_t>::max())))return {id,1,absent};
+  // Preserve the complete mode bit field, including Championship's 0x10000000.
+  return {id,1,found->bits};
+ }
+ return found!=row.columns.end()?*found:Column{id,1,0};
+}
 struct WriteReservation {
  std::shared_ptr<Client> client;std::atomic<bool> finished{false};
  explicit WriteReservation(std::shared_ptr<Client> value):client(std::move(value)){client->BeginWrite();}
@@ -66,14 +101,14 @@ void WriteResults(uint8_t* base,uint32_t output,const std::vector<Spec>& specs,c
  size_t size=8+specs.size()*16;for(size_t i=0;i<specs.size();++i){if(pages[i].rows.size()>100)throw std::runtime_error("Statistics row count too large");size+=pages[i].rows.size()*(48+specs[i].columns.size()*24);}
  std::memset(base+output,0,size);Put32(base+output,static_cast<uint32_t>(specs.size()));Put32(base+output+4,output+8);
  uint32_t cursor=output+8+static_cast<uint32_t>(specs.size())*16;
- for(size_t i=0;i<specs.size();++i){const auto& page=pages[i];const auto& spec=specs[i];auto* view=base+output+8+i*16;
+ for(size_t i=0;i<specs.size();++i){const auto& page=pages[i];const auto& spec=specs[i];const bool lap_times=TimedDisplay(spec);auto* view=base+output+8+i*16;
   Put32(view,spec.view);Put32(view+4,page.total);Put32(view+8,static_cast<uint32_t>(page.rows.size()));Put32(view+12,page.rows.empty()?0:cursor);
   const auto rows=cursor;cursor+=static_cast<uint32_t>(page.rows.size())*48;
   for(size_t j=0;j<page.rows.size();++j){const auto& source=page.rows[j];auto* row=base+rows+j*48;Put64(row,source.peer);Put32(row+8,source.rank);
    const auto primary=std::find_if(source.columns.begin(),source.columns.end(),[](const auto& c){return c.id==3;});if(primary!=source.columns.end())Put64(row+16,primary->bits);
    std::memcpy(row+24,source.name.data(),std::min<size_t>(15,source.name.size()));Put32(row+40,static_cast<uint32_t>(spec.columns.size()));Put32(row+44,spec.columns.empty()?0:cursor);
-   for(auto id:spec.columns){auto* column=base+cursor;rex::memory::store_and_swap<uint16_t>(column,id);auto found=std::find_if(source.columns.begin(),source.columns.end(),[&](const auto& c){return c.id==id;});
-    const Column value=id==0xFFFA?Column{id,1,source.rank}:found!=source.columns.end()?*found:Column{id,1,0};column[8]=value.type;
+   for(auto id:spec.columns){auto* column=base+cursor;rex::memory::store_and_swap<uint16_t>(column,id);
+    const Column value=ReadColumn(source,id,lap_times,spec.view);column[8]=value.type;
     if(value.type==1 || value.type==5)Put32(column+16,static_cast<uint32_t>(value.bits));else Put64(column+16,value.bits);cursor+=24;
    }
   }

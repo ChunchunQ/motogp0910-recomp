@@ -52,7 +52,11 @@ and the legacy array format without converting it. Unknown IDs do not inflate
 catalog progress. A transient missing/partially written file retains the last
 good snapshot; changing profile clears the previous profile's snapshot.
 
-Default progress path: Windows Documents/motogp0910/achievements/434307F0.toml.
+Default progress path: Windows `Documents/MotoGP 09-10/achievements/434307F0.toml`.
+The launcher and game share the [user-data migration](portable-launcher.md):
+when the new default folder is absent, the old `Documents/motogp0910` tree is
+copied and verified once, with the original retained as a backup. Existing new
+folders and custom roots are never merged or overwritten.
 The Windows Known Folder API honors redirected/OneDrive Documents. Configured
 user_data_root takes precedence over REX_USER_DATA_ROOT; relative paths resolve
 against the executable folder, matching the child game's working directory.

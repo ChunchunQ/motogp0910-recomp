@@ -118,7 +118,7 @@ Push-Location $ProjectRoot
 try {
     $ToolsBuild = Join-Path $ProjectRoot 'out/tools-win'
     Invoke-Native -Command $CMake -Arguments @('-S', 'tools', '-B', $ToolsBuild, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk")
-    Invoke-Native -Command $CMake -Arguments @('--build', $ToolsBuild, '--parallel', "$Jobs")
+    Invoke-Native -Command $CMake -Arguments @('--build', $ToolsBuild, '--target', 'motogp_inspect', '--parallel', "$Jobs")
     $Extracted = Join-Path $ProjectRoot 'assets/updates/extracted'
     if (!(Test-Path -LiteralPath $Extracted)) {
         Invoke-Native -Command (Join-Path $ToolsBuild 'motogp_inspect.exe') -Arguments @('stfs-extract', $TitleUpdatePath, $Extracted)
@@ -129,7 +129,7 @@ try {
     Stage-File -Source (Join-Path $Extracted 'default.xexp') -Destination (Join-Path $Staged 'default.xexp') -Expected $PatchHash
     Invoke-Native -Command $RexGlue -Arguments @('codegen', '--ignore-stamp', 'motogp0910_manifest.toml')
     Invoke-Native -Command $CMake -Arguments @('--preset', 'win-amd64-release', "-DCMAKE_CXX_COMPILER=$Clang", "-DCMAKE_MAKE_PROGRAM=$Ninja", "-DCMAKE_PREFIX_PATH=$Sdk", "-DREXSDK_VERSION=$($SdkMetadata.cmake_version)")
-    Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--parallel', "$Jobs")
+    Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--target', 'motogp0910', 'motogp0910-launcher', 'motogp0910-crash-monitor', '--parallel', "$Jobs")
     $ExeDirectory = Join-Path $ProjectRoot 'out/build/win-amd64-release'
     $ControllerDb = Join-Path $ProjectRoot 'third_party/SDL_GameControllerDB'
     Copy-Item -LiteralPath (Join-Path $ControllerDb 'gamecontrollerdb.txt') -Destination $ExeDirectory -Force
@@ -141,9 +141,21 @@ try {
     Get-ChildItem -LiteralPath (Join-Path $Sdk 'bin') -Filter '*.dll' -File | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $ExeDirectory -Force
     }
-    Invoke-Native -Command $CMake -Arguments @('--build', '--preset', 'win-amd64-release', '--target', 'motogp_headless_probe', '--parallel', "$Jobs")
+    # Native packages need the matching Microsoft C++ redistributable DLLs.
+    $RedistRoot = Join-Path $VsInstall 'VC/Redist/MSVC'
+    $CrtDirectory = Get-ChildItem -LiteralPath $RedistRoot -Directory | Sort-Object Name -Descending |
+        ForEach-Object {
+            $X64Redist = Join-Path $_.FullName 'x64'
+            if (Test-Path -LiteralPath $X64Redist -PathType Container) {
+                Get-ChildItem -LiteralPath $X64Redist -Filter 'Microsoft.VC*.CRT' -Directory
+            }
+        } |
+        Select-Object -First 1
+    if (!$CrtDirectory) { throw 'Microsoft x64 C++ redistributable DLLs were not found.' }
+    foreach ($Name in @('msvcp140.dll', 'msvcp140_atomic_wait.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+        Copy-Item -LiteralPath (Join-Path $CrtDirectory.FullName $Name) -Destination $ExeDirectory -Force
+    }
     & (Join-Path $PSScriptRoot 'stage-spatial-runtime.ps1') -Destination $ExeDirectory
-    Invoke-Native -Command (Join-Path $ExeDirectory 'motogp_headless_probe.exe') -Arguments @($Staged)
     Write-Host 'Windows build complete. Executable: out/build/win-amd64-release/motogp0910.exe'
     Write-Host 'Gameplay has not been validated. See README.md for full game data and patch requirements.'
 } finally {

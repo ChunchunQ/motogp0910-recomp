@@ -54,6 +54,13 @@ uint32_t OnlineLabel(){return online_label.load(std::memory_order_acquire);}
 bool RemoveStorage(uint8_t* base,uint32_t menu,uint32_t screen){return menu&&Read(base,menu)==kGameSettingsVtable&&Filter(base,menu,screen,7,5,5,true);}
 bool RemoveParty(uint8_t* base,uint32_t menu,uint32_t screen){return menu&&Read(base,menu)==kMultiplayerVtable&&Filter(base,menu,screen,5,3,1);}
 bool RemovePremium(uint8_t* base,uint32_t menu,uint32_t screen){return IsMatchSettings(base,menu)&&Filter(base,menu,screen,12,10,7);}
+bool RemovePrivateSlots(uint8_t* base,uint32_t menu,uint32_t screen){
+  if(!IsMatchSettings(base,menu)||!Filter(base,menu,screen,12,10,8))return false;
+  // Native commit 8224E428 copies +136 to private capacity and sets public
+  // capacity to 20 minus it. +132 is a different selector; leave it intact.
+  Write(base,menu+136,0);return true;
+}
+void MatchOptions(uint8_t* base,uint32_t menu,uint32_t screen){RemovePremium(base,menu,screen);RemovePrivateSlots(base,menu,screen);}
 bool RemoveMarketplace(uint8_t* base,uint32_t menu,uint32_t screen){
   const auto read=[&](uint32_t at){return rex::memory::load_and_swap<uint32_t>(base+at);};
   const auto write=[&](uint32_t at,uint32_t value){rex::memory::store_and_swap<uint32_t>(base+at,value);};
@@ -75,11 +82,14 @@ REX_HOOK_RAW(sub_8223AEE8){motogp::options::RemoveStorage(base,ctx.r3.u32,ctx.r4
 REX_HOOK_RAW(sub_822483E0){motogp::options::RemoveParty(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_822483E0(ctx,base);}
 REX_HOOK_RAW(sub_82248630){motogp::options::RemoveParty(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_82248630(ctx,base);}
 REX_HOOK_RAW(sub_82248840){motogp::options::RemoveParty(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_82248840(ctx,base);}
-REX_HOOK_RAW(sub_8224DF60){motogp::options::RemovePremium(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224DF60(ctx,base);}
-REX_HOOK_RAW(sub_8224EAA0){motogp::options::RemovePremium(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224EAA0(ctx,base);}
-REX_HOOK_RAW(sub_8224CFB8){motogp::options::RemovePremium(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224CFB8(ctx,base);}
+REX_HOOK_RAW(sub_8224DF60){motogp::options::MatchOptions(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224DF60(ctx,base);}
+REX_HOOK_RAW(sub_8224EAA0){motogp::options::MatchOptions(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224EAA0(ctx,base);}
+REX_HOOK_RAW(sub_8224CFB8){motogp::options::MatchOptions(base,ctx.r3.u32,ctx.r4.u32);__imp__sub_8224CFB8(ctx,base);}
 REX_HOOK_RAW(sub_8224D130){const auto menu=ctx.r3.u32;__imp__sub_8224D130(ctx,base);
-  if(motogp::options::IsMatchSettings(base,menu))motogp::options::Write(base,menu+128,0); // Off for hosting, Any for search.
+  if(motogp::options::IsMatchSettings(base,menu)){
+    motogp::options::Write(base,menu+128,0); // Off for hosting, Any for search.
+    motogp::options::Write(base,menu+136,0); // All player capacity is public.
+  }
 }
 REX_HOOK_RAW(sub_826EDB38){const auto label=motogp::options::OnlineLabel();
   if(label&&ctx.r3.u32==motogp::options::kOnlineHandle&&motogp::options::Read(base,ctx.r3.u32)==731){ctx.r3.u64=label;return;}

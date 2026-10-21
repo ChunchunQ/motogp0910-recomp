@@ -242,6 +242,60 @@ real kernel enumerators also use the SDK completion mechanism. Offline and LAN
 keep their previous stats behavior. The custom server accepts writes only for
 the authenticated client's own identity.
 
+## Lap Times display projection
+
+The native read-column schema differs from the properties uploaded by
+`XSessionWriteStats`. Returning uploaded property 3 directly as display column 3
+gave the UI a signed int64 rating; its int32 read saw the leading `FFFFFFFF`
+word and displayed `--:--.--`. Display column 5 similarly received property 5
+instead of the game-mode bits in property 6, resulting in an Arcade label.
+
+`src/online/stats.cpp` now projects Lap Times views `1..63`, All Time Ghost views `127..189`
+and Monthly Ghost views `316..378`, with the complete
+native UI specification (`1,2,3,4,5,6,7,0xFFFA`, independent of order):
+
+| Native display column | Stored write property | Meaning |
+| --- | --- | --- |
+| 3 | 2 | Lap ticks, signed int32, 60 ticks per second |
+| 5 | 6 | Full game-mode bits, including Championship flag `0x10000000` |
+| 6 | 7 | Track index used by the native track-name table |
+| 7 | 13 | Season selector used by the native 2009/2010 label |
+
+The separate int64 rating at native row offset `+16` is preserved. Internal
+best-rating reads with a different column specification remain raw. The remaining
+189 views retain their previous column behavior, including both Arcade groups.
+Native selector `82300088` confirms base IDs 1/127/316 for the three supported
+timed categories, before adding the class-times-21 and track offsets. Uploads, persistent records, rank ordering and website
+time conversion are unchanged; no database migration or server deployment is
+needed. Existing records benefit if their associated properties were retained.
+Absent/invalid lap ticks stay unavailable instead of displaying a zero time.
+An invalid track index falls back to the selected view's track because the
+native track-name lookup does not bounds-check its index. Missing mode/season
+data is not guessed.
+
+`src/online/leaderboard_display.cpp` scopes mode-label changes to categories 0, 2 and 3
+inside native draw routine `8223CF40`, and to its mode-text call site
+`8223DD14`. The original localized Championship, Career, Arcade and Time Trial
+labels remain in use. Quick Race, split screen, online split screen, LAN and
+Online have explicit labels, as do internal preview/training/tutorial/demo/replay
+IDs if present in a record. Unknown metadata shows `-`. Additional labels have
+English and Turkish text; the other native game languages use the English
+fallback for these additional labels. This does not enable record submissions
+from otherwise unsupported modes or create new leaderboard categories.
+
+The title's mode-name table is at `8288F720`; its original label getter is
+`8223F340`. The projection follows native read parser `823009E8`, property
+setup `822FEE30`, and row setters `8223F3D0`, `8223F338`, `8223F300` and
+`8223F288`. Research for all 17 internal IDs includes the Championship flag
+override; the flag is never reconstructed from lap duration.
+
+`lap_times_probe` is an opt-in CPU-only regression target covering the native
+output ABI, all 378 view IDs, unchanged internal reads, mode/season/track
+projection, missing/invalid values, and the 17 mode-label IDs. It requires no
+server, original game inputs or GPU. This change has **not been built or run**
+at the user's request; these new checks and native Windows UI validation are
+pending. The older validation results below do not validate this change.
+
 ## Validation and remaining deployment work
 
 Current targeted results (16 October 2026):
@@ -280,3 +334,10 @@ Internet race, live leaderboard UI after a real lap, and native Windows GPU
 behavior still require the deployed endpoint and two players. Previous user
 confirmation of LAN/Radmin racing remains valid evidence for the original LAN
 path, not for the new Internet relay.
+
+
+The ghost-category extension repairs row presentation only. It does not implement
+uploading/downloading a ghost replay or validate that the live service rolls
+Monthly records over by calendar period. Replay transfers are intentionally
+outside the current scope. This revision was syntax-checked without a build or
+gameplay test; earlier Lap Times probe results do not validate the extension.

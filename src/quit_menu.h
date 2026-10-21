@@ -1,10 +1,8 @@
 #pragma once
-#include <rex/ui/imgui_dialog.h>
 #include <atomic>
 #include <cstdint>
 #include <functional>
-#include <memory>
-struct ImFont;
+struct PPCContext;
 namespace rex {class Runtime;namespace input {class InputSystem;} }
 namespace motogp::quit {
 constexpr uint32_t kMainMenuVtable=0x8200CF7C, kItemsOffset=0x3C, kItemSize=40, kQuitIndex=6;
@@ -25,16 +23,6 @@ void PollIntroInput(uint8_t* base);
 bool IntroSkipAllowed(uint8_t* base);
 bool BeginIntroSkip(uint8_t* base);
 void FinishIntroSkip(uint8_t* base);
-struct InputDecision {bool accept=false,cancel=false;};
-class Confirmation {
- public:
-  void Open(uint16_t held);
-  InputDecision Update(uint16_t buttons,bool suppress_direction=false);
-  bool exit_selected()const{return exit_selected_;}
-  void SelectExit(bool value){exit_selected_=value;}
- private:
-  uint16_t previous_=0;bool armed_=false,exit_selected_=false;
-};
 void Initialize(rex::Runtime* runtime);
 uint32_t LabelAddress();
 void SetFocused(bool focused);
@@ -42,6 +30,7 @@ void SetOtherMenuCheck(bool (*check)());
 void Stop();
 bool Pending();
 void Request();
-std::unique_ptr<rex::ui::ImGuiDialog> CreateConfirmationDialog(rex::ui::ImGuiDrawer* drawer,
-    ImFont* font,bool turkish,std::function<void()> exit);
+void SetExitHandler(std::function<void()> exit);
+// Called on the guest frontend thread; uses the title's real Yes/No screen.
+void TickConfirmation(PPCContext& ctx,uint8_t* base);
 }

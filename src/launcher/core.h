@@ -110,7 +110,7 @@ class Config {
   void Save() {
     if (ReadFile(path) != original) throw Error(
         L"Settings changed outside the launcher. Close and reopen it before saving.",
-        L"Ayar dosyası launcher dışında değişti. Kaydetmeden önce launcher'ı yeniden aç.");
+        L"Ayar dosyası başka bir uygulama tarafından değiştirildi. Kaydetmeden önce Launcher'ı yeniden aç.");
     auto bytes = motogp::config::Serialize(table,path);
     // Keep the exact pre-launcher file once; never overwrite an existing backup.
     const fs::path backup(path.wstring() + L".bak");
@@ -121,12 +121,12 @@ class Config {
         CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) throw Error(
         L"Cannot save settings. Use a writable folder; close other launcher instances.",
-        L"Ayarlar kaydedilemiyor. Yazılabilir bir klasör kullan; diğer launcher örneklerini kapat.");
+        L"Ayarlar kaydedilemiyor. Yazma iznin olan bir klasör kullan ve Launcher'ın diğer açık pencerelerini kapat.");
     DWORD written = 0;
     bool ok = WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr)
         && written == bytes.size() && FlushFileBuffers(file);
     CloseHandle(file);
-    if(ReadFile(path)!=original){DeleteFileW(temporary.c_str());throw Error(L"Settings changed during save. Retry after the other writer finishes.",L"Ayarlar kaydetme sırasında değişti. Diğer işlem tamamlanınca tekrar dene.");}
+    if(ReadFile(path)!=original){DeleteFileW(temporary.c_str());throw Error(L"Settings changed during save. Retry after the other writer finishes.",L"Ayarlar kaydedilirken başka bir işlem tarafından değiştirildi. O işlem tamamlanınca yeniden dene.");}
     if (!ok || !MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
       DeleteFileW(temporary.c_str());
       throw Error(L"Failed to write settings; the original file was preserved.",
@@ -146,7 +146,7 @@ struct Settings {
   std::string network_mode="online",online_server=kCommunityServer;
   std::string lan_player_name="Player",lan_room_name="MotoGP room",lan_bind_ip,lan_host_ip;
   int width = 0, height = 0, scale_x = 1, scale_y = 1, anisotropic = -1, volume = 100, adapter = -1;
-  int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0;
+  int guest_width=0,guest_height=0,game_language=1,refresh_rate=0,fps_limit=0,monitor=1;
   bool fullscreen = true, vsync = true, keyboard = true, mute = false;
   bool letterbox = true, dither = false, shader_cache = true, msaa = true;
   double fsr_reduction = 0.2, cas_sharpness = 0.0;
@@ -172,6 +172,8 @@ struct Settings {
     s.lan_bind_ip=Get(t,"lan_bind_ip",std::string{});s.lan_host_ip=Get(t,"lan_host_ip",std::string{});
     s.width = Get<int64_t>(t, "window_width", 0);
     s.height = Get<int64_t>(t, "window_height", 0);
+    const auto saved_monitor=Get<int64_t>(t,"monitor",1);
+    s.monitor=saved_monitor>=1 && saved_monitor<=16?static_cast<int>(saved_monitor):1;
     s.guest_width=Get<int64_t>(t,"video_mode_width",0);
     s.guest_height=Get<int64_t>(t,"video_mode_height",0);
     s.fullscreen = Get(t, "fullscreen", true);
@@ -211,8 +213,8 @@ struct Settings {
     return s;
   }
   void Validate() const {
-    if(network_mode!="offline" && network_mode!="lan" && network_mode!="online")throw Error(L"Choose Offline, LAN or Online.",L"Çevrimdışı, LAN veya Çevrimiçi seç.");
-    if(network_mode=="online" && (online_server.empty() || online_server.size()>512 || online_server.find_first_of("\r\n\t ")!=std::string::npos || (!online_server.starts_with("https://") && !online_server.starts_with("http://127.0.0.1:") && !online_server.starts_with("http://localhost:"))))throw Error(L"Online requires a community server HTTPS address (for example https://play.example.com).",L"Çevrimiçi için topluluk sunucusunun HTTPS adresi gerekli (örneğin https://play.example.com).");
+    if(network_mode!="offline" && network_mode!="lan" && network_mode!="online")throw Error(L"Choose Offline, LAN or Online.",L"Çevrim dışı, LAN veya Çevrim içi seç.");
+    if(network_mode=="online" && (online_server.empty() || online_server.size()>512 || online_server.find_first_of("\r\n\t ")!=std::string::npos || (!online_server.starts_with("https://") && !online_server.starts_with("http://127.0.0.1:") && !online_server.starts_with("http://localhost:"))))throw Error(L"Online requires a community server HTTPS address (for example https://play.example.com).",L"Çevrim içi bağlantı için topluluk sunucusunun HTTPS adresi gerekli (örneğin https://play.example.com).");
     if(!adaptive.Valid())throw Error(L"Invalid DualSense profile. Resistance-zone end must exceed start; positions 0-9, strength 0-8.",L"Geçersiz DualSense profili. Direnç aralığının bitişi başlangıçtan büyük olmalı; konumlar 0-9, güç 0-8.");
     const auto ipv4=[](const std::string& value){
       if(value.empty())return true;unsigned parts=0,number=0,digits=0;uint32_t address=0;
@@ -226,14 +228,14 @@ struct Settings {
           L"LAN: player name must be 1-15 UTF-8 bytes, room name 1-31 bytes; use a valid IPv4 or leave it empty.",
           L"LAN: oyuncu adı 1-15 UTF-8 bayt, oda adı 1-31 bayt olmalı; geçerli IPv4 yaz veya boş bırak.");
     Wide(lan_player_name);Wide(lan_room_name);
-    if(aspect!="auto" && aspect!="16:9" && aspect!="21:9" && aspect!="32:9")throw Error(L"Unsupported aspect ratio.",L"Desteklenmeyen en-boy oranı.");
+    if(aspect!="auto" && aspect!="16:9" && aspect!="4:3" && aspect!="21:9" && aspect!="32:9")throw Error(L"Unsupported aspect ratio.",L"Desteklenmeyen en-boy oranı.");
     for(size_t i=0;i<engine_effects.size();++i){const auto values=EngineValues(kEngineEffects[i]);
-      if(std::find(values.begin(),values.end(),engine_effects[i])==values.end())throw Error(L"Unsupported engine effect setting.",L"Desteklenmeyen motor efekt ayarı.");}
+      if(std::find(values.begin(),values.end(),engine_effects[i])==values.end())throw Error(L"Unsupported engine effect setting.",L"Oyun motoru için desteklenmeyen bir efekt ayarı seçildi.");}
     if(shadow_distance<0 || shadow_distance>180)throw Error(L"Shadow distance must be 0 to 180.",L"Gölge mesafesi 0 ile 180 arasında olmalı.");
     if(width<0 || height<0 || width>8192 || height>8192 ||
        guest_width<0 || guest_height<0 || guest_width>8192 || guest_height>8192 ||
        scale_x<1 || scale_x>8 || scale_y<1 || scale_y>8 ||
-       adapter < -2 || anisotropic < -1 || anisotropic>5 || volume<0 || volume>100 ||
+       adapter < -2 || monitor<1 || monitor>16 || anisotropic < -1 || anisotropic>5 || volume<0 || volume>100 ||
        !std::isfinite(fsr_reduction) || fsr_reduction<0 || fsr_reduction>2 ||
        !std::isfinite(cas_sharpness) || cas_sharpness<0 || cas_sharpness>1 ||
        (backend!="sdl" && backend!="xinput") ||
@@ -269,6 +271,7 @@ struct Settings {
     // skip intros. Keep the runtime's internal diagnostic switch out of the UI.
     Put(t,"allow_intro_skip",true);
     Put(t, "window_width", width); Put(t, "window_height", height);
+    Put(t,"monitor",monitor);
     if(guest_width)Put(t,"video_mode_width",guest_width);
     if(guest_height)Put(t,"video_mode_height",guest_height);
     Put(t, "fullscreen", fullscreen); Put(t, "vsync", vsync);
@@ -337,20 +340,20 @@ inline void Validate(const fs::path& exe, const fs::path& game) {
       L"Seçilen oyun klasöründe default.xex yok.");
   if (Sha256(game / "default.xex") != kXexHash) throw Error(
       L"This is not the supported stock default.xex. Use your original, unmodified disk executable.",
-      L"Bu desteklenen stok default.xex değil. Diskten çıkardığın değiştirilmemiş orijinal dosyayı kullan.");
+      L"Bu default.xex dosyası desteklenen özgün sürümle eşleşmiyor. Diskten çıkardığın değiştirilmemiş dosyayı kullan.");
   if (fs::is_regular_file(game / "default.xexp")) {
     if (Sha256(game / "default.xexp") != kPatchHash) throw Error(
         L"default.xexp does not match the supported title update. It was not overwritten.",
-        L"default.xexp desteklenen title update ile eşleşmiyor. Dosya değiştirilmedi.");
+        L"default.xexp desteklenen oyun güncellemesiyle eşleşmiyor. Dosya değiştirilmedi.");
   } else if (!fs::is_regular_file(game / kUpdate) || Sha256(game / kUpdate) != kUpdateHash) {
     throw Error(L"Copy your title update or its verified default.xexp patch into the game folder.",
-                L"Title update dosyanı veya doğrulanmış default.xexp patch'ini oyun klasörüne koy.");
+                L"Oyun güncellemesi dosyanı veya doğrulanmış default.xexp yamasını oyun klasörüne koy.");
   }
   // Dashboard artwork (nxeart) may legitimately be empty in the disk dump.
   for (const auto* name : {L"xenondata"}) {
     if (!fs::is_directory(game / name) || fs::is_empty(game / name)) throw Error(
         L"Game data folder missing or empty: " + std::wstring(name) + L". Copy the complete disk data.",
-        L"Oyun veri klasörü eksik veya boş: " + std::wstring(name) + L". Diskin bütün verilerini kopyala.");
+        L"Oyun verisi klasörü eksik veya boş: " + std::wstring(name) + L". Diskteki tüm oyun verilerini kopyala.");
   }
 }
 // Windows CRT command-line quoting, including embedded quotes/trailing slashes.

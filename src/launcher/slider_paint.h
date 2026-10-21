@@ -1,9 +1,19 @@
 #pragma once
 #include <windows.h>
+#include <objidl.h>
+#include <gdiplus.h>
 #include <commctrl.h>
 #include <windowsx.h>
 #include <algorithm>
 namespace launcher {
+inline void PaintSliderThumb(HDC dc,int cx,int cy,double radius,COLORREF color){
+  Gdiplus::Graphics graphics(dc);
+  graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+  const auto r=static_cast<Gdiplus::REAL>(std::max(1.0,radius));
+  Gdiplus::SolidBrush brush(Gdiplus::Color(255,GetRValue(color),GetGValue(color),GetBValue(color)));
+  graphics.FillEllipse(&brush,static_cast<Gdiplus::REAL>(cx)-r,static_cast<Gdiplus::REAL>(cy)-r,2*r,2*r);
+}
 inline RECT SliderTrack(HWND control){
   RECT channel{},thumb{};SendMessageW(control,TBM_GETCHANNELRECT,0,reinterpret_cast<LPARAM>(&channel));SendMessageW(control,TBM_GETTHUMBRECT,0,reinterpret_cast<LPARAM>(&thumb));
   // Native channel bounds include half a thumb at either end. Use the thumb

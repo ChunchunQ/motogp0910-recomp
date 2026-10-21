@@ -63,8 +63,8 @@ the launcher before starting, since changing backend is not a live operation. Fu
 
 The service uses the runtime's SDL instance through an additive, versioned C
 export. The shared input V1 table and SDK pin stay unchanged. It only targets
-SDL devices identified as PS5, including Edge; Xbox, 8BitDo and DualShock 3/4
-never receive these reports. Forcing PlayStation artwork does not enable them.
+SDL devices identified as PS5, including Edge. Other controller types never
+receive these reports. Forcing PlayStation artwork does not enable them.
 There is no analog input remapping or physics modification.
 
 A 100 ms worker observes settings and hotplug changes. It sends only changed
@@ -78,8 +78,7 @@ Rumble, light, speaker and microphone flags are left unset.
 
 ## Hardware verification boundary
 
-The user owns an **8BitDo Ultimate**, which cannot reproduce DualSense trigger
-resistance. USB and Bluetooth framing are supplied by SDL's existing driver;
+USB and Bluetooth framing are supplied by SDL's existing driver;
 neither transport's physical resistance has been tested here. Steam Input,
 DS4Windows or device hiding can expose an Xbox device instead of the native pad.
 Use native SDL access, initially over USB, when a DualSense tester is available.
@@ -90,8 +89,8 @@ Abrupt process termination cannot run the normal release path.
 
 The actual Windows EXE and custom runtime were built and exercised under Wine.
 `adaptive_triggers_probe` uses the production service and real runtime SDL
-virtual DualSense, Edge, Xbox, DS4 and 8BitDo devices, with effect callbacks. It
-checks reference packet bytes, full-range scaling, zero/invalid/off behavior,
+virtual DualSense, Edge, Xbox, DS4 and unsupported controller devices, with
+effect callbacks. It checks reference packet bytes, full-range scaling, zero/invalid/off behavior,
 independent sides, live changes, focus, disable, shutdown, reconnection, rejected
 writes and no reports to unsupported devices. This verifies software/transport,
 not physical motors or native Windows GPU rendering.

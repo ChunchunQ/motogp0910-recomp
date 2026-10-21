@@ -11,6 +11,7 @@ uint32_t OnlineLabel();
 bool RemoveStorage(uint8_t* base,uint32_t menu,uint32_t screen);
 bool RemoveParty(uint8_t* base,uint32_t menu,uint32_t screen);
 bool RemovePremium(uint8_t* base,uint32_t menu,uint32_t screen);
+bool RemovePrivateSlots(uint8_t* base,uint32_t menu,uint32_t screen);
 // Restrict the native Options list to its five functional rows, before init.
 bool RemoveMarketplace(uint8_t* base,uint32_t menu,uint32_t screen);
 }

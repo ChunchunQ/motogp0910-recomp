@@ -75,7 +75,7 @@ struct ModalStyle {
     const int cy=r.bottom/2,cx=(thumb.left+thumb.right)/2;const bool enabled=IsWindowEnabled(draw.hdr.hwndFrom);
     RECT track{channel.left,cy-S(2),channel.right,cy+S(2)};SetDCBrushColor(draw.hdc,RGB(48,53,64));FillRect(draw.hdc,&track,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
     const auto color=enabled?kLauncherAccent:RGB(85,93,107);track.right=cx;SetDCBrushColor(draw.hdc,color);FillRect(draw.hdc,&track,reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-    SelectObject(draw.hdc,GetStockObject(DC_BRUSH));SelectObject(draw.hdc,GetStockObject(NULL_PEN));Ellipse(draw.hdc,cx-S(5),cy-S(5),cx+S(5),cy+S(5));
+    PaintSliderThumb(draw.hdc,cx,cy,5*scale,color);
     RestoreDC(draw.hdc,saved);return CDRF_SKIPDEFAULT;
   }
   LRESULT Color(HDC dc,HWND control)const{

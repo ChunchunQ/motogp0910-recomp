@@ -32,13 +32,18 @@
 #include "achievement_ui.h"
 #include "overlay_theme.h"
 #include "quit_menu.h"
+#include "local_splitscreen.h"
 #include "options_menu.h"
+#include "online/leaderboard_display.h"
+#include "dlc_content.h"
+#include "dlc_installation.h"
 #include "localization.h"
 #include "in_game_settings.h"
 #include "frame_pacing.h"
 #include "debug_overlay.h"
 #include "portable_paths.h"
 #include "config_file.h"
+#include "user_data_paths.h"
 #include <rex/input/input_system.h>
 #include <imgui.h>
 #include <rex/ui/keybinds.h>
@@ -56,9 +61,23 @@ class Motogp0910App : public rex::ReXApp {
   // Override virtual hooks for customization:
   // void OnPostInitLogging() override {}
   bool SetupEnvironment() override {
-    const bool ready=rex::ReXApp::SetupEnvironment();
+    bool ready=false;
+    try {ready=rex::ReXApp::SetupEnvironment();}
+    catch(const std::exception& error){
+      sdk_config_.Clear();
+      rex::ShowSimpleMessageBox(rex::SimpleMessageBoxType::Error,
+          std::string("Could not prepare game settings or saved data.\n\n")+error.what());
+      return false;
+    }
     sdk_config_.Clear();
     if (!ready) {
+      return false;
+    }
+    // Also enforce the local prerequisite for direct executable / Steam starts.
+    // Missing content stays an inline launcher task; do not open a new dialog.
+    if(!motogp::dlc::AllInstalled(motogp::dlc::ContentRoot(
+        motogp::portable::Root(rex::filesystem::GetExecutableFolder())))){
+      REXLOG_ERROR("Required DLC is missing or incomplete. Open the launcher and choose Install DLC.");
       return false;
     }
     const auto root = game_data_root();
@@ -140,6 +159,8 @@ class Motogp0910App : public rex::ReXApp {
   // void OnLoadXexImage(std::string& xex_image) override {}
   // void OnPostLoadXexImage() override {}
   void OnPostSetup() override {
+    motogp::splitscreen::Initialize(runtime());
+    motogp::dlc::Initialize(runtime(),motogp::portable::Root(rex::filesystem::GetExecutableFolder()));
     motogp::ApplyWindowIcon(window()->GetNativeWindowHandle());
     motogp::localization::Install(runtime(),motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/localization/tr/overlay");
     // The title opens its image volume by the Xbox device name during startup.
@@ -163,6 +184,7 @@ class Motogp0910App : public rex::ReXApp {
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::Initialize(runtime());
     motogp::options::Initialize(runtime());
+    motogp::online::lap_times::Initialize(runtime());
     settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
     settings_gate_->SetFocused(window()->HasFocus());
     settings_model_=std::make_shared<motogp::settings::Model>(settings_path_,runtime()->graphics_system()?runtime()->graphics_system()->presenter():nullptr);
@@ -197,7 +219,7 @@ class Motogp0910App : public rex::ReXApp {
     achievement_preferences_->Load(user_data_root(),motogp::portable::Root(rex::filesystem::GetExecutableFolder()));
     if(motogp::localization::Turkish())achievement_preferences_->turkish=true;
     motogp::quit::SetFocused(window()->HasFocus());
-    quit_dialog_=motogp::quit::CreateConfirmationDialog(drawer,achievement_font_,achievement_preferences_->turkish,[this] {
+    motogp::quit::SetExitHandler([this] {
       app_context().CallInUIThreadDeferred([this] {
         achievements().SaveUnlockState();
         motogp::lan::Stop();
@@ -234,6 +256,8 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    motogp::splitscreen::Stop();
+    motogp::dlc::Stop();
     motogp::debug::UnregisterToggle();
     motogp::debug::Shutdown();
     debug_dialog_.reset();
@@ -243,7 +267,6 @@ class Motogp0910App : public rex::ReXApp {
     motogp::quit::SetOtherMenuCheck(nullptr);
     settings_dialog_.reset();
     settings_model_.reset();
-    quit_dialog_.reset();
     motogp::quit::Stop();
     motogp::lan::Stop();
     motogp::wide::Stop();
@@ -266,8 +289,14 @@ class Motogp0910App : public rex::ReXApp {
       auto selected=rex::to_path(*value);path=selected.is_absolute()?selected:root/selected;return true;
     };
     configured("game_data_root",paths.game_data_root);
-    const bool user_root_changed=configured("user_data_root",paths.user_data_root);
-    if(!configured("cache_root",paths.cache_root)&&user_root_changed&&rex::cvar::GetFlagSource("cache_root")<=rex::cvar::Source::kConfig)paths.cache_root=paths.user_data_root/"cache";
+    bool user_root_changed=configured("user_data_root",paths.user_data_root);
+#ifdef _WIN32
+    if(!user_root_changed&&rex::cvar::Query<std::string>("user_data_root").empty()){
+      paths.user_data_root=motogp::user_data::DefaultRoot(rex::filesystem::GetUserFolder());
+      user_root_changed=true;
+    }
+#endif
+    if(!configured("cache_root",paths.cache_root)&&user_root_changed&&rex::cvar::Query<std::string>("cache_root").empty())paths.cache_root=paths.user_data_root/"cache";
     configured("update_data_root",paths.update_data_root);configured("metadata_root",paths.metadata_root);
     if (!paths.game_data_root.empty()) {
       return;
@@ -305,7 +334,6 @@ class Motogp0910App : public rex::ReXApp {
   std::shared_ptr<motogp::settings::InputGate> settings_gate_=std::make_shared<motogp::settings::InputGate>();
   std::shared_ptr<motogp::settings::Model> settings_model_;
   std::unique_ptr<rex::ui::ImGuiDialog> settings_dialog_;
-  std::unique_ptr<rex::ui::ImGuiDialog> quit_dialog_;
   ImFont* achievement_font_ = nullptr;
   ImFont* achievement_heading_font_ = nullptr;
   std::shared_ptr<motogp::achievements::Preferences> achievement_preferences_ = std::make_shared<motogp::achievements::Preferences>();

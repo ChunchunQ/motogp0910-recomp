@@ -6,5 +6,6 @@ enum ControlId {kPath=101,kBrowse,kSize,kBackend,kFullscreen,kVsync,kKeyboard,kM
     kResetBinding,kPostEffect,kShaderCache,kMsaa,kAdapter,kPromptStyle,kGameLanguage,kRefreshRate,kFpsLimit,kFsrQuality,kAspect,kShadowDistance,kLanEnabled,kLanPlayer,kLanRoom,kLanAdapter,kLanHost,kCrashDiagnostics,kAdaptiveTriggers=160,kEngineBase=150,kNavGraphics=200,kNavAudio,kNavControls,kNavGeneral,kNavAdvanced,kNavAchievements,kNavMultiplayer,
     kOnlineServer=161,kVerifyFiles=162,kDebugOverlay=163,kResetBindings=165,kAchievementSearch=220,kAchievementFilter,kAchievementPopup,kAchievementSound,kAchievementList,
     kAccountUser=170,kAccountPass,kSignIn,kSignOut,kRegister,
-    kBindingBase=300,kCaptureBase=400};
+    kMonitor=175,kAddToSteam=176,kInstallDlc=177,kForgotPassword=178,kUpdateNotice=180,kUpdateNow,kUpdateCancel,kUpdateClose,
+    kRememberAccount=190,kMyAccount=191,kBindingBase=300,kCaptureBase=400};
 }

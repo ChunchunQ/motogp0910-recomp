@@ -182,7 +182,7 @@ bike_upgrades = {
 
     tyres_soft_compound_125_stage_2 = {
     name = [[YUMUŞAK HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni yumuşak hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni yumuşak hamur.]],
     stage =2,
     staff_level =4,
     category = "brakes",
@@ -294,7 +294,7 @@ bike_upgrades = {
 
     tyres_hard_compound_125_stage_2 = {
     name = [[SERT HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni sert hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni sert hamur.]],
     stage =2,
     staff_level =4,
     category = "brakes",
@@ -1459,7 +1459,7 @@ bike_upgrades = {
 
     tyres_soft_compound_250_stage_2 = {
     name = [[YUMUŞAK HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni yumuşak hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni yumuşak hamur.]],
     stage =2,
     staff_level =12,
     category = "brakes",
@@ -1593,7 +1593,7 @@ bike_upgrades = {
 
     tyres_hard_compound_250_stage_2 = {
     name = [[SERT HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni sert hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni sert hamur.]],
     stage =2,
     staff_level =12,
     category = "brakes",
@@ -1715,7 +1715,7 @@ tyres_hard_compound_250_stage_4 = {
 
     engine_balancing_250_stage_2 = {
     name = [[BALANS AYARI]],
-    description = [[Devir aralığı boyunca güç eğrisini düzgünleştirerek motordan biraz daha fazla performans elde eder.]],
+    description = [[Tüm devir aralığında daha düzenli bir güç dağılımı sağlayarak motorun performansını biraz artırır.]],
     stage =2,
     staff_level =17,
     category = "engine",
@@ -2671,7 +2671,7 @@ tyres_hard_compound_250_stage_4 = {
 
     gearbox_clutch_250_stage_4 = {
     name = [[DEBRİYAJ]],
-    description = [[Son derece kaliteli debriyaj ayarı, vitesler boyunca hızlanırken en yüksek dengeyi sağlamak için sarsıntıyı ve kaydırmayı büyük ölçüde azaltır.]],
+    description = [[Hassas debriyaj ayarı, vites değiştirerek hızlanırken sarsıntıyı ve debriyajın kaçırmasını büyük ölçüde azaltarak dengeyi artırır.]],
     stage =4,
     staff_level =19,
     category = "gearbox",
@@ -2958,7 +2958,7 @@ tyres_hard_compound_250_stage_4 = {
 
   tyres_soft_compound_gp_stage_2 = {
     name = [[YUMUŞAK HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni yumuşak hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni yumuşak hamur.]],
     stage =2,
     staff_level =22,
     category = "brakes",
@@ -3092,7 +3092,7 @@ tyres_hard_compound_250_stage_4 = {
 
     tyres_hard_compound_gp_stage_2 = {
     name = [[SERT HAMUR]],
-    description = [[Lastiklerin tutarlılığını ve kullanım ömrünü artıran yeni sert hamur.]],
+    description = [[Lastiklerin performansını daha uzun süre korumasını ve daha dayanıklı olmasını sağlayan yeni sert hamur.]],
     stage =2,
     staff_level =22,
     category = "brakes",
@@ -3214,7 +3214,7 @@ tyres_hard_compound_250_stage_4 = {
 
     engine_balancing_gp_stage_2 = {
     name = [[BALANS AYARI]],
-    description = [[Devir aralığı boyunca güç eğrisini düzgünleştirerek motordan biraz daha fazla performans elde eder.]],
+    description = [[Tüm devir aralığında daha düzenli bir güç dağılımı sağlayarak motorun performansını biraz artırır.]],
     stage =2,
     staff_level =21,
     category = "engine",
@@ -4334,7 +4334,7 @@ tyres_hard_compound_250_stage_4 = {
 
     gearbox_clutch_gp_stage_4 = {
     name = [[DEBRİYAJ]],
-    description = [[Son derece kaliteli debriyaj ayarı, vitesler boyunca hızlanırken en yüksek dengeyi sağlamak için sarsıntıyı ve kaydırmayı büyük ölçüde azaltır.]],
+    description = [[Hassas debriyaj ayarı, vites değiştirerek hızlanırken sarsıntıyı ve debriyajın kaçırmasını büyük ölçüde azaltarak dengeyi artırır.]],
     stage =4,
     staff_level =22,
     category = "gearbox",
