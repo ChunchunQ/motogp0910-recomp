@@ -2,7 +2,8 @@
 
 This delivery updates the game and launcher on ChunchunQ's `nobk-online` branch.
 It includes every updated end-user feature while excluding local test tools,
-workspace/CI instructions, README/screenshot changes and historical build files.
+workspace/CI instructions, screenshot changes and historical build files.
+The root README is replaced with a `TODO` placeholder for the handoff.
 The [English handoff](chunchunq-handoff.md) explains remaining service work;
 [the DLC catalogue](online-dlc-catalog.json) records verified content metadata.
 

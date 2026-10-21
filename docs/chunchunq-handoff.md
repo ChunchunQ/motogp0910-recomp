@@ -295,8 +295,10 @@ updated end-user features. The earlier online-only boundary is superseded.
   reader and its license/source, and FIFA's MIT attribution. These production
   dependencies are not test scripts. SDK/runtime pins remain unchanged.
 - Local test/probe/verification changes, automated build workflows, workspace
-  setup instructions, README/screenshot edits and historical build ZIPs are
+  setup instructions, screenshot edits and historical build ZIPs are
   excluded from the patch. Existing upstream files in those areas are retained.
+- Replace the outdated root README with a `TODO` placeholder. No local README
+  setup instructions are transferred.
 - Publish a direct application ZIP with the launcher at its root and `bin/`,
   `resources/`, empty `game/` and empty `dlc/` directories. An outer wrapper ZIP
   is not an updater payload. Original game/DLC content is never distributed.
