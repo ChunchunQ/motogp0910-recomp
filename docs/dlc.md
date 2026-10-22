@@ -21,7 +21,8 @@ The single General game-files action follows **Select ISO → Select title updat
 → Install DLC → Verify game files**. Once the base game and title update are
 present, **Install DLC** replaces verification until all three packages are
 installed. There is no separate adjacent DLC button. The source menu uses the
-launcher's dark dropdown colors and highlighted rows, with hover help suppressed while choosing a source.
+launcher's dark dropdown colors and highlighted rows, with hover help suppressed while
+choosing a source.
 The button shows installation help on hover; clicking it dismisses that tooltip.
 Choose **Select archives…** for ZIP, RAR or 7z files, or **Select folders…** for
 folders obtained by unpacking the archive. Both pickers support Ctrl/Shift and
@@ -135,8 +136,11 @@ The supplied ZIP was downloaded and its three packages were extracted with the
 existing inspection tool. Their metadata, payload inventories and native marker
 names were checked against the recompiled content-discovery routine and pinned
 SDK source. Reader hashes and x64 PE headers were verified against the official
-distribution. These are artifact/source inspections. A local Windows release build was produced on 21 October without tests; the
-subsequent success-dialog removal and Turkish footer polish are source-only
-changes. No native Windows installation/gameplay result is claimed for the
+distribution. These are artifact/source inspections. A local Windows release build was
+produced on 21 October without tests. The
+subsequent success-dialog removal and Turkish footer polish are also included in
+the 22 October main Release build. Its later launcher checks exercise readiness
+with isolated inventory fixtures; they do not perform a real DLC import or race.
+See [the validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md). No native Windows installation/gameplay result is claimed for the
 complete final source state. Imported DLC assets, including their language scripts, remain
 unmodified. Native visual/gameplay review and RAR/7z sample imports remain pending.

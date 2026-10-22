@@ -5,9 +5,10 @@ empty-IP launcher/SDK argument bug is documented in [lan-startup-fix.md](lan-sta
 
 ## Usage
 
-Extract the complete ZIP and keep `motogp0910-crash-monitor.exe` beside the
-other EXEs/DLLs. Preserve existing game data, settings and saves. Enable
-**General > Extended crash diagnostics** (default on), then start with PLAY.
+Extract the complete ZIP and keep `bin/motogp0910-crash-monitor.exe` with the
+other game/runtime binaries. Preserve existing game data, settings and saves.
+Enable **Advanced > Extended crash diagnostics** (default on), then start with
+PLAY in `MotoGP09-10Launcher.exe`. See [installation layout](game-layout.md).
 
 After a crash, use **Logs**. A `crash-...` directory contains `report.txt`,
 `crash.dmp` when dump writing succeeds, the latest game log and current

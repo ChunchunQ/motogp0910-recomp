@@ -33,7 +33,7 @@ hit testing, blocked maximize and minimize/close commands are checked. Its
 
 ## Launcher Achievements page
 
-The launcher retains its existing MotoGP sidebar, dark cards and orange accent.
+The launcher uses its current Racing Lines tabs, dark cards and orange accent.
 **Achievements** shows the real title catalog: **50 achievements / 1000 G**, with
 all 50 original icons loaded from the user's own XEX. No extracted achievement
 artwork, fabricated unlocks or fixture progress ships in the release.
@@ -55,11 +55,13 @@ good snapshot; changing profile clears the previous profile's snapshot.
 Default progress path: Windows `Documents/MotoGP 09-10/achievements/434307F0.toml`.
 The launcher and game share the [user-data migration](portable-launcher.md):
 when the new default folder is absent, the old `Documents/motogp0910` tree is
-copied and verified once, with the original retained as a backup. Existing new
+copied and verified before publication. A byte-identical legacy folder is then
+removed; conflicting or unverifiable legacy data is retained. Existing old-folder
+cleanup is also guarded and attempted once, as described in the migration guide. Existing new
 folders and custom roots are never merged or overwritten.
 The Windows Known Folder API honors redirected/OneDrive Documents. Configured
 user_data_root takes precedence over REX_USER_DATA_ROOT; relative paths resolve
-against the executable folder, matching the child game's working directory.
+against the portable installation root, matching the child game's working directory.
 metadata_root / REX_METADATA_ROOT and the SDK's existing metadata discovery
 also apply. The launcher never unlocks, resets or rewrites achievements.
 
@@ -82,7 +84,8 @@ The envelope has a gentle attack and zero-valued ends to avoid clicks. The cue
 is generated as PCM, needs no downloaded audio assets, and runs asynchronously
 through Windows WinMM. No system mixer volume is changed.
 
-F7 > Pop-up in game controls visual notifications; Unlock sound / volume disables or adjusts the cue. Game master volume and
+F7 > Pop-up in game controls visual notifications; Unlock sound / volume disables or
+adjusts the cue. Game master volume and
 mute also apply; mute/disable interrupts active playback within the worker's
 20 ms polling interval, excluding driver scheduling. Sound preferences save
 separately as `achievement-ui.toml` under the configured user data root. Existing
@@ -112,14 +115,16 @@ keybinding dispatch were exercised under Wine: **286 checks passed**. Coverage:
 The actual launcher window additionally passed **59,199 checks** across
 all six pages, EN/TR and 75/100/125/150% scales. This includes loading all original
 XEX catalog entries/icons, legacy/current save byte preservation, search/filters,
-actual mouse dragging, caption controls, scrolling, transient save failures, profile isolation, shared preference writes,
+actual mouse dragging, caption controls, scrolling, transient save failures, profile
+isolation, shared preference writes,
 and keeping achievements usable during a running child. Existing launcher
 settings persistence and child-exit reload checks remain included.
 
 Build has no warnings in the changed application/probe sources. These checks
 are not a native Windows GPU screenshot or a listening test on the user's
 speakers. Production draw data was rendered locally with fixture achievements
-for EN/TR previews; those images/logs/configs stay in ignored `out/achievements/` and `out/launcher-achievements/`.
+for EN/TR previews; those images/logs/configs stay in ignored `out/achievements/` and
+`out/launcher-achievements/`.
 The release contains no fixture achievements or preview screenshots.
 
 ```powershell

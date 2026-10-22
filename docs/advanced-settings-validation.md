@@ -45,7 +45,10 @@ the blur alpha and velocity while preserving the original camera enable state.
 The ten settings and their labels fit five aligned rows at 75–150% scales.
 In that validated build, Debug/crash diagnostics followed them vertically and
 required scrolling. A subsequent layout change places both checkboxes side by
-side below the last row; that layout change has not been runtime-tested.
+side below the last row. The subsequent main launcher viewport audit covers
+the current seven-page layout in both languages and four scales; see
+[the later validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md). Native Windows
+renderer/gameplay acceptance remains separate.
 
 The final ZIP's public root launcher also passed a separate smoke check: real
 mouse/keyboard selections for all six new settings were saved to root

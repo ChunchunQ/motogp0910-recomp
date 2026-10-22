@@ -23,6 +23,11 @@ anti-cheat: a modified client can submit fabricated records for its own identity
 
 ## Player setup
 
+The native View profile action (previously Gamer Card) opens a rider license for the production
+NOBK service: selected-player name, country flag/avatar, membership date,
+Overview/Records tabs and a link to the general NOBK account profile.
+See [player card behavior and validation status](gamer-card.md).
+
 In **Online → Connection mode** choose:
 
 | Mode | Behavior |
@@ -31,11 +36,23 @@ In **Online → Connection mode** choose:
 | LAN | Existing broadcast room discovery and optional host IPv4 fallback |
 | Online | Community HTTPS handshake, server room discovery, UDP relay and persistent native leaderboards |
 
-For Online enter the administrator's **HTTPS origin**, for example
-`https://play.example.com`, in **Online server**. Set a player name and optionally
-a host room name, then launch and use the original Player Match host/search UI.
-Everyone must enter the same server address. There is deliberately no invented
-public default server: the user has not purchased/deployed the VDS yet.
+For Online, sign in with the shared **NOBK Online** account on the launcher's
+Online page. The production origin is fixed to `https://motogp.nobkonline.com`;
+the server-address control is hidden and Save/PLAY restores this configured
+origin rather than accepting a hidden field override. Online is the current
+launcher default. Offline and LAN remain explicitly selectable without accounts.
+
+The username becomes the in-game name. **Remember me** is enabled by default:
+checked sessions save a DPAPI-protected token; unchecked sessions stay in memory.
+The password is never saved. Before each Online PLAY, the launcher refreshes the
+site token and links this PC's game profile through `/v2/link`. A rejected token
+returns to sign-in; connection failures block Online launch without silently
+switching to Offline. A hosting room-name field appears after sign-in.
+Then use the native **Online → Player Match** host/search flow.
+
+**Create account**, **Forgot password?** and **My account** open the shared
+website's registration, recovery and account pages. There is no separate
+MotoGP password-reset service. See [account presentation](launcher.md#online-account-presentation-and-persistence).
 
 LAN IPv4 fields are for LAN. They do not select an Internet interface or route
 Online traffic. Online selects the route to the VDS automatically.
@@ -54,20 +71,40 @@ The server stores only its SHA-256 digest and the assigned persistent player ID.
 HTTPS authenticates subsequent requests with that secret; short-lived UDP
 tickets and MAC keys are separate and rotate on reconnect.
 
-Changing the player name or IP retains the same records when the same profile
-is used. Multiple players behind one router have independent identities. Names
-are display names and are **not unique or verified account names**: choosing
+At the legacy profile layer, changing the display name or IP retains the same
+records when the same profile is used. Multiple players behind one router have
+independent identities. Names
+at that layer are display names, **not proof of account ownership**: choosing
 someone else's name does not grant access to that person's records. The player
 database has no IP column; live socket endpoints and temporary traffic quotas
 still use addresses. The administrator's proxy/OS logging policy is separate.
 
-There is currently **no account login, portable export or recovery service**.
-Deleting a profile loses access to its records; copying the DPAPI-protected file
-to another PC/Windows user is not a portable backup. A clean Windows reinstall
-can also lose access. Profiles are currently selected by the exact configured
-server address, so keep that address consistent; changing the hostname/port or
-its spelling can select a different profile. Do not delete profiles to resolve
-a connection problem, and never send them in public logs or bug reports.
+Production accounts add a second, separate layer: the launcher signs in at
+`https://play.nobkonline.com/api/account/launcher` and stores a remembered token
+at `%LOCALAPPDATA%\MotoGP0910\Online\nobk-account.bin`. The account name,
+token and optional country are protected together by Windows DPAPI. Before
+PLAY, `PrepareOnline` refreshes the token and `LinkAccount` proves this PC's
+existing per-server profile to `/v2/link`. The site password is not stored in
+that profile or sent to the Rider License's public lookup endpoints.
+
+Account-backed recovery on another PC uses a new website sign-in and server
+linking; copying a DPAPI file between Windows users/machines is not a portable
+backup. The server owns account-to-player association. Do not infer ownership
+from a display name, delete local profiles to troubleshoot a connection, or
+promise automatic merging of independent legacy records. An unlinked legacy
+profile still depends on its secret; losing it is not repaired by choosing the
+same name. Independent service operators must provide their own compatible
+account/link configuration. The public launcher does not expose a server switch.
+
+The earlier proposal for a new custom account/recovery-code backend was not
+adopted; shared NOBK sign-in and website recovery are the implemented solution.
+
+## Independent service operation
+
+The commands below describe running the repository's backend. They do not
+configure or redeploy NOBK production. The standard-library relay/storage server
+and the site's account service are separate components: a fresh standalone
+backend is not a replacement for the production launcher authentication API.
 
 ## Linux server
 
@@ -106,7 +143,9 @@ Keep the existing database and player profiles. See [security review](community-
    for the relay, in both the provider firewall and the operating system firewall.
    Keep TCP 30820 private to the machine.
 6. `https://play.example.com/health` should report `service: motogp0910`.
-   Enter `https://play.example.com` in both launchers.
+   This is an independent-operator example, not the production launcher origin.
+   A development client must explicitly target that service; the public
+   launcher retains the fixed NOBK origin and requires its account contract.
 
 `motogp-online.service.example` is an optional systemd template. Adjust its paths
 and create the `motogp` service user before installing it. It keeps writable
@@ -190,7 +229,9 @@ profile is rejected; two different Windows users/PCs have independent profiles.
 Regular shutdown disconnects the ticket; after an unexpected process death the
 server permits reconnect after its stale-connection interval. Do not distribute
 personal profile files. Changing the server origin or Windows user creates a
-separate identity; this initial version has no account recovery/transfer UI.
+separate local credential. On production, website sign-in and `/v2/link`
+associate that credential with the account before connecting. Keep account
+linking distinct from unlinked legacy profile recovery.
 
 UDP packets carry a session identifier and HMAC-SHA256 with a secret negotiated
 over HTTPS. The secret never appears in UDP. Client/server directions use
@@ -219,7 +260,8 @@ property `0x20000003` as the signed 64-bit rating. The game compares ratings wit
 **greater-is-better**, and writes timed results as negative values; some score
 modes write positive ratings. Consequently all 378 views keep the greatest
 rating for each player, preserving the associated columns as one result. A
-slower lap cannot replace a faster lap. Duplicate operation IDs are idempotent within the most recent 256 writes for
+slower lap cannot replace a faster lap. Duplicate operation IDs are idempotent within
+the most recent 256 writes for
 that player. The current native schemas all use `best`, so replaying an older
 result outside that bounded window still cannot worsen the stored best rating.
 No `sum`/`last` schemas are enabled by the shipped configuration.
@@ -265,7 +307,8 @@ The separate int64 rating at native row offset `+16` is preserved. Internal
 best-rating reads with a different column specification remain raw. The remaining
 189 views retain their previous column behavior, including both Arcade groups.
 Native selector `82300088` confirms base IDs 1/127/316 for the three supported
-timed categories, before adding the class-times-21 and track offsets. Uploads, persistent records, rank ordering and website
+timed categories, before adding the class-times-21 and track offsets. Uploads,
+persistent records, rank ordering and website
 time conversion are unchanged; no database migration or server deployment is
 needed. Existing records benefit if their associated properties were retained.
 Absent/invalid lap ticks stay unavailable instead of displaying a zero time.
@@ -289,16 +332,18 @@ setup `822FEE30`, and row setters `8223F3D0`, `8223F338`, `8223F300` and
 `8223F288`. Research for all 17 internal IDs includes the Championship flag
 override; the flag is never reconstructed from lap duration.
 
-`lap_times_probe` is an opt-in CPU-only regression target covering the native
+`lap_times_probe` is a main-branch-only CPU regression target (excluded from
+this selective PR) covering the native
 output ABI, all 378 view IDs, unchanged internal reads, mode/season/track
 projection, missing/invalid values, and the 17 mode-label IDs. It requires no
-server, original game inputs or GPU. This change has **not been built or run**
-at the user's request; these new checks and native Windows UI validation are
-pending. The older validation results below do not validate this change.
+server, original game inputs or GPU. The later main-source local regression recorded in
+[the Rider License validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md) includes this
+probe. Native Windows leaderboard rendering and a live lap submission still
+require separate acceptance; CPU projection checks do not establish them.
 
 ## Validation and remaining deployment work
 
-Current targeted results (16 October 2026):
+Historical targeted results (16 October 2026; before the later account/profile work):
 
 | Check | Result |
 |---|---|
@@ -329,9 +374,11 @@ and `--wine PATH` for the Windows backend from Linux. Both programs clean up
 their temporary owned services. These tests do not certify public DNS, public
 certificate issuance or the actual VDS firewall.
 
-The VDS has not been provided and no public service has been deployed. A real
-Internet race, live leaderboard UI after a real lap, and native Windows GPU
-behavior still require the deployed endpoint and two players. Previous user
+The client now targets the configured NOBK production origin and consumes its
+public profile/ranking APIs. This replaces the earlier unconfigured-endpoint
+status; it is not evidence that this project deployed the service or completed
+a real Internet race. Live leaderboard UI after a real lap and native Windows
+GPU behavior still require an end-to-end check with two players. Previous user
 confirmation of LAN/Radmin racing remains valid evidence for the original LAN
 path, not for the new Internet relay.
 
@@ -339,5 +386,7 @@ path, not for the new Internet relay.
 The ghost-category extension repairs row presentation only. It does not implement
 uploading/downloading a ghost replay or validate that the live service rolls
 Monthly records over by calendar period. Replay transfers are intentionally
-outside the current scope. This revision was syntax-checked without a build or
-gameplay test; earlier Lap Times probe results do not validate the extension.
+outside the current scope. The extension was initially syntax-checked only. The later
+local regression
+includes the current `lap_times_probe`; neither that probe nor the display fix
+validates real ghost transfer, Monthly rollover or an Internet race.

@@ -1,138 +1,90 @@
-# Project status — 18 October 2026
+# Project status — 23 October 2026
 
+This is the preview integration status, reconciled with main documentation
+revision `5e91cf5`. Production features were selectively delivered at `ab7d3f7`;
+this documentation update does not merge main or change application code. Older milestone
+reports retain their original evidence; they do not replace current build pins,
+installation instructions or validation limits.
 
-**Launcher Racing Lines:** User-selected concept B is implemented as a compact 940 × 578 launcher with horizontal tabs, scrollable settings and title buttons drawn over the artwork. General adds read-only, cancellable SHA-256 game-file verification. See [scope and validation](launcher-redesign.md).
+## Platform and delivery
 
-This is the current status entry point. Older milestone documents describe
-historical builds; a stable SDK version or old ZIP mentioned there does not
-replace the current release pin. User observations are distinguished from
-automated checks and from remaining native Windows verification.
+Windows 10/11 x64 is the product target. Launcher **1.1.11** and the supported
+game title update **0.0.1.1** have independent versions. ReXGlue is pinned to
+`0.10.0.24-dev.gbd833a2` (`bd833a2ab69d305f99ddf57418fc38ffec8af93d`) in
+`sdk-version.json`, with the matching custom DLLs in the runtime manifest.
+Do not mix stable/nightly packages or individual runtime DLLs.
 
-## Platform and delivery rules
+The public entry point is `MotoGP09-10Launcher.exe`; game/runtime binaries are
+under `bin/`. Launcher and game share root `config.json`. The default Windows
+save/cache root is `Documents/MotoGP 09-10`; migration preserves existing data.
+Original game, TU and all three supported DLC packages are local prerequisites
+for every connection mode. See [layout](game-layout.md), [portable settings](portable-launcher.md)
+and [DLC installation](dlc.md).
 
-Windows 10/11 x64 is the product target. ReXGlue is pinned to
-`0.10.0.24-dev.gbd833a2` in `sdk-version.json`; the matching custom runtime pair
-is pinned in `third_party/rexglue-runtime/manifest.json`. Preserve the game,
-configuration and saves. English filenames; English default with Turkish UI.
-Show each completed stage before starting the next. Ask about unclear UX
-requirements; while awaiting answers continue only independent authorized work.
-Don't publish original game data, personal logs or preview screenshots.
+Build/CI policy, workspace instructions and local regression implementations
+are outside this selective transfer. Source documentation maintenance does not
+increment the launcher version or establish new application validation.
 
-## Current evidence
+## Implemented features and remaining limits
 
-The latest [portable launcher package](portable-launcher.md) passed
-all 31 Windows PE/Wine suite entries with its matching custom Release DLLs.
-Advanced gates F3 behind an off-by-default checkbox; manual intro skipping uses
-the native transition with Cross/A or Start, Space or Enter. Final checks include
-76 debug/timing/layout checks, 12 owning-module GPU API checks, 127 native
-quit/startup/input checks and 70,809 launcher UI assertions. All eight sliders, focus, rapid checkbox input, two-way popup animation, native
-mouse selection and inline network visibility are included in the UI run. Extended crash
-diagnostics is in Advanced; intro skipping no longer needs a checkbox. Native Windows
-D3D12 overlay/gameplay and physical controller validation remain separate.
+| Area | Current implementation | Evidence or remaining boundary |
+| --- | --- | --- |
+| Startup and collision | Supported TU, missing native callback repairs, serialized coordinate/endian repair | User reported working gameplay and 4–5 Qatar Time Trial laps without falling through the track; not all-track acceptance |
+| Career liveries | Scoped synchronous GPU readback with preserved flags/ABI | CPU/ABI checks; first career-race Windows visual acceptance remains outstanding |
+| Launcher | Racing Lines, seven pages, ISO/TU/DLC setup, verification, Steam shortcuts/artwork, native controls/help | Wine Win32 UI and persistence checks; native composition, actual imports and Steam review remain separate |
+| Settings and saves | Shared JSON, legacy backups, Windows save-folder migration and custom-root preservation | Isolated format/persistence/UI coverage; preserve original saves/configuration during upgrades |
+| Input and local play | Xbox/PS3/keyboard prompts, corrected Default action labels, explicit preference preservation, controller/keyboard splitscreen, non-career rider availability | Native gameplay, reconnects and physical-device combinations remain to be checked |
+| Native menus | PC menu cleanup, zero private slots, native Quit/Press Start confirmation, themed system dialogs | Native visual/gameplay review remains separate from CPU/input evidence |
+| Live settings and achievements | F1 immediate controls, F7/launcher read-only achievement list, shared notification preferences | CPU/persistence/UI checks; GPU, listening and physical-controller acceptance remain outstanding |
+| Turkish localization | Native text/font overlay, launcher/account/update strings and 50 achievements | Native-bank/CPU checks; full Windows career/tutorial/HUD visual sweep remains outstanding |
+| LAN | LAN02 discovery, direct-IP fallback, guest session/socket bridge and lobby retry repairs | User confirmed earlier two-PC Radmin racing; revised retry/rejoin, larger grids and poor networks need native checks |
+| NOBK Online | Fixed production service, shared-site sign-in/token refresh, PC linking, authenticated relay, 378 native statistics views | Source and local protocol coverage; no new production deployment or Internet race acceptance is claimed |
+| Native leaderboard display | Lap Times, All Time Ghost and Monthly Ghost column/mode projection | Included in local regression; replay transfer and calendar-based Monthly rollover are not implemented/validated by this display fix |
+| Rider License | View profile, Overview/Records, avatar/flag/bio with general emoji, Rider Rank, selected-board lap/map/date and isolated input | Local CPU/ImGui checks and user screenshots; lobby circuit context, season/Moto2 integration and DLC outlines remain deferred |
+| Launcher updates | FIFA-compatible manifest/download contract, helper, restart acknowledgement and rollback | Endpoint remains empty; update-preview checks exist, but real download/install/restart/rollback acceptance remains outstanding |
+| DualSense adaptive triggers | Default-off SDL resistance profiles in launcher/F1, focus/shutdown reset | Software/transport checks; physical USB/Bluetooth resistance unverified |
+| Rendering and performance | Spatial FSR 1/CAS, experimental FSR 2/3 and horizontal-plus ultrawide; scoped runtime fixes | No full temporal reconstruction, all-camera GPU validation or measured native FPS improvement claimed |
+| Diagnostics | Native crash monitor, optional F3 diagnostics, actionable warnings | Nine isolated crash scenarios; reporting does not diagnose every exit or certify race stability |
 
-The current quality package also fixes temporal FSR sharpness persistence across
-mode changes, accented achievement search and adaptive-trigger cleanup on normal
-window close. Additional validation passed 56 community-server tests, 96
-sanitized LAN protocol/session checks, 73 relay authentication checks and nine
-native crash-monitor scenarios. These checks do not establish all-track gameplay
-coverage or a measured native Windows frame-rate improvement.
+## Rider License statistics
 
-Launcher and game settings now share root `config.json`, including live F1 saves.
-Twenty-two format/migration/SDK-priority checks and 346 live-settings checks
-passed. The single public launcher loads its UI library in process from `bin/`; root resources,
-configuration and logs were verified separately from the unchanged save/cache
-location. Nine crash scenarios also passed with the bin layout and JSON evidence.
-The launcher now has a single public EXE, orange rounded checkboxes and an inline
-Online tab between Controls and Achievements. The achievement-list hover tooltip
-was removed so it cannot obscure cards.
+- **Rider Rank:** website overall rider ordering, including its 17-base-track
+  catalogue and full ranking scope; separate from a selected board's rank.
+- **Tracks Held:** distinct playable circuits led, including DLC, out of **20**.
+- **Records Held:** circuit/class boards where the rider is first.
+- **Boards Entered:** published circuit/class personal-best entries, not unique
+  circuits driven. **Total Track Domination** uses Tracks Held / 20.
 
-| Area | Implemented / checked | Native Windows evidence / limit |
-|---|---|---|
-| Game startup and races | Original XEX plus TU 0.0.1.1; startup/race callback repairs | User reports working gameplay |
-| Qatar collision data | Serialized coordinate/endian repair; 192 regressions | User drove 4–5 Time Trial laps without falling through the track |
-| PS3 / Xbox / keyboard prompts | Original supplied PS3 artwork, correct texture pitch and replay row; new dark/orange keyboard font | User accepted PS3/replay fixes; latest keyboard visual check pending |
-| Career liveries | Scoped synchronous GPU readback, preserved flags and ABI | First career-race visual result remains unverified in available evidence |
-| LAN/Radmin | Automatic discovery and IP fallback; session/socket integration | User verified two-PC racing; not proof of every disconnect/rejoin scenario |
-| Community Online / VDS | Separate Offline/LAN/Online launcher modes; Linux/Windows Python service, HTTPS identities, authenticated UDP relay and native 378-view persistent leaderboards | Local Windows PEs exercised with Linux and Windows Python backends under Wine; public VDS/TLS/firewall and Internet race pending. Use Player Match; no official Xbox Live ranked/friends/voice. See community-online.md. |
-| Community service security | MGO2 UDP endpoint proof, strict room transitions, pre-TLS admission, authenticated Caddy proxy, bounded SQLite/HTTP/UDP work; 46 server tests and 12 real HTTPS checks per Linux/Windows backend | Windows Python/clients exercised under Wine; deployed VDS OS/firewall/provider DDoS controls and Internet race remain unverified. See community-security.md. |
-| Revised lobby admission | Retained selected discovery result, valid null leave slots; 67 kernel, 20 generated-wrapper checks and 3 two-process modes | New fix's native Radmin replay pending |
-| Live settings | F1 MotoGP UI, 49 live controls, safe launcher persistence; 346 Windows/Wine checks and actual launcher child-exit reload | Native GPU/live gameplay result pending |
-| Turkish text / native Options | 2,102 message IDs, five translated scripts, four extended native fonts, 50 achievements; normalized 48 Turkish glyphs across four banks; read-only VFS overlay; Marketplace row removed | Automated native CPU/UI checks passed; Windows GPU text/layout review pending. See turkish-localization.md. |
-| Quit menu | Uppercase entry; white stripe and upper cap with brightness/alpha retained; separate boot/frontend guards; 109 checks | User confirmed Press Start Back now opens exit confirmation. User also accepted the white upper cap. See quit-menu.md. |
-| Achievements | Launcher page + F7 list; 50 original icons, 1000 G, live read-only progress, search/filters and shared pop-up/sound preferences; 286 runtime checks and 60,132 actual launcher UI checks | EN/TR previews inspected. Native scrollbar now passes actual mouse-drag input; title bar has only minimize/close. Native game GPU/listening check pending |
-| DualSense adaptive triggers | Downpour SDL approach researched first; nine shared launcher/F1 parameters, native PS5/Edge targeting, explicit reset on disable/focus/shutdown; 200 software/transport checks | Experimental and default off. User owns 8BitDo; physical DualSense USB/Bluetooth resistance remains untested. See adaptive-triggers.md. |
-| FSR 2/3 | Experimental AMD providers; neutral depth/motion and per-frame history reset | Proper temporal reconstruction and scene render-cost reduction absent; Windows GPU dispatch unverified |
-| Ultrawide | Experimental horizontal-plus projection and centered HUD | Full Windows camera/cutscene/culling coverage unverified |
-| Performance | Reduced avoidable queries/logging/locking; synthetic path checks | No measured native game FPS improvement |
-| Runtime safety / crash reports | TLS, thread IDs, owned paths, dates; external native exception monitor | Dumps help diagnose complete exits; lobby returns are a different failure category |
+The profile summary/Records currently use the agreed temporary 2009 scope;
+website Rider Rank uses the site's own scope. See [the full contract](gamer-card.md).
 
-## Current QA and documentation update — 17 October 2026
+## Source-branch evidence and integration boundary
 
-The [wet Motegi log audit](motegi-rain-qa.md) addresses all recorded error
-categories and the repeated null-descriptor diagnostic. Final checks passed:
-1,768 font geometry/block comparisons, 74,926 native localization checks,
-2,146 real kernel/VFS checks and 80 exact SDK texture-parser checks; all 25
-Windows PE/Wine suite entries passed. A new native Windows rainy race remains
-required. Experimental FSR 2/3 warnings are retained.
+Main source `8a33ea9` has a successful local Windows Release build. Recorded
+source-branch evidence includes 60 server tests, 6,807 Rider License checks,
+65,765 launcher viewport checks, 10,807 focused launcher checks and 31 non-layout
+Windows scenarios. Launcher validation completed in phases, with no final
+single-run 32/32 report. These are Wine/CPU/Win32/ImGui results, not native
+Windows GPU, physical-gamepad, complete-race or live-service acceptance.
 
-Repository Markdown prose is now English. Exact translated UI labels/glyph
-samples remain localized where useful. The obsolete cancelled Claude handoff
-was removed; source licenses, required assets and historical ZIPs are retained.
-See [repository instructions](../AGENTS.md). The current package is linked
-from the [README](../README.md).
+The selective preview worktree was not separately rebuilt. Its source excludes
+the local validation implementations and two unrelated main-only launcher fixes.
+The [main validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md)
+retains detailed evidence outside this PR. Documentation maintenance adds no new
+application validation evidence or local build archive to the transfer.
 
-## Historical controls / UI update — 15 October 2026
+## Upstream integration
 
-- Native Control Settings follows Xbox / original PS3 DualShock 3 / Keyboard.
-  The supplied PS3 bank already contained the diagram; no new upload needed.
-- User chose a dark/orange keyboard **key list**, not a full keyboard image.
-  Real keybind alternatives and native action names follow live bindings and
-  Default / Alternative A / B. No gameplay mappings are rewritten.
-- Settings shortcut is **F1**; old F4 migrates while a different custom bind
-  is retained. Alt+F4 still closes the window normally.
-- Previous scrollbar issue now has a real OS mouse-drag regression; the launcher
-  caption visibly contains only working minimize/close buttons.
-- Press Start now reads boot application phase **828DA060** separately from the
-  frontend property. The user confirmed the corrected Press Start Back/B exit.
-  That input path is preserved in this update.
-- User chose **white** for the QUIT GAME accent; the seventh tile uses an isolated
-  white/gray texture view preserving native alpha, geometry and upper-cap
-  brightness layers. User accepted the final white cap.
+Rider License was pushed to `main` as `8a33ea9`, then selectively transferred to
+`preview` as `ab7d3f7` for the existing
+[PR #1](https://github.com/ChunchunQ/motogp0910-recomp/pull/1), targeting
+`ChunchunQ:nobk-online`. The extension preserves the earlier production features
+and excludes CI, workspace rules, local validation implementations, unrelated
+launcher layout fixes, screenshots and historical/original game archives.
+The selective integration worktree was not separately rebuilt. The attempted
+PR-description update was denied by GitHub permissions; code delivery does not
+prove that the description was subsequently edited.
 
-Screenshots and raw game banks stay out of Git. Read-only achievement progress,
-LAN/Radmin, original button artwork and the cancelled physics investigation's
-revert are preserved.
-
-## Work sequence
-
-1. Keyboard prompt redesign delivered separately; visual review pending.
-2. Achievement UI, notification and quiet sound completed; Windows ZIP ready.
-3. Quit menus follow-up implemented in the launcher achievement update: uppercase
-   `QUIT GAME`, corrected live frontend hook for Press Start Back/B; [98 targeted checks](quit-menu.md).
-4. In-game live settings completed: only immediate controls appear; no restart-only section. [Scope and 345 targeted checks](in-game-settings.md).
-5. Launcher achievement page completed, retaining the existing MotoGP design.
-   [Read-only save paths, original catalog and shared notification options](achievements.md).
-6. Native controls diagram and F1 / previous UI follow-up completed; native visual review pending.
-7. DualSense adaptive triggers and remaining white cap follow-up implemented;
-   [source research, settings and hardware verification boundary](adaptive-triggers.md).
-8. Turkish written localization and Marketplace removal completed; native visual review pending. [Scope and validation](turkish-localization.md).
-9. Community Online service and native leaderboards implemented at the user's new priority. Public VDS deployment and Internet playtest require the future server endpoint. LAN remains available.
-10. Launcher redesign and Controls interaction refinements delivered; current design and acceptance notes are in launcher-redesign.md.
-
-The FPS/physics investigation was explicitly cancelled and reverted. Don't
-resume speculative simulation or handling changes. Frame generation is excluded
-by the user's instruction. Keep experimental FSR choices available with their
-limitations; don't present compatibility dispatch as full temporal support.
-
-## Source map
-
-- User observations and current order: ongoing conversation.
-- [Roadmap](roadmap.md), [launcher requests](launcher-next-steps.md).
-- [LAN findings](lan-lobby-stability.md), [crash reporting](crash-reports.md).
-- [Community server, modes, deployment and original statistics ABI](community-online.md).
-- [Community service security review, fixed vulnerabilities and limits](community-security.md).
-- [Runtime safety / validation limits](stability-quality-control.md).
-- [Experimental rendering](experimental-rendering.md).
-- [Career readback](career-textures.md), [collision repair](collision-data.md).
-- [Keyboard prompts](keyboard-prompts.md), [achievement UI](achievements.md), [live settings](in-game-settings.md).
-- Build provenance: SDK pin, runtime manifest, Git commit, per-ZIP SHA-256.
+See the [handoff](chunchunq-handoff.md) and [roadmap](roadmap.md). The full
+fork changelog remains outside this selective transfer. Physics/handling experiments were cancelled and
+reverted; frame generation remains excluded.

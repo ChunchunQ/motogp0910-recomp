@@ -22,7 +22,8 @@ section and no changes to physics, session membership or game files.
 
 GPU selection, internal rendering scale, host display mode/size/Hz, shader
 storage, native MSAA, FXAA, anisotropic filtering, game language, game folder,
-keyboard-enable toggle, input backend and LAN setup are deliberately absent. Their current startup or
+keyboard-enable toggle, input backend and LAN setup are deliberately absent. Their
+current startup or
 cache paths do not provide a verified safe live change through this menu.
 The pinned MnK driver ignores key releases while disabled; toggling it off/on
 with a held key can latch that key. Its live keyboard-enable toggle is therefore
@@ -43,19 +44,23 @@ Changes take effect immediately; **Save settings** persists them for future
 launcher use. Return does not implicitly save. **Revert unsaved** restores the
 last saved live values, including the real presenter configuration.
 
-The app retains the SDK-resolved config path. Saving merges only changed managed
-keys into the latest TOML, preserves unrelated tables, paths, LAN settings and
+The app retains the root settings path independently of its private SDK adapter. Saving
+merges only changed managed
+keys into the latest root `config.json`, preserves unrelated supported objects, paths,
+LAN settings and
 other values, and refuses conflicting external edits to the same key. An
 exclusive temporary file, flushed atomic replacement and first-file backup
 protect the existing config. A failed save leaves live values available and
 reports the error. The launcher reloads the file when its child game exits,
-because its controls are disabled during the session; the next PLAY cannot
+because game-setting controls are disabled during the session; the next PLAY cannot
 silently overwrite the newly saved values with an old snapshot.
 
 The overlay does not pause the simulation or network: pause offline gameplay
 before adjusting settings; LAN participants keep running. Opening takes a
 reference-counted SDK input blocker immediately. Input polling, keystroke queue
-draining and release masking stay on the existing guest frame hook. Native input polling is serialized with mapping edits to avoid racing the SDK's direct string readers. A native
+draining and release masking stay on the existing guest frame hook. Native input polling
+is serialized with mapping edits to avoid racing the SDK's direct string readers. A
+native
 keystroke import gate also covers the SDK path that bypasses its state blocker.
 Closing waits for held buttons to be released before returning control.
 Keyboard/mouse DOWN events reach ImGui before being intercepted ahead of MnK;
@@ -88,7 +93,7 @@ CPU planning and ImGui draw/layout checks do not establish shader correctness.
 ## DualSense resistance profiles — 15 October 2026
 
 Controls adds the same nine adaptive-trigger parameters as the launcher editor.
-They update the native SDL effect service live and save back to the same TOML
+They update the native SDL effect service live and save back to the same JSON
 keys. XInput hides these controls because it cannot apply them; switch to SDL
 in the launcher before starting. Default off and experimental. This adds no
 restart-only setting to F1. [Modes, sources and hardware limits](adaptive-triggers.md).

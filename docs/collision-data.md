@@ -22,8 +22,9 @@ not an intentional change to physics or a render-resolution setting.
 The hooks call the original routines and preserve their return values,
 integer/index fields and guest call state. They repair only floating-field
 stores using byte reversal of the original serialized integer bits.
-No compressed game assets or original XEX/TU files are changed. ReXGlue
-remains pinned to v0.10.0 and the matched runtime DLL pair is unchanged.
+No compressed game assets or original XEX/TU files are changed. This repair
+originally used stable v0.10.0 and required no runtime change. Current builds
+retain it on the exact nightly pin in `sdk-version.json`; see [migration](sdk-nightly-migration.md).
 
 The optional physics_asset_probe loads the actual patched 0.0.1.1 XEX and
 calls the real registered conversion functions. Eight finite float patterns
@@ -54,7 +55,7 @@ Repair activity appears in the log as PHYSICS_ASSET_FIX. A clean diagnostic
 run can use the separately tested graphics option to avoid texture warnings:
 
 ```powershell
-.\motogp0910.exe --gpu_allow_invalid_fetch_constants=true --log_file=logs\qatar-collision-test.log
+.\bin\motogp0910.exe --gpu_allow_invalid_fetch_constants=true --log_level=debug --log_file=logs\qatar-collision-test.log
 ```
 
 If the fall persists, this log will help establish whether repaired records

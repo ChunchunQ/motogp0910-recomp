@@ -1,11 +1,17 @@
 # Native PC quit confirmation
 
+The implementation below is retained in main `8a33ea9` and the selective
+preview delivery. Its original build-only milestone is distinguished from
+the later [local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md); native Windows
+gameplay and physical-controller acceptance remain separate.
+
 The seventh main-menu entry, **QUIT GAME**, and Back on the initial Press Start
 screen now use the title's own Yes/No dialog. The previous ImGui confirmation is
 removed. No announcer voice is added: the user rejected the tutorial-word sample,
 and a suitable standalone menu announcement has not been found.
 
-The dialog opens with **Yes** selected, as requested by the user. It uses the game's existing localized
+The dialog opens with **Yes** selected, as requested by the user. It uses the game's
+existing localized
 quit question, explicit Yes/No labels, renderer, fades and mapped confirm/back controls.
 It does not introduce mouse buttons or host-only Enter/Escape shortcuts; the
 configured virtual gamepad mappings continue to work. The caption follows game

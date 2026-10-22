@@ -1,5 +1,10 @@
 # Exact SDK nightly migration
 
+The exact nightly pin below remains current. Validation counts and selector
+labels describe the migration milestone. FSR 2/3 remains experimental even
+though current captions omit that suffix; [rendering limits](experimental-rendering.md)
+and [project status](project-status.md) describe the current presentation.
+
 The project now pins **0.10.0.24-dev.gbd833a2**, release tag
 `nightly-20261002-bd833a2a`, source
 `bd833a2ab69d305f99ddf57418fc38ffec8af93d`. Official Linux/Windows SDK package

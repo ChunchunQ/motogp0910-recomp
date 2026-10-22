@@ -1,5 +1,9 @@
 # Diagnostic overlay and startup input
 
+The validation totals below describe the diagnostic-overlay milestone.
+For current package paths and the later main build, see [layout](game-layout.md)
+and [project status](project-status.md); diagnostic files now live in `bin/`.
+
 The Windows development package adds an optional diagnostic overlay and manual
 startup skipping. These changes preserve the existing launcher paint fixes,
 localization resources and game/runtime compatibility fixes.
@@ -7,7 +11,7 @@ localization resources and game/runtime compatibility fixes.
 ## Launcher options
 
 Advanced contains **Enable debug overlay** (default off) and **Extended crash
-diagnostics**. Debug permission is stored in the game TOML; crash diagnostics
+diagnostics**. Debug permission is stored in the shared root `config.json`; crash diagnostics
 retain the existing launcher preference and behavior. They apply on the next
 game launch. Launcher language and game text language remain independent.
 
@@ -35,7 +39,7 @@ gauges use live runtime counters. Missing GPU bridge/instrumentation is shown
 as unavailable rather than manufactured zero readings. Counter collection can
 still be absent on an uninstrumented path; a zero value is not proof of coverage.
 The matching custom runtime includes the GPU bridge and lightweight counter
-instrumentation in Release builds. Tracy profiling remains disabled in Release.
+instrumentation in Release builds. These counters can be read without attaching a Tracy profiler.
 The runtime archive and DLL hashes are recorded in the existing manifest.
 
 ## Manual startup skipping

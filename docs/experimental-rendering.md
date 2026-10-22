@@ -1,13 +1,16 @@
 # Experimental FSR and horizontal-plus ultrawide
 
-The stable milestone uses the exact ReXGlue v0.10.0 source and existing fixes.
-All previous packages remain available for rollback. Neither the SDK nor the
+Current sources use the exact nightly pin in `sdk-version.json` and matching
+custom runtime manifest. The older stable v0.10.0 milestone is preserved as a
+separate historical rollback package; see [migration](sdk-nightly-migration.md). Neither the SDK nor the
 original game assets are silently updated by selecting these settings.
 
 ## FSR 2 and FSR 3
 
-Graphics offers FSR 1, CAS, FSR 2 (Experimental), FSR 3 (Experimental) and six
-quality modes. The Windows D3D12 presenter uses the AMD FidelityFX API and the
+Graphics offers Bilinear, CAS, FSR 1, FSR 2 and FSR 3 with six FSR quality
+modes. FSR 2/3 remain experimental even though the current selector captions
+omit the Experimental suffix; their help retains the limitations. The Windows D3D12
+presenter uses the AMD FidelityFX API and the
 providers in third_party/fidelityfx. Provider enumeration against the actual
 shipped DLL identifies FSR 2.3.3 and FSR 3.1.4 as distinct implementations.
 
@@ -58,7 +61,8 @@ cutscene or culling edge case has been visually verified.
 
 CPU/provider tests do not establish successful Windows GPU shader execution or
 race stability. Linux graphical startup results are recorded separately in
-launcher-validation.md. No screenshots are tracked in the repository.
+launcher-validation.md. No new rendering QA captures are transferred; historical preview screenshots
+remain unchanged.
 
 The actual Windows game GPU smoke test stopped at adapter initialization: the
 cloud Wine environment exposes no Direct3D 12 adapter with feature level 11_0.

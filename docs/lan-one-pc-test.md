@@ -1,12 +1,16 @@
-# Testing LAN with two instances on one Windows PC
+# Legacy two-instance LAN test helper
 
 Two game processes can exercise real discovery, joining and packet transport
 on one PC. This does not validate routing, broadcast or firewall behavior
 between separate physical or virtual LAN peers.
 
 1. Close existing game windows and extract the complete current Windows ZIP.
-   Copy `scripts/test-lan-one-pc.ps1` from source beside the EXE; the normal
-   package omits this optional helper. Preserve `game/`.
+   The normal package omits `scripts/test-lan-one-pc.ps1`; this legacy helper
+   expects a flat EXE folder and predates shared JSON/default Online mode.
+   Do not run it unchanged against the current `bin/` package: its legacy
+   `--lan_enabled` flags alone do not override an explicit `network_mode`.
+   Preserve `game/`, `dlc/` and your settings. A current-layout helper update is
+   separate work; the procedure below records its original test contract.
 2. Open PowerShell in the program directory:
 
 ```powershell

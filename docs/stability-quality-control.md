@@ -1,5 +1,10 @@
 # Stability and quality control — 14 October 2026
 
+Historical 14 October runtime validation. The code findings remain relevant;
+page counts, package names and assertion totals below belong to that milestone.
+Use [project status](project-status.md) and [working safeguards](../AGENTS.md) for
+current source, delivery and proportionate validation policy.
+
 Windows 10/11 remains the target. This update keeps the exact SDK pin
 `0.10.0.24-dev.gbd833a2` and the existing collision, PS3/replay, career readback,
 launcher and experimental rendering features.

@@ -1,5 +1,10 @@
 # Local splitscreen input
 
+The implementation below is retained in main `8a33ea9` and the selective
+preview delivery. Its original build-only milestone is distinguished from
+the later [local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md); native Windows
+gameplay and physical-controller acceptance remain separate.
+
 Selecting **Multiplayer → Splitscreen** evaluates playable devices once at entry.
 With two physical controllers, the first two connected controller slots become
 players 1 and 2. With one physical controller and enabled gamepad-style keyboard

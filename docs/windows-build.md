@@ -32,6 +32,20 @@ selected tool paths. A full VS 2026 build was not run on this Linux host;
 VS discovery has targeted coverage. Missing MSVCP140/VCRUNTIME140 DLLs require
 the [Microsoft x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
 
+## Supported input hashes
+
+`scripts/build-windows.ps1` verifies these original inputs before building:
+
+| Input | SHA-256 |
+| --- | --- |
+| Stock `default.xex` | `54245417e996ed0aa561a5a803fd810e87684bd0b43082f316db711b3ee786ae` |
+| Original TU container | `441df6cc2e20ac8aeeed475138c1714d477f965423d8c5c9b0202e3a18d8141f` |
+| Extracted `default.xexp` | `0419205ba10dc65eaa7b0bb62abc64cada46119ece5ed749e4ba20c06a6bc079` |
+
+The TU patches stock 0.0.0.1 to supported 0.0.1.1 in memory. The original-input
+parameter set accepts the original TU container; `-PreparedInputs` accepts a
+verified XEX/patch directory. Do not publish these files or their private URLs.
+
 ## Obtain sources
 
 ```powershell
@@ -67,7 +81,8 @@ $TitleUpdate = Join-Path $GameRoot 'TU_11K61VG_0000004000000.0000000000081'
 ```
 
 The execution-policy change applies only to the current shell. XEX/TU alone
-are sufficient to compile; running requires the complete disc data. Suggested
+are sufficient to compile; running requires the complete disc data and all
+three supported DLC packages in the portable installation. See [DLC setup](dlc.md). Suggested
 starting parallelism: Jobs 2 for 8 GB RAM, 4 for 16 GB, 8 for 32 GB+, subject
 to CPU resources. Reduce Jobs after memory exhaustion. Subsequent builds reuse
 unchanged objects.

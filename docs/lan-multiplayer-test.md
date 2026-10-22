@@ -1,4 +1,4 @@
-# Windows LAN multiplayer — experimental test build
+# Windows LAN multiplayer
 
 14 October 2026. SDK: **0.10.0.24-dev.gbd833a2**. Game: TU **0.0.1.1**.
 Protocol: **LAN02**; both PCs must use this exact package. The older LAN
@@ -54,8 +54,8 @@ For one Windows PC, use the [two-instance test instructions](lan-one-pc-test.md)
    require Internet router port forwarding.
 6. Use the original **Online/Xbox Live > Player Match** flow. One PC creates a
    room; the other searches and joins the discovered result.
-7. If discovery fails, close the joining game and set Host IPv4 in Multiplayer
-   Settings to the host's reachable address on that LAN. Restart and search
+7. If discovery fails, close the joining game and set Host IPv4 on the launcher's
+   Online page in LAN mode to the host's reachable address on that LAN. Restart and search
    again. The host can leave Host IPv4 empty.
 8. Begin with two players. Check joining, race start, remote movement, race end
    and rejoining after departure. Select Offline to disable LAN.
@@ -94,7 +94,7 @@ contain local/virtual LAN addresses; review them before sharing.
   filtering and correct search row slot/property/context pointers. Public and
   private lobby capacities are represented. QoS metadata comes from the host;
   Internet bandwidth and latency are not measured.
-- Multiplayer dialog: Offline / LAN / Online selection, player/room names, automatic local adapter selection
+- Launcher Online page: Offline / LAN / Online selection, player/room names, automatic local adapter selection
   with explicit IPv4 override, optional host IPv4 fallback. EN/TR localization.
 - Separate game cover and launcher logo icons, existing graphics/controller,
   collision, career livery readback and stability changes remain in the package.
@@ -107,8 +107,9 @@ tested under Wine; native testing of the updated fix is pending. Wine in this
 cloud reports no physical IP Helper adapters, so its network checks use
 loopback and cannot substitute for Radmin routing/gameplay checks.
 
-Initial use is two players. Multi-client mesh and private slots have code
-paths but are not validated in this delivery. Nonzero WSA completion routines,
+Initial use is two players. Larger-grid behavior remains unverified. Current
+PC host menus hide Private Slots and convert requested capacity to public slots;
+wire fields remain for compatibility with existing hosts. See [menu cleanup](pc-menu-cleanup.md). Nonzero WSA completion routines,
 TCP-based multiplayer and blocking scalar receive are not implemented by this
 bridge; the inspected title VDP path uses events, overlapped receives and
 nonblocking sockets. No leaderboards, ranked arbitration, voice verification

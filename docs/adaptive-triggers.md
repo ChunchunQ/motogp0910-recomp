@@ -57,9 +57,10 @@ Vibration/calibration modes are not exposed.
 
 The launcher dialog edits pending values; **Apply** accepts them, **Cancel**
 preserves the previous values. **Save settings / PLAY** persists them. F1 updates
-profiles live and can save the same keys back to `motogp0910.toml` without
+profiles live and can save the same keys back to the shared root `config.json` without
 restarting. On an XInput backend these live controls are hidden; choose SDL in
-the launcher before starting, since changing backend is not a live operation. Full-profile revert avoids invalid intermediate start/end ranges.
+the launcher before starting, since changing backend is not a live operation.
+Full-profile revert avoids invalid intermediate start/end ranges.
 
 The service uses the runtime's SDL instance through an additive, versioned C
 export. The shared input V1 table and SDK pin stay unchanged. It only targets

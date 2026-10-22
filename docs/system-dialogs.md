@@ -1,5 +1,10 @@
 # In-game system dialog theme
 
+The implementation below is retained in main `8a33ea9` and the selective
+preview delivery. Its original build-only milestone is distinguished from
+the later [local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md); native Windows
+gameplay and physical-controller acceptance remain separate.
+
 Text-entry dialogs such as career team naming use the SDK's shared ImGui
 keyboard dialog. The application now supplies its default style through
 `OnConfigureStyle`, using the palette and spacing from the F1 settings and

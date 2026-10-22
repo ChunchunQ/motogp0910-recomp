@@ -1,5 +1,10 @@
 # LAN launcher startup fix — 14 October 2026
 
+Historical repair/evidence record. TOML names below describe the original
+reproduction; current launcher/game persistence is root `config.json` with
+legacy migration and a private SDK adapter. Use [current layout](game-layout.md)
+for package paths. The argument omission and LAN fallback repair are retained.
+
 The reported game log ended immediately after the title update was applied;
 the launcher reported exit code **3221226505 (0xC0000409)**. That status alone
 does not identify a particular stack-buffer error: an unhandled C++ exception

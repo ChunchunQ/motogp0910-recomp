@@ -3,7 +3,7 @@
 Target integration branch: **ChunchunQ / `nobk-online`**.
 Scope: DLC-aware online records, website catalogue, room compatibility,
 account recovery, the in-game Rider License and the MotoGP launcher update
-service. Prepared on 21 October 2026; updated on 22 October 2026. This document and
+service. Prepared on 21 October 2026; updated on 23 October 2026. This document and
 [the factual catalogue](online-dlc-catalog.json) are self-contained; no website
 or production service was modified during this investigation.
 
@@ -16,8 +16,9 @@ describes the completed client delivery and its remaining service integration.
 
 The existing integration PR is
 [ChunchunQ/motogp0910-recomp#1](https://github.com/ChunchunQ/motogp0910-recomp/pull/1),
-from `inflamesgo:preview` to `ChunchunQ:nobk-online`. The existing source baseline
-for this extension is `6013abe9b56b064676affe3aa61ecf1a7d11ca59`.
+from `inflamesgo:preview` to `ChunchunQ:nobk-online`. The source baseline for this extension is
+`6013abe9b56b064676affe3aa61ecf1a7d11ca59`; Rider License was pushed to
+`preview` as `ab7d3f7` after the user approved the selective transfer.
 The user approved extending that PR with Rider License from `main` revision
 `8a33ea9`: Rider Rank, corrected metric names, aligned profile details, bio emoji
 support, removal of routine diagnostics and launcher version `1.1.11`.
@@ -455,3 +456,8 @@ and the exclusion boundaries above. No new build, broad regression campaign
 or service deployment is performed for this transfer.
 Native online/Moto2/season behavior, physical-controller/Windows-GPU
 playthroughs and real-service updater/rollback acceptance remain pending.
+
+The main-branch [local validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md) retains
+the detailed source-branch evidence. That report and its probe implementations
+are not part of the selective PR transfer. The PR body update attempt was denied
+by GitHub permissions; its text is not evidence of the code delivery state.

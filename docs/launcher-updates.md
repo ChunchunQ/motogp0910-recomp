@@ -6,8 +6,9 @@ is `ChunchunQ/fifa09-recomp`, revision
 `711da3941d81879db06ea4f2c36c3a519ac826d9`, `launcher/Updater.cs`.
 It includes a notification
 panel, background download, an independent installation helper, rollback and a
-restart acknowledgement. These are source changes; native execution has not yet
-been validated.
+restart acknowledgement. The current source is included in the main Windows
+Release build. Wine preview checks are recorded below; a real update transaction
+and native Windows installation acceptance remain unverified.
 
 The manifest endpoint is deliberately empty in
 `src/launcher/updates.h::kConfiguration`. An empty endpoint prevents all update
@@ -187,13 +188,15 @@ The changelog has 240 pixels of height, and Update now sits at the lower edge.
 Its scrollbar uses the launcher's existing slim rail geometry, colors and drag
 handling. The native EDIT scrollbar is omitted; wheel, keyboard and rail input
 scroll the wrapped text. During download, Cancel shares the bottom action row.
-This layout revision is locally built without running UI tests at the user's
-request; the earlier check count above does not validate the revised layout.
+This layout revision was initially built without UI tests. The later main
+launcher viewport audit includes the current source; successful live-service
+updates and native visual review remain separate from that coverage.
 
 The close control now uses a 32 × 32 logical-pixel button with a larger,
 antialiased vector X, a hand cursor, a translucent hover/pressed background and
-keyboard focus. This additional polish is local source work only; it has not
-been built or tested in the current revision.
+keyboard focus. This polish is included in the later main Windows Release build and launcher
+viewport audit. Those checks do not validate end-to-end update installation or
+native Windows transition smoothness; see [local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md).
 
 Run `MotoGP09-10Launcher.exe --preview-update` to show a synthetic v1.1.11
 notification with English/Turkish sample release notes. Click the download icon

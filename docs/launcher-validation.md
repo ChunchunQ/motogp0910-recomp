@@ -1,5 +1,10 @@
 # Launcher update validation — 14 October 2026
 
+Historical 14 October launcher validation. The stable SDK, five-page layout
+and pending-feature statements below describe that milestone, not current main.
+Use [project status](project-status.md) and [the later local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md)
+for current source/build state; the recorded check results are not rerun here.
+
 ReXGlue remains pinned to v0.10.0 / f5337cdc947ff6d4c4196737e2c807a48f2a1fc2.
 Both new EXEs were built as Windows AMD64; the archive includes the matched
 manifest-verified runtime pair, original PS3 prompt pack and controller database.

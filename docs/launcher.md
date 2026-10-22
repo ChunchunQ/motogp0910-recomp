@@ -2,21 +2,25 @@
 
 Open `MotoGP09-10Launcher.exe`, select the game directory and press **PLAY**.
 The current [Racing Lines redesign](launcher-redesign.md) uses a compact horizontal-tab layout, charcoal fields, amber/red cover-inspired art and a scrollable settings area. Minimize/close sit directly over the art. General includes cancellable, read-only game-file verification.
-PLAY is anchored at the lower right; Save / Defaults / Logs / Report sit above the status line. Context help uses standard Windows hover tooltips instead of permanent explanation paragraphs.
-**Online → Connection mode** edits network settings inside the launcher: Offline hides all parameters, LAN shows only local/virtual-network fields, and Online shows the community server fields. Switching modes or tabs preserves entered values. Save / PLAY applies them;
+PLAY is anchored at the lower right; Save / Defaults / Logs / Report sit above the
+status line. Context help uses standard Windows hover tooltips instead of permanent
+explanation paragraphs.
+**Online → Connection mode** edits network settings inside the launcher: Offline hides all parameters, LAN shows only local/virtual-network fields, and Online shows NOBK sign-in or the signed-in account and hosting room field. Switching modes or tabs preserves entered values. Save / PLAY applies them;
 Online sits between Controls and Achievements.
-The launcher opens on **General** every time. The default language is English; **General → Launcher language → Türkçe** switches the whole
+The launcher opens on **General** every time. The default language is English; **General
+→ Launcher language → Türkçe** switches the whole
 interface immediately and retains the choice in the shared root `config.json`.
 File names stay English. No CMD file is required.
 
 ## Importing an Xbox 360 ISO
 
 General uses one game-file action in the existing button position:
-**Select ISO → Select title update → Verify game files**. The base-game check
+**Select ISO → Select title update → Install DLC → Verify game files**. The base-game check
 requires the supported stock executable and a nonempty `xenondata` directory;
 full data hash verification remains separate. A bold cyan notice beside the
 button says **Game files are missing** first, then **Title update is missing**
-or **Title update is invalid**. It disappears when the game and update are ready.
+or **Title update is invalid**. It disappears when the base game and update are ready;
+missing DLC is then listed inline.
 The footer stays **Game is not ready** until normal launch validation succeeds;
 the existing green ready message is preserved. Progress appears on the action
 button; detailed errors and verification results remain in dialogs/reports.
@@ -36,7 +40,8 @@ data against the embedded file hashes. A verified extraction is installed
 directly into `game`. If that directory exists, matching files are preserved,
 conflicting files cause an error, and only absent files are moved in. The merge
 journals new files/directories and removes them if interrupted cooperatively.
-Existing installations and the ISO are never overwritten. Cancellation or failure removes the staging directory;
+Existing installations and the ISO are never overwritten. Cancellation or failure
+removes the staging directory;
 the active game path changes only after successful extraction. A process kill
 or power failure can leave a temporary staging directory for manual removal.
 
@@ -64,8 +69,10 @@ selection and persistent-footer revision is built locally without running tests
 at the user's request. A real supported ISO import and native Windows UI
 validation remain pending.
 
-The subsequent All files picker and immediate TU-patch extraction changes are
-local source edits only; no new build or tests were run for that revision.
+The subsequent All files picker and immediate TU-patch extraction changes were
+initially source-only. They are included in the later main Windows Release build
+and isolated launcher regression. Actual supported ISO/TU imports and native
+Windows visual acceptance remain separate; see [local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md).
 
 ## Required DLC
 
@@ -127,6 +134,10 @@ Its MIT attribution is retained in
 launcher notices. Native Windows/Steam acceptance remains pending for this
 extracted integration branch.
 
+The later main source was built and checked as described in the external
+[main validation report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md). The selective integration worktree
+was not separately rebuilt.
+
 ## Graphics
 
 | Setting | Runtime behavior |
@@ -149,7 +160,8 @@ extracted integration branch.
 | VSync / aspect ratio / dithering | Actual presentation flags |
 | Shader cache | SDK persistent shader storage; changing this does not delete existing cache files |
 
-The current package includes a matched modified **ReXGlue Nightly 0.10.0.24-dev.gbd833a2** runtime with its
+The current package includes a matched modified **ReXGlue Nightly
+0.10.0.24-dev.gbd833a2** runtime with its
 bundled FSR 1 / CAS shader bytecode enabled. Keep both included runtime DLLs;
 using the old official DLL makes the FSR setting unavailable. See
 [the pinned runtime and reproduction instructions](../third_party/rexglue-runtime/readme.md).
@@ -228,7 +240,12 @@ and supported patch/update; they do not promise that every disk asset is valid.
 **Open logs** and **Error report** remain available. Reports are created locally
 and never uploaded automatically.
 
-## Verification
+## Verification history
+
+The following counts describe earlier launcher milestones, including the old
+three-page UI. Current source has seven pages; the latest main build and phased
+Wine validation are recorded in [the Rider License report](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md).
+Preserve those evidence boundaries rather than treating old totals as a new run.
 
 - Windows game, launcher and runtime DLL pair built successfully.
 - 72 launcher checks: numeric launch arguments are verified against actual SDK
@@ -256,7 +273,8 @@ Windows GPU rendering and listening/playing with the new settings still need
 validation on the user's computer. Defaults keep bilinear presentation and
 native 720p rendering; higher resolutions and upscaling are opt-in.
 
-The launcher serializes launch arguments using actual TOML node types. Earlier
+The launcher serializes launch arguments using typed configuration nodes
+(the parser retains a toml++ representation internally while root storage is JSON). Earlier
 boolean conversion of numeric nodes could turn scale/volume/sharpness values
 into `true`; the new regression checks prevent that.
 
@@ -272,8 +290,10 @@ useful for inspecting language and layout changes.
 an example of useful settings; its launcher design is not copied. FXAA,
 anisotropic filtering, internal scale and persistent shader storage are useful
 here and have actual v0.10.0 implementations. Downpour-specific UE3 patches,
-mouse-camera tuning, its fork's FSR 3 / frame limiter and adaptive-trigger
-parameters are not imported as nonfunctional MotoGP controls.
+mouse-camera tuning, its fork's FSR 3 / frame limiter and parameters are not imported as
+nonfunctional MotoGP controls. The later
+implemented SDL resistance profiles are documented separately in
+[adaptive triggers](adaptive-triggers.md).
 
 [FIFA Street PC Port](https://github.com/samuelit0davila/fifa-street-pc-port)
 was also inspected through its C# launcher sources and published screenshots.
@@ -302,7 +322,7 @@ oversized output values show Automatic / desktop; disk configuration changes
 only when the user saves or launches. Internal render resolution is independent
 of this output-size filter.
 
-Game language choices are English, French, German, Spanish and Italian. The
+Game language choices are English, French, German, Spanish, Italian and Turkish. The
 launcher forwards user_language; a scoped title hook lets an explicit selection
 take precedence over the game's internal language tweak, uses the original
 localization-file mapping and restores that tweak. Six native locale/ABI checks
@@ -433,5 +453,7 @@ its original room-name layout, and tab/mode changes preserve field values.
 
 The footer displays the configured launcher version instead of the title-update
 version. The FPS selector has room for all nine presets, including 240 FPS.
-These edits are local. No game/launcher build or gameplay test is run for this
-revision; compiler syntax checking is separate from native Windows UI validation.
+These edits are included in main `8a33ea9` and selective preview `ab7d3f7`.
+The main Windows Release build and isolated launcher checks are recorded in
+[local validation](https://github.com/inflamesgo/motogp0910-recomp/blob/5e91cf5/docs/rider-license-validation.md); a full native Windows gameplay
+or live account-service acceptance run is not implied.

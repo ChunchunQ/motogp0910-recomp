@@ -1,9 +1,17 @@
 # Racing Lines launcher
 
+The opening summary describes the current layout. Dated follow-up sections
+below are a historical design/validation ledger: older page counts, dialogs,
+TOML storage and flat executable names are superseded by [the launcher guide](launcher.md)
+and [portable settings](portable-launcher.md). Captures were inspected locally;
+screenshots are intentionally absent on main. This transfer preserves the
+preview branch's existing historical capture files.
+
 The user selected concept B, with a further requirement: minimize and close must
 sit directly over the background artwork, without a persistent title-bar tile.
 The original compact layout used a **940 × 578 logical-pixel** window. The
-current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monitor DPI and small-desktop fitting remain supported.
+current expanded layout is **1040 × 732 logical pixels** at 100% DPI. Per-monitor DPI
+and small-desktop fitting remain supported.
 
 - General, Graphics, Advanced, Audio, Controls, Online and Achievements are regular
   pages. Online sits between Controls and Achievements and contains the complete
@@ -64,13 +72,23 @@ runtime. Wine/Xvfb tests exercise real Win32 controls: English/Turkish, six page
 minimize/close, caption background pixels, persistence and existing render/network
 settings. The file-verification tests use the real full original data tree, a
 same-size altered copy, missing files, cancellation, completion and result logs.
-The initial redesign run passed **65,756 actual launcher UI checks**, plus ten actions against the standalone production EXE (open/language changes, page selection, actual nested checkbox clicks, save and close). Unknown TOML keys were preserved and no game save was created. Follow-up changes and results are recorded below. Native Windows desktop/GPU user review remains separate from these checks.
+The initial redesign run passed **65,756 actual launcher UI checks**, plus ten actions
+against the standalone production EXE (open/language changes, page selection, actual
+nested checkbox clicks, save and close). Unknown TOML keys were preserved and no game
+save was created. Follow-up changes and results are recorded below. Native Windows
+desktop/GPU user review remains separate from these checks.
 
-[General page screenshot](screenshots/launcher-racing-lines-general.png) and
-[Turkish achievements screenshot](screenshots/launcher-racing-lines-achievements.png)
-show the actual compiled launcher under Wine, not the earlier generated concept.
+General and Turkish achievement captures were inspected under Wine during
+that milestone. They are not tracked on main or included in the Windows package. Existing
+preview captures are preserved.
 
-Future development packages omit README/feature instructions, SHA256SUMS and the external licenses directory. Required third-party notices are embedded in resource 104 and can be read through the launcher system menu (Alt+Space → Third-party notices). The packager checks that the launcher contains the complete notice bundle before omitting sidecar licenses. Runtime pins and the separate archive hash remain; required resources and debug map are preserved. Existing published ZIPs are not rewritten by this policy change.
+Development packages omit README/feature instructions, SHA256SUMS and the external
+licenses directory. Required third-party notices are embedded in resource 104 and can be
+read through the launcher system menu (Alt+Space → Third-party notices). The packager
+checks that the launcher contains the complete notice bundle before omitting sidecar
+licenses. Runtime pins and the separate archive hash remain; required resources and
+debug map are preserved. Existing published ZIPs are not rewritten by this policy
+change.
 
 Original redesign package: `downloads/MotoGP0910-Windows-x64-launcher-racing-lines.zip`.
 
@@ -153,8 +171,8 @@ actions; an unknown config key remained intact and no game save was created.
 Native Windows reproduction of the user's transient paint issue still needs
 their follow-up: Wine passing does not prove identical Windows compositor behavior.
 
-[Current compiled launcher](screenshots/launcher-racing-lines-general.png) and
-[close-button hover](screenshots/launcher-racing-lines-caption-hover.png).
+Compiled launcher and close-hover captures were inspected locally; they are
+not retained on main; existing preview captures are preserved.
 
 Previous package: `downloads/MotoGP0910-Windows-x64-launcher-polish.zip`.
 SHA-256: `7fc35e1480d7a59096b0d442dc7f41b1ccb222a837761863333801cb732a65da`.
@@ -200,10 +218,8 @@ fields are disabled, while config identifiers and physical effect bytes retain
 compatibility. The explicit fixed-resistance explanation avoids implying a
 speed/RPM-driven racing effect. See [trigger scope](adaptive-triggers.md).
 
-Compiled Windows UI screenshots: [achievements](screenshots/launcher-racing-lines-achievements.png),
-[graphics](screenshots/launcher-racing-lines-graphics.png),
-[multiplayer](screenshots/launcher-racing-lines-multiplayer.png) and
-[trigger editor](screenshots/launcher-racing-lines-triggers.png).
+Achievements, Graphics, multiplayer and trigger-editor captures were inspected
+locally. Main omits screenshots; preview retains its earlier capture inventory.
 
 The final Windows PE / Wine run passed **90,877 launcher UI checks** across
 English/Turkish and 75/100/125/150% scaling. New regressions cover four-card
@@ -301,14 +317,9 @@ serialization retain their existing behavior. A mode change completes its
 repaint before returning. Labels say **LAN**, with application-neutral local /
 virtual network help; no specific virtual LAN product is named in the UI.
 
-Current screenshots: [General](screenshots/launcher-racing-lines-general.png),
-[achievements](screenshots/launcher-racing-lines-achievements.png),
-[Audio](screenshots/launcher-racing-lines-audio.png),
-[native hover help](screenshots/launcher-racing-lines-tooltip.png),
-[Offline](screenshots/launcher-racing-lines-multiplayer-offline.png),
-[LAN](screenshots/launcher-racing-lines-multiplayer.png) and
-[Online](screenshots/launcher-racing-lines-multiplayer-online.png).
-
+General, Achievements, Audio, hover-help and three mode captures were inspected
+locally during this milestone; they are not tracked on main. Existing preview
+captures are preserved.
 
 Validation: the final rebuilt Windows PE passed **86,327** actual UI assertions
 under Wine/Xvfb. These include native mouse-hover appearance, correct tooltip

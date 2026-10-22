@@ -34,9 +34,12 @@ Other Xbox LIVE error/help messages retain their original meaning. Offline,
 LAN and community Online implementation and service requirements are unchanged.
 
 Keyboard action descriptions use the title's actual Default layout constructor
-`0x822F0AD0`, rather than Alternative A at `0x822F0B78`. A means Gear up and B
-means Gear down; X is Rear brake, Y is Celebration, LT is Front brake, RT is
-Accelerate, LB is Tuck in and RB is Change view. Native diagram labels distinguish
+`0x822F0AD0`, rather than Alternative A at `0x822F0B78`. In Default, A means
+Tuck in / Confirm, B is Gear down / Back, X is Rear brake, Y is Gear up,
+LT is Front brake, RT is Accelerate, LB is Look behind and RB is Change view.
+D-pad Up is Celebration; Down changes view; Left/Right select apology/angry
+rider gestures. `src/keyboard_binding_specs.h` contains the launcher labels. Native
+diagram labels distinguish
 stick presses from full two-axis sticks. Camera look-around remains separate
 from the rider action mapping. The game can still select its alternative layouts.
 

@@ -1,8 +1,8 @@
 # Keyboard prompt refresh
 
-First item in the user's 14 October 2026 UI list. Selected style: **dark
-keycaps with orange MotoGP accents**. The other four UI items remain separate
-deliveries, in the order recorded in [roadmap.md](roadmap.md).
+Selected style: **dark keycaps with orange MotoGP accents**. This implementation
+originated in the 14 October 2026 UI milestone. Current delivered features and
+remaining acceptance work are listed in [project status](project-status.md).
 
 The original thin rectangular outline and ASCII stroke font are replaced by
 rounded dark keycaps, a subtle rim/shadow, a compact orange top accent and
@@ -36,8 +36,8 @@ Windows gameplay visuals and physical controller behavior remain user checks.
 ## Reproducibility
 
 The Apache-2.0 source font, notice and license are in `third_party/open-sans/`.
-The Windows package includes its license/notice, while the renderer itself
-needs no extra font files. To regenerate the compiled coverage data:
+The Windows launcher embeds its license/notice; no separate license folder is
+packaged. The renderer itself needs no extra font files. To regenerate the compiled coverage data:
 
 ```sh
 python3 scripts/generate-keyboard-font.py

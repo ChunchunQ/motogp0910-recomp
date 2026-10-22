@@ -2,7 +2,7 @@
 
 The [current evidence matrix](project-status.md) is the status authority.
 Historical milestone documents retain their original test scope and do not
-supersede the current SDK pin or package linked from the [README](../README.md).
+supersede the current SDK pin or [installation instructions](game-layout.md).
 
 ## Delivered work
 
@@ -20,6 +20,17 @@ supersede the current SDK pin or package linked from the [README](../README.md).
    hover help and conditional multiplayer settings.
 7. Supplied wet Motegi log audit and compatibility fixes; see
    [recorded findings and retest boundary](motegi-rain-qa.md).
+8. Required three-package DLC import and portable runtime mounting, direct ISO/TU
+   setup, Steam shortcuts/artwork and shared JSON/save-folder migration.
+9. Shared NOBK account sign-in, token refresh and PC linking; Remember me,
+   country display and website account/recovery actions. The baseline account
+   system was inherited from ChunchunQ, not introduced by Rider License.
+10. Native timed-board projection, local splitscreen, non-career rider selection,
+    PC menu cleanup and native quit confirmation.
+11. Rider License Overview/Records with Rider Rank, Tracks Held, Records Held,
+    Boards Entered, selected-board map/lap/date and bounded bio/general emoji.
+12. Launcher update-service client/helper with local rollback; version 1.1.11.
+    The manifest endpoint remains empty pending operator configuration.
 
 ## Acceptance work still needed
 
@@ -32,10 +43,18 @@ supersede the current SDK pin or package linked from the [README](../README.md).
   focus changes and physical controller variants.
 - Validate LAN retry/disconnect/rejoin and larger grids on separate machines.
   Previous successful two-PC racing does not cover every network condition.
-- Deploy the community service to a real Linux or Windows VDS; verify TLS,
-  firewall/routing, Internet racing and native leaderboard UI. Hosting runs
-  separately from the game client and does not require every player to have
-  administrator access to the VDS.
+- Validate the configured NOBK production integration end to end: account
+  sign-in/linking, Internet racing and native leaderboard UI. The production
+  origin is configured; this does not establish deployment health or race
+  acceptance. Independent server operators must verify TLS/firewalls/routing;
+  hosting remains separate from the player client.
+- Finish website DLC catalogue/outline publication and establish native Moto2
+  statistics mapping and independent season storage/query behavior. Preserve
+  the temporary Rider License 2009 scope until that work is agreed.
+- Verify Rider License native GPU sharpness, controller input, first-load failure
+  recovery and lobby circuit context; the latter is not yet integrated.
+- Configure a MotoGP-specific launcher manifest and exercise a real update,
+  cancellation, failed restart and rollback before enabling public updates.
 - Verify adaptive resistance on real DualSense/Edge hardware. The user's
   8BitDo does not provide that hardware feature.
 - Keep FSR 2/3 and ultrawide limitations explicit; temporal reconstruction needs
@@ -43,10 +62,12 @@ supersede the current SDK pin or package linked from the [README](../README.md).
 
 ## Deferred or excluded
 
-Portable username/password accounts remain the
-[documented proposal](community-accounts-plan.md), not implemented behavior.
-Code signing and the final packaged README are deferred until release.
-The Claude migration was cancelled; its obsolete handoff was removed.
+NOBK website accounts and PC linking are implemented; a separate custom
+account/password/recovery-code service was never adopted. The obsolete standalone
+account proposal and completed launcher/profile checklists have been consolidated
+into the current feature documents. Code signing remains deferred. Do not write
+the final README until the user declares the entire project complete; the root
+placeholder remains unchanged.
 Frame generation is excluded. The speculative FPS/physics investigation was
 cancelled and reverted; do not resume it without new authorized evidence.
 

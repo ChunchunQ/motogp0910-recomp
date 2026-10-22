@@ -1,5 +1,10 @@
 # Release log review and noise reduction
 
+Historical supplied-log review. The logging policy is retained in the later
+main source/build; this log does not validate subsequent UI or profile changes.
+Routine Rider License success traces were separately removed, with actionable
+warnings retained; see [profile diagnostics](gamer-card.md#diagnostics).
+
 The supplied Windows log covers approximately 17 minutes, ending in the
 ordinary window-close and hard-exit sequence. The user reports Time Trial at
 Catalunya followed by a three-lap championship race at Brno. This log contains

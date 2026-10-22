@@ -13,7 +13,8 @@ Extract the complete Windows ZIP. Replace the EXEs and both runtime DLLs,
 and keep `resources/controller/ps3-prompts.bin` in its supplied subdirectory.
 Also keep `resources/controller/ps3-controls.bin` for the Controls screen.
 Keep your existing `game/`, settings and saves. The launcher and Qatar
-collision repair are retained. The new package also includes the scoped career texture readback repair;
+collision repair are retained. The new package also includes the scoped career texture
+readback repair;
 see [career texture notes](career-textures.md).
 
 Automatic switching follows meaningful input, not idle connection or minor
@@ -21,7 +22,7 @@ stick drift. Use SDL for native Sony detection. XInput wrappers present an
 Xbox controller; test PS artwork with an Xbox pad using:
 
 ```powershell
-.\motogp0910.exe --input_backend=xinput --button_prompt_style=playstation
+.\bin\motogp0910.exe --input_backend=xinput --button_prompt_style=playstation
 ```
 
 `--button_prompt_style=xbox`, `keyboard` and `auto` select the other modes.
@@ -126,19 +127,20 @@ archives are not modified.
 | `0x82284E98`, `0x82284E88`, `0x82284DB0` | Inline glyph recognition and sizing |
 | `0x823D1008` | Per-frame style and Windows XInput observation |
 
-The supplied ReXGlue v0.10.0 runtime pair exposes the existing shared SDL
+The matched custom runtime pair exposes the existing shared SDL
 function table, keeping input observation in the same SDL instance as the
 backend. The SDK/code generator version is unchanged.
 
 ## Build checks
 
-The current Windows executables passed 222 native draw/pixel-row/texture descriptor,
+The earlier prompt-artwork milestone passed 222 native draw/pixel-row/texture descriptor,
 replay crop and PPC ABI checks, plus 92 binding and real SDL virtual-controller
 checks under Wine. The native draw probe also passed on Linux. It reads the
 actual patched XEX instructions to check all four replay drawing loops:
 5-button and 8-button upper rows, plus their 5-icon and 8-icon lower rows.
-This catches the swapped-row defect that the earlier synthetic fixture missed. These checks do not validate gameplay visuals on a Windows GPU or a physical Sony pad.
-The current cloud window probe could not open its X display; its earlier
+This catches the swapped-row defect that the earlier synthetic fixture missed. These
+checks do not validate gameplay visuals on a Windows GPU or a physical Sony pad.
+That milestone's cloud window probe could not open its X display; its earlier
 171-check result is not counted as a new-build verification. Additional game
 testing was stopped at the user's request; the user will test locally.
 

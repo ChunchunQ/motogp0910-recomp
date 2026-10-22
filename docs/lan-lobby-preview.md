@@ -2,7 +2,8 @@
 
 Historical foundation milestone: for the later guest socket/XNet integration and
 current user-test build, see [Windows LAN multiplayer](lan-multiplayer-test.md).
-The tests below apply to the foundation revision, not the untested integration.
+The tests below apply to the foundation revision. Later integration and user
+racing evidence are recorded in that linked guide; the foundation TODOs are historical.
 
 This first implementation milestone adds a native UDP discovery/session
 service and a bridge for MotoGP's original XAM session calls. **It is not yet

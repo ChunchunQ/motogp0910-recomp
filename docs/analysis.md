@@ -1,7 +1,7 @@
 # Binary analysis and startup repair record
 
-Addresses below apply only to the supplied binaries identified by hashes in
-[README.md](../README.md). Historical investigations began with ReXGlue v0.10.0;
+Addresses below apply only to the supported binaries whose hashes are checked
+in `scripts/build-windows.ps1` (see [Windows build inputs](windows-build.md#supported-input-hashes)). Historical investigations began with ReXGlue v0.10.0;
 the current SDK pin is `sdk-version.json`. Original binary dumps are private.
 
 | Version | XEX entry | Missed discovery target | Validated boundary |
@@ -96,8 +96,9 @@ and difficulty screens, then Championship, Career, Arcade, Time Trial,
 Multiplayer and Options without a modal. The menu was observed for at least
 two minutes with no fatal/unregistered-call message. The approximately
 nine-minute session was deliberately terminated with SIGTERM, not reported
-as a successful normal game exit. [Captured frames](screenshots/README.md)
-are direct captures.
+as a successful normal game exit. Direct captures were inspected during that
+milestone; screenshots are not retained on main. Existing historical preview captures
+are preserved by this documentation transfer.
 
 The milestone CPU probe passed 47 cases: 10 math, 5 callback, 24 initializer,
 6 comparator and 2 getter checks, plus all 7,144 initializer registrations.
@@ -138,8 +139,9 @@ default; five real configuration precedence scenarios passed. See
 loaded through actual SDK SDL on Linux and Windows PE/Wine; counts and physical
 hardware limits are in [mapping notes](controller-mappings.md).
 
-The native launcher uses toml++ to preserve unmanaged settings, retain a first
-backup, detect external changes and save atomically. `CreateProcessW` receives
+The initial native launcher used TOML with preserved unmanaged settings,
+backups, conflict detection and atomic saves. The current launcher/game share
+root JSON and retain those preservation guarantees; see [portable settings](portable-launcher.md). `CreateProcessW` receives
 the selected game root/options with the executable folder as working directory;
 custom save/cache paths remain intact. Early 46-case launcher checks covered
 Unicode arguments/CWD and EN/TR GUI save/reload, defaults and bounded reports.

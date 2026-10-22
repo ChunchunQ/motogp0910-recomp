@@ -1,5 +1,10 @@
 # Community service security review — 16 October 2026
 
+This is the dated review of the local relay/profile backend, not a current
+security audit of the public NOBK website, account service or hosting. Shared
+site sign-in/PC linking was added afterward; see [current account behavior](community-online.md).
+The original findings and test evidence below retain their reviewed scope.
+
 Scope: the Python control API, authenticated UDP relay, SQLite identity/stats,
 Windows control/UDP client, protocol transitions, packaging and the supplied
 Linux/Windows deployment instructions. This was a source review plus bounded

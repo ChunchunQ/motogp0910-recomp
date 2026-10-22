@@ -9,7 +9,12 @@ SDK is pinned in `sdk-version.json`. Xvfb provides a virtual display and Mesa
 lavapipe provides CPU Vulkan rendering. The ALSA null sink opens a real SDL
 audio backend but does not validate audible sound quality.
 
-Build Linux as described in the [README](../README.md). Code generation uses
+This is an advanced reproduction note for an already prepared Linux build,
+not a supported end-user Linux distribution or a complete clean-build guide.
+The launcher/profile product target remains Windows. `scripts/install-cloud.sh`
+prepares dependencies and SDK sources; it does not build the game. The runner
+expects `out/build/linux-amd64-release/motogp0910` (or `MOTOGP_CLOUD_BINARY`).
+Code generation uses
 `assets/game-tu/default.xex` and `default.xexp`; runtime additionally needs the
 complete original `xenondata/`, `nxeart/` and remaining disc layout.
 

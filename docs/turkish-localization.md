@@ -92,10 +92,9 @@ fonts; original disk files are unchanged.
 `check-turkish-fonts.py` passed **1,768** native-bank comparisons across all
 four faces: body size, baseline, advance, line height, mark placement, dot
 removal, original atlas blocks and unrelated glyph metrics. It also renders
-word sheets directly from shipped BC3 atlases and native metrics:
-[Impact](screenshots/turkish-impact-native-proof.png) and
-[small Arial](screenshots/turkish-arial-small-native-proof.png).
-These are font proofs, not gameplay screenshots.
+Impact and small Arial word sheets directly from shipped BC3 atlases and native
+metrics. These locally inspected font proofs are not gameplay screenshots and
+are intentionally not tracked on main. Existing preview proofs are preserved. Regenerate them with `--preview-dir` below.
 
 ## Resource loading
 

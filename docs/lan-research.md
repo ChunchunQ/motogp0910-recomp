@@ -1,5 +1,11 @@
 # LAN / Radmin VPN research — 14 October 2026
 
+Historical research against the recorded source revisions. SDK-stub findings
+and proposed implementation steps below predate the application LAN bridge.
+The user subsequently reported two-PC Radmin racing; [current LAN instructions](lan-multiplayer-test.md)
+and [project status](project-status.md) supersede the old unverified status.
+External project descriptions are point-in-time observations, not current audits.
+
 First target: **two Windows 10/11 PCs on the same Radmin VPN network, hosting
 and joining a MotoGP 09/10 race without a separate directory/relay server**.
 Radmin supplies the virtual LAN; the game host owns the lobby. The primary flow
@@ -10,7 +16,8 @@ ranked services, friends, voice and leaderboards are outside this first stage.
 The research baseline was stability commit `bcef3c9`. The subsequent
 [first lobby foundation](lan-lobby-preview.md) implements and checks native
 discovery and guest session calls. The subsequent [experimental integration](lan-multiplayer-test.md)
-wires guest XNet/UDP/VDP and launcher settings; real racing remains unverified. SDK
+wires guest XNet/UDP/VDP and launcher settings; later user evidence confirms
+an earlier two-PC race, with revised retry/rejoin acceptance still pending. SDK
 `0.10.0.24-dev.gbd833a2`, patched title version `0.0.1.1`.
 
 ## Existing ReXGlue examples
