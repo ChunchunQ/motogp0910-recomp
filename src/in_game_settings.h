@@ -51,8 +51,8 @@ struct View {
   bool saved=false;
 };
 bool DrawMenu(Model& model,View& view,bool turkish,ImFont* font,ImFont* heading);
-// UI thread owns open/close and the dialog. Device polling and release masking
-// run on the existing guest frame hook, never concurrently on the UI thread.
+// Dialogs render on UI. The native player-card import may open its gate on a
+// guest thread. Device polling/release masking stay on the guest frame hook.
 class InputGate {
  public:
   void Initialize(rex::input::InputSystem* input);
@@ -74,7 +74,7 @@ class InputGate {
 std::unique_ptr<rex::ui::ImGuiDialog> CreateMenu(rex::ui::ImGuiDrawer* drawer,
     std::shared_ptr<Model> model,std::shared_ptr<InputGate> gate,
     ImFont* font,ImFont* heading,bool turkish,rex::ui::Window* window=nullptr,bool (*can_open)()=nullptr);
-void SetGuestGate(InputGate* gate);
+void SetGuestGate(InputGate* gate, InputGate* player_card_gate=nullptr);
 void PollGuestInput();
 bool GuestInputBlocked();
 // Compatibility access to InputStateMutex: serialize device polling and MnK

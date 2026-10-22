@@ -32,6 +32,13 @@
 namespace motogp::settings {
 std::mutex& InputValueMutex(){return motogp::InputStateMutex();}
 namespace {
+std::atomic<InputGate*> guest_gate{nullptr}, player_card_gate{nullptr};
+std::mutex menu_open_mutex;
+bool OtherMenuBlocked(InputGate* opening){
+  for(auto* gate:{guest_gate.load(std::memory_order_acquire),player_card_gate.load(std::memory_order_acquire)})
+    if(gate&&gate!=opening&&gate->Blocking())return true;
+  return false;
+}
 using Paint=rex::ui::Presenter::GuestOutputPaintConfig;
 const Spec* Find(std::string_view key){for(const auto& s:Catalog())if(s.key==key)return &s;return nullptr;}
 bool Numeric(std::string_view s,double& value){if(s.empty())return false;auto r=std::from_chars(s.data(),s.data()+s.size(),value);return r.ec==std::errc{}&&r.ptr==s.data()+s.size()&&std::isfinite(value);}
@@ -213,7 +220,12 @@ bool Model::Save(){
   }catch(const std::exception& e){error_=e.what();return false;}
 }
 void InputGate::Initialize(rex::input::InputSystem* input){input_=input;open_=false;held_=false;buttons_=0;epoch_=0;}
-void InputGate::Open(){std::lock_guard lock(transition_);if(!input_)return;neutral_epoch_=UINT64_MAX;open_=true;buttons_=0;if(!held_.exchange(true,std::memory_order_acq_rel)){
+void InputGate::Open(){
+  // F1 and a native Gamer Card call can arrive on different threads. Make the
+  // other-menu check and acquiring a blocker one serialized transition.
+  const std::lock_guard menus(menu_open_mutex);
+  std::lock_guard lock(transition_);if(!input_||OtherMenuBlocked(this))return;
+  neutral_epoch_=UINT64_MAX;open_=true;buttons_=0;if(!held_.exchange(true,std::memory_order_acq_rel)){
   input_->AddUIInputBlocker();
   // Mouse-look must not recapture/hide the pointer while editing the menu.
   // This temporary internal change is never written to the launcher file.
@@ -393,7 +405,6 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
   ImGui::End();ImGui::PopStyleColor(6);return close;
 }
 namespace {
-std::atomic<InputGate*> guest_gate{nullptr};
 class Menu final:public rex::ui::ImGuiDialog,public rex::ui::WindowInputListener {
  public:
   Menu(rex::ui::ImGuiDrawer* drawer,std::shared_ptr<Model> model,std::shared_ptr<InputGate> gate,ImFont* font,ImFont* heading,bool tr,rex::ui::Window* window,bool (*can_open)())
@@ -440,8 +451,18 @@ class Menu final:public rex::ui::ImGuiDialog,public rex::ui::WindowInputListener
   ImGuiConfigFlags old_flags_=0;ImGuiBackendFlags old_backend_=0;uint64_t epoch_=0;uint16_t previous_=0;
 };
 }
-void SetGuestGate(InputGate* gate){guest_gate.store(gate,std::memory_order_release);}
-void PollGuestInput(){if(auto* gate=guest_gate.load(std::memory_order_acquire))gate->PollGuest();}
-bool GuestInputBlocked(){auto* gate=guest_gate.load(std::memory_order_acquire);return gate&&gate->Blocking();}
+void SetGuestGate(InputGate* gate,InputGate* card){
+  guest_gate.store(gate,std::memory_order_release);
+  player_card_gate.store(card,std::memory_order_release);
+}
+void PollGuestInput(){
+  if(auto* gate=guest_gate.load(std::memory_order_acquire))gate->PollGuest();
+  if(auto* gate=player_card_gate.load(std::memory_order_acquire))gate->PollGuest();
+}
+bool GuestInputBlocked(){
+  auto* gate=guest_gate.load(std::memory_order_acquire);
+  auto* card=player_card_gate.load(std::memory_order_acquire);
+  return (gate&&gate->Blocking())||(card&&card->Blocking());
+}
 std::unique_ptr<rex::ui::ImGuiDialog> CreateMenu(rex::ui::ImGuiDrawer* drawer,std::shared_ptr<Model> model,std::shared_ptr<InputGate> gate,ImFont* font,ImFont* heading,bool turkish,rex::ui::Window* window,bool (*can_open)()){return std::make_unique<Menu>(drawer,std::move(model),std::move(gate),font,heading,turkish,window,can_open);}
 }

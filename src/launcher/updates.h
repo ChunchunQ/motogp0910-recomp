@@ -20,7 +20,7 @@ struct Configuration {
 
 // Approved launcher release version. Checks remain inactive until the NOBK
 // service operator supplies a documented MotoGP-specific manifest endpoint.
-inline const Configuration kConfiguration{"1.1.10", L""};
+inline const Configuration kConfiguration{"1.1.11", L""};
 
 struct Release {
   std::string version, url, sha256;

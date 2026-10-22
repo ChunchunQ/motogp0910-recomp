@@ -1,8 +1,9 @@
-# MotoGP 09/10: production and online integration handoff
+# MotoGP 09/10: online integration handoff
 
 Target integration branch: **ChunchunQ / `nobk-online`**.
-Scope: the complete updated game/launcher feature set and the remaining NOBK
-website/backend integration. Prepared on 21 October 2026. This document and
+Scope: DLC-aware online records, website catalogue, room compatibility,
+account recovery, the in-game Rider License and the MotoGP launcher update
+service. Prepared on 21 October 2026; updated on 22 October 2026. This document and
 [the factual catalogue](online-dlc-catalog.json) are self-contained; no website
 or production service was modified during this investigation.
 
@@ -10,9 +11,20 @@ or production service was modified during this investigation.
 
 The comparison baseline is ChunchunQ's `nobk-online` at
 `6ca5339e47b1d55ea33486f5da3dead4c29ff290`, fetched on 21 October 2026.
-The local integration branch starts directly from this baseline and carries
-the complete production feature set. This document separates client behavior
-from the website/backend work still required by the operator.
+The baseline is already included in the integration source. This document
+describes the completed client delivery and its remaining service integration.
+
+The existing integration PR is
+[ChunchunQ/motogp0910-recomp#1](https://github.com/ChunchunQ/motogp0910-recomp/pull/1),
+from `inflamesgo:preview` to `ChunchunQ:nobk-online`. The existing source baseline
+for this extension is `6013abe9b56b064676affe3aa61ecf1a7d11ca59`.
+The user approved extending that PR with Rider License from `main` revision
+`8a33ea9`: Rider Rank, corrected metric names, aligned profile details, bio emoji
+support, removal of routine diagnostics and launcher version `1.1.11`.
+This extension carries the reviewed feature dependencies onto the existing
+`preview` history, preserving its previously included production features.
+It does not merge the full `main` branch or include local validation tools,
+CI/workspace rules, build archives or unrelated launcher layout fixes.
 
 | Component | Implemented in our client | Remaining integration |
 | --- | --- | --- |
@@ -21,10 +33,14 @@ from the website/backend work still required by the operator.
 | DLC installation/loading | Required three-package import plus runtime enumeration/mounting from portable `dlc/434307F0`. | Carry the runtime/path support; extend website metadata and verify Moto2/season behavior below. |
 | Public room capacity | Private Slots row removed; new PC-hosted rooms use zero private slots. | Carry client menu/bridge changes; retain wire fields for compatibility. No server schema change is needed for this alone. |
 | Account UI and recovery | **Forgot password?** and **My account** follow FIFA's shared website URLs. Remember me uses persistent or session-only tokens; country is read from the account API. | Carry the launcher changes. Preserve the optional `country` string on login/token refresh. No new recovery API is needed; Online PLAY still requires sign-in. |
-| Steam integration | Add to Steam with five editable PNG files in `resources/steam`; one green success message per session. | Preserve the loose artwork and normal launcher entry point. No service changes are required. |
-| Local play and exit | Keyboard/controller or two-controller splitscreen, controller as player 1; native Yes/No Quit confirmation, initially Yes. | Carry the input/lifecycle dependencies. Physical-controller and complete save/exit review remain pending. |
-| Default user data | Verified migration to `Documents/MotoGP 09-10`, with safe one-time legacy cleanup. | Preserve explicit custom paths and the portable DLC root. No server migration is required. |
-| Display and localization | Monitor choice, experimental 4:3, corrected input labels, FPS selector, Turkish wording and footer sizing. | Carry matching resources and runtime helpers; preserve SDK/runtime pins. |
+| Rider License | Native **View profile** opens Overview/Records, avatar/flag, membership/bio, selected-board personal best with outline/date, and the website's **Rider Rank**. Routine debug logs are removed; failure warnings remain. | Included in this PR extension. Preserve the temporary 2009 scope; integrate lobby context, season/Moto2 metadata and DLC artwork as described below. |
+
+Launcher version `1.1.11` is approved for this release. Both bio displays use
+the embedded Noto catalogue (5,709 emoji sequences / 4,068 shared sprites),
+including flags, skin-tone modifiers and supported ZWJ combinations. Original
+UTF-8 account text is retained; display aliases preserve the pinned 16-bit
+ImGui ABI. Assets and OFL notices are embedded, with no emoji service request.
+New emoji outside this catalogue require an asset update.
 
 Include the complete client changes listed here in the integration patch. The
 remaining actions concern service configuration, website/backend extensions and
@@ -130,6 +146,12 @@ instead of circuit names, confirming catalogue gaps. This does not prove that no
 other 2010 record exists. The public live response had no open room during the
 inspection; DLC room behavior was not observed.
 
+On 22 October the ranking page, its current JavaScript, `/api/motogp/ranking`
+and `/api/motogp/views` were retrieved successfully. Those responses contained
+15 ranked riders and 38 populated boards. The site's ranking code still used
+the 17-base-track catalogue. These are point-in-time observations, not fixed
+production totals or proof of DLC/season correctness.
+
 ### Installation/help content
 
 Update How to play for the next matching release: describe Select ISO → Select
@@ -180,6 +202,90 @@ actual published package at release time, rather than a local preview build.
    DLC, first expose verified values through the live snapshot/API, then render
    them. Do not guess these from the room name or account name.
 
+### Rider License contracts and remaining integration
+
+The native Online lobby/leaderboard **Gamer Card** action now reads **View
+profile** / **Profili incele** and opens **RIDER LICENSE** / **PİLOT LİSANSI**.
+Overview and Records share an avatar/flag, inline membership date, optional
+three-line bio with a full-bio popup and a compact browser action. Keyboard
+bindings still work, but the footer displays controller hints only and centers
+the complete hint group on the same right-pane center in both tabs. This is
+client implementation; it requires no new friends/social service or SDK patch.
+
+- **Identity and public account data:** resolve the selected MotoGP XUID's
+  nonzero 24-bit ID through `/api/motogp/player?id=<id>` on
+  `https://www.nobkonline.com`, requiring the response ID to match. Shared
+  country, membership, bio and avatar metadata comes from the general site's
+  `/api/fifa09/player?name=<resolved-name>`, requiring a matching account name.
+  The shared endpoint name is intentional, not a numeric FIFA identity lookup.
+  The browser action opens `/profile/?u=<resolved-name>`. No credentials are
+  sent. Production Online mode alone uses this mapping; Offline, LAN and other
+  community servers must not resolve their local IDs against production NOBK.
+- **Metric definitions:** **Tracks Held** counts distinct playable circuits
+  with at least one first-place board; **Records Held** counts first-place
+  boards; **Boards Entered** counts separate published circuit/class boards,
+  not distinct circuits ridden. **Total Track Domination** uses Tracks Held
+  divided by 20, including DLC and excluding reserved slot 17. For example,
+  17 first-place boards across 16 circuits means 16/20 = 80%, with 19 board
+  entries possible. This denominator intentionally differs from the site's
+  current 17-base-track catalogue.
+- **Rider Rank:** a separate compact header value reproduces the website's
+  ordering. Join `/api/motogp/ranking` players with first-place owners from
+  `/api/motogp/views`, then sort by distinct tracks held descending, `firsts`
+  descending, `points` descending and original API `pos` ascending. Renumber
+  the result and select by MotoGP player ID. Using raw API `pos` alone can give
+  the wrong displayed rank. The current API exposes at most 100 riders; an
+  absent or unavailable rank is a hyphen, never a guessed placement. This rank
+  follows the site's full ranking scope, independently of the card's temporary
+  2009 filter. When the site's track catalogue/ranking contract changes, update
+  `ReadRanking` in `src/gamer_card.cpp` too: its current base-track membership
+  check mirrors the site's 0..16 entries. Do not leave the two policies drifting.
+- **Season and class limits:** Records and Overview currently exclude rows
+  whose property 13 is 1 and retain legacy rows without a season under the
+  temporary 2009 presentation. Preserve that limitation until the separate
+  storage/query integration is defined; labels cannot restore overwritten
+  historical records. Moto2 labels still depend on verified server metadata.
+  The current public player endpoint lists group-0 rows, so unpublished ghost
+  boards are not synthesized as if the API had returned them.
+- **Selected personal best and lobby context:** verified leaderboard calls
+  carry the exact selected view. Personal Best matches that view for lap,
+  class/mode, rank/population and date, never the fastest lap on another board.
+  Lobby openings currently have no board context and show **No track selected**;
+  they do not inherit the last leaderboard view. Later lobby integration must
+  provide verified track/class/season/mode values before this panel can use
+  the lobby's circuit. Displaying 2009 for now is deliberate.
+- **Set time:** both Records and Personal Best use the accepted result's
+  existing `updated` timestamp, relative below seven days and then a date,
+  with full local date/time on hover. The score write path preserves this time
+  for equal/worse submissions; no extra date endpoint is needed.
+- **Art and native index mapping:** base outlines use explicit filenames under
+  `/assets/motogp/tracks/`, retaining native indices. Losail's transparent
+  `omap-qatar.png` was retrieved and visually inspected. No verified published
+  DLC outlines or directly usable local DLC images were identified in this
+  pass; their panel currently says **Map unavailable** while lap data remains
+  usable. Extract/map the correct DLC frontend banks listed in section 2 and
+  extend `kTrackMaps` when those public assets exist. Never substitute another
+  circuit. The transparent default helmet is embedded RCDATA; flag artwork
+  uses an embedded atlas with its flag-icons MIT attribution.
+- **Loading and diagnostics:** identity/records publish before optional
+  metadata/photo work; ranking and outlines follow on the cancellable worker.
+  Preserve the five-second HTTP deadline, initial transient identity retry,
+  per-player cache, shared 60-second ranking cache, per-circuit artwork cache
+  and close/switch cancellation. The renderer uses preloaded font sizes for
+  sharp text. Routine debug traces are removed; actionable transport, data,
+  decode, font, texture and browser failures remain warnings in the game log.
+
+Transfer dependencies include `src/gamer_card.cpp/.h`, `gamer_card_flags.h`,
+the embedded helmet resources, native menu label replacements, the shared input
+gate and application lifecycle/font wiring, Windows WinHTTP/WIC/COM libraries,
+and flag-icons attribution in both source and embedded notices. Do not copy the
+dialog alone or omit its input isolation/cleanup. Personal Best now centers its
+circuit name, lap and a single class/2009/mode line in the middle column, with
+equal insets between the map and rank dividers. The outline and rank/date retain
+their positions. This spacing adjustment is included along with the other
+Rider License refinements. Emoji PNG/metadata resources, their regeneration
+script, Noto OFL notice and the flag-icons MIT attribution accompany the feature.
+
 Native DLC online writes/reads and mixed-content races were not executed in this
 investigation. There is no claim that all client-side Moto2 normalization is
 already complete or that only the server needs changing.
@@ -209,14 +315,13 @@ The MotoGP update UI is retained.
    }
    ```
 
-   This is a contract example, not a live endpoint or an approved next version.
-   The client constant remains `1.1.10`, the earlier updater milestone. Later
-   feature groups are not yet assigned release versions; agree on the actual
-   delivery version before publishing the manifest. No new version is approved
-   by this document.
+   This is a contract example, not a live endpoint. The user approved launcher
+   version `1.1.11` for the Rider License release; the client constant now uses
+   that version. The earlier updater milestone was `1.1.10`. Publishing an
+   actual manifest still requires the operator's real package URL and checksum.
 3. Upload the complete MotoGP Windows package before publishing its manifest.
    The URL must use HTTPS and end in `.zip`; use the package ZIP itself rather
-   than an outer wrapper ZIP. Keep a versioned URL stable and compute the
+   than an outer Actions artifact. Keep a versioned URL stable and compute the
    checksum after packaging. Include the update helper in `bin/`.
 
 Numeric version comparison, localized notes, download and SHA-256 verification
@@ -276,35 +381,36 @@ NOBK sign-in, account-to-PC linking, the 60 Hz website time correction and the
 latest QoS/relay diagnostics are already present in the baseline branch.
 Preserve those upstream changes; do not count them as new work from this handoff.
 
-## 7. Complete production transfer and dependencies
+## 7. Transfer boundaries and dependencies
 
-The integration branch is based on **ChunchunQ's `nobk-online`** and carries all
-updated end-user features. The earlier online-only boundary is superseded.
+The existing PR uses the reviewed `preview` branch. This extension is prepared
+separately from its frozen handoff worktree and preserves that source history;
+a new PR is not needed while it remains open. Do not merge our whole `main` or
+cherry-pick mixed feature commits blindly.
 
-- Preserve the portable DLC adapter, shared prerequisite checker, importer and
-  ISO/TU setup helpers together. The three packages remain locally mandatory
-  in every connection mode; no server-side package negotiation is requested.
-- Carry the full revised launcher: account session/country/recovery, update
-  protocol/install/helper, Steam integration and the matching layout/resources.
-  Steam artwork remains editable as five loose PNGs. The updater retains its
-  local rollback fallback and requires no additional server fields.
-- Include local splitscreen and its input assignment/synchronization helpers,
-  native Quit and its existing save/close lifecycle, non-career rider selection,
-  user-data migration, display choices and the synchronized Turkish resources.
-- Preserve the required CMake/native build/package support, pinned archive
-  reader and its license/source, and FIFA's MIT attribution. These production
-  dependencies are not test scripts. SDK/runtime pins remain unchanged.
-- Local test/probe/verification changes, automated build workflows, workspace
-  setup instructions, screenshot edits and historical build ZIPs are
-  excluded from the patch. Existing upstream files in those areas are retained.
-- Replace the outdated root README with a `TODO` placeholder. No local README
-  setup instructions are transferred.
-- Publish a direct application ZIP with the launcher at its root and `bin/`,
-  `resources/`, empty `game/` and empty `dlc/` directories. An outer wrapper ZIP
-  is not an updater payload. Original game/DLC content is never distributed.
-- See [the production changelog](local-release-changelog.md) for the complete
-  feature inventory and [the DLC catalogue](online-dlc-catalog.json) for verified
-  track/season/rider metadata.
+- Carry the client features in the status table, their headers/implementation
+  files and the necessary CMake/application lifecycle wiring. The portable DLC
+  adapter, shared prerequisite checker and launcher importer belong together.
+- Keep updater protocol/install/helper files and their build/package wiring
+  together. `third_party/fifa09-launcher-LICENSE.txt` and the matching notice
+  must accompany adapted FIFA code; the existing archive-reader license/source
+  requirements still apply. Do not transfer original game/DLC containers.
+- Split mixed `motogp0910_app.h`, CMake and launcher changes by feature. The
+  existing PR's agreed scope already includes save-data migration, local
+  splitscreen/native Quit, Steam artwork and launcher/Turkish layout changes;
+  preserve that reviewed work. The earlier online-only selection guidance
+  must not be used to remove features already included in this PR. Carry only
+  the new Rider License dependencies for its extension; copying full mixed
+  files can accidentally import probes, unrelated packaging or CI changes.
+  Existing application-based optional targets receive only the link/resource
+  dependencies needed by the updated application header; no new probe target
+  or local test implementation is added.
+- Exclude `.github/`, root README edits, `AGENTS.md`, private environment/setup
+  instructions, screenshots, historical ZIPs and the full local changelog.
+  This English handoff and `online-dlc-catalog.json` are the service reference.
+- Publish the real application ZIP for launcher updates, never a GitHub Actions
+  artifact wrapper. An empty `dlc/` beside `game/` is part of the package layout;
+  neither directory should contain original content in a distributed build.
 
 ## 8. Acceptance evidence for integration
 
@@ -324,9 +430,28 @@ updated end-user features. The earlier online-only boundary is superseded.
   and a failed installation/startup rollback.
 - Confirm zero private slots/full public capacity when creating or updating a
   room, and confirm the signed-out recovery action opens the shared NOBK page.
+- For Rider License, check leaderboard and lobby entry paths, the selected
+  player's identity, both tabs and their stable footer center, class popup,
+  avatar/flag fallback, long/multiline bio and modal input isolation. Compare
+  Rider Rank with the website, including tied metrics and an unlisted rider.
+  Verify selected-view lap/rank/date agreement, temporary 2009 scope, the
+  distinct-pist versus board-count definitions, cancellation/reopening/cache
+  behavior and missing artwork/failure states. Lobby circuit integration and
+  season-aware rankings remain separate work, not acceptance already achieved.
 
-This extracted integration branch has not been built or tested. Preparing it
-does not deploy a service or website, publish a release or open an upstream PR.
-A previous local Windows build predates the final DLC-popup removal and Turkish footer polish; it does
-not validate this complete delivery. Native online/Moto2/season behavior and
-real-service updater/rollback acceptance remain pending.
+The original handoff review performed no new application build, gameplay/UI/
+server or probe tests or service deployment. The upstream PR was subsequently
+opened as linked above. Windows build and Quick quality checks were dispatched
+for Rider License commit `1b8e105`; their results were not inspected here.
+Source revision `8a33ea9` has a successful local Windows Release build and
+package. Its local validation includes 60 server tests, 6,807 Rider License
+checks, 65,765 launcher viewport checks and 10,807 focused launcher regression
+checks under Wine/CPU/ImGui, with the launcher audited in phases rather than a
+single final all-green umbrella run. These are source-branch results, not a
+claim that this selectively prepared integration worktree was rebuilt or that
+excluded local test tools are part of the PR. Transfer review checks exact
+feature-file correspondence, required source/resource/license/build wiring
+and the exclusion boundaries above. No new build, broad regression campaign
+or service deployment is performed for this transfer.
+Native online/Moto2/season behavior, physical-controller/Windows-GPU
+playthroughs and real-service updater/rollback acceptance remain pending.

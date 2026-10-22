@@ -12,14 +12,13 @@ been validated.
 The manifest endpoint is deliberately empty in
 `src/launcher/updates.h::kConfiguration`. An empty endpoint prevents all update
 network requests and leaves the notification button hidden. The launcher
-version constant remains **1.1.10**, the earlier approved updater milestone,
+version constant is **1.1.11**, approved for the Rider License release,
 and is separate from the game's title update version `0.0.1.1`. Historical
 commits were grouped as 1.1.0–1.1.9, with the updater as milestone 1.1.10.
-Later feature additions have not been assigned final version placeholders;
-1.1.10 is not a fresh calculation for this complete delivery. These groups do
+The Rider License release advances that milestone to 1.1.11. These groups do
 not create historical Git tags or rewrite commits. Related fixes stay with
 their feature group; CI and documentation alone do not increment the product
-version. Agree on the delivery version before activating the real manifest.
+version. Configure the real delivery endpoint before activating the manifest.
 
 ## Approved launcher behavior
 

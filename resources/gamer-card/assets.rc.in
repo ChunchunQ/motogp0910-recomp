@@ -1,0 +1,3 @@
+201 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/gamer-card/default-helmet.png"
+202 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/gamer-card/emoji.png"
+203 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/gamer-card/emoji.json"

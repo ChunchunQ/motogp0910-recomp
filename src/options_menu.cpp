@@ -2,10 +2,12 @@
 #include <rex/hook.h>
 #include <rex/memory.h>
 #include <rex/runtime.h>
+#include <rex/cvar.h>
 #include <array>
 #include <atomic>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 REX_EXTERN(__imp__sub_8223B4E0);
 REX_EXTERN(__imp__sub_8223B950);
 REX_EXTERN(__imp__sub_8223BA68);
@@ -24,6 +26,7 @@ REX_EXTERN(__imp__sub_826EDB38);
 namespace motogp::options {
 namespace {
 std::atomic<uint32_t> online_label{0};
+std::atomic<uint32_t> profile_label{0};
 uint32_t Read(uint8_t* base,uint32_t at){return rex::memory::load_and_swap<uint32_t>(base+at);}
 void Write(uint8_t* base,uint32_t at,uint32_t value){rex::memory::store_and_swap<uint32_t>(base+at,value);}
 bool IsMatchSettings(uint8_t* base,uint32_t menu){
@@ -49,6 +52,12 @@ bool Filter(uint8_t* base,uint32_t menu,uint32_t screen,unsigned capacity,unsign
 void Initialize(rex::Runtime* runtime){
   const auto address=runtime->memory()->SystemHeapAlloc(8);if(!address)throw std::runtime_error("Could not allocate the PC Online label");
   std::memcpy(runtime->virtual_membase()+address,"ONLINE",7);online_label.store(address,std::memory_order_release);
+  const bool tr=rex::cvar::Query<std::string>("game_text_language")=="turkish";
+  const char* profile=tr?"Profili incele":"View profile";
+  const auto profile_address=runtime->memory()->SystemHeapAlloc(32);
+  if(!profile_address)throw std::runtime_error("Could not allocate the profile action label");
+  std::memcpy(runtime->virtual_membase()+profile_address,profile,std::strlen(profile)+1);
+  profile_label.store(profile_address,std::memory_order_release);
 }
 uint32_t OnlineLabel(){return online_label.load(std::memory_order_acquire);}
 bool RemoveStorage(uint8_t* base,uint32_t menu,uint32_t screen){return menu&&Read(base,menu)==kGameSettingsVtable&&Filter(base,menu,screen,7,5,5,true);}
@@ -93,5 +102,13 @@ REX_HOOK_RAW(sub_8224D130){const auto menu=ctx.r3.u32;__imp__sub_8224D130(ctx,ba
 }
 REX_HOOK_RAW(sub_826EDB38){const auto label=motogp::options::OnlineLabel();
   if(label&&ctx.r3.u32==motogp::options::kOnlineHandle&&motogp::options::Read(base,ctx.r3.u32)==731){ctx.r3.u64=label;return;}
+  // The native label getter receives a handle containing a bank/index pair.
+  // Replace both Gamer Card labels and the lobby help text without changing
+  // action IDs, original message banks or the active language's other strings.
+  const auto profile=motogp::options::profile_label.load(std::memory_order_acquire);
+  if(profile&&ctx.r3.u32){
+    const auto id=motogp::options::Read(base,ctx.r3.u32);
+    if(id==1137||id==1433||id==1416){ctx.r3.u64=profile;return;}
+  }
   __imp__sub_826EDB38(ctx,base);
 }

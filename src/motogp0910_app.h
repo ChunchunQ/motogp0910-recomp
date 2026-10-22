@@ -41,6 +41,7 @@
 #include "in_game_settings.h"
 #include "frame_pacing.h"
 #include "debug_overlay.h"
+#include "gamer_card.h"
 #include "portable_paths.h"
 #include "config_file.h"
 #include "user_data_paths.h"
@@ -187,10 +188,15 @@ class Motogp0910App : public rex::ReXApp {
     motogp::online::lap_times::Initialize(runtime());
     settings_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
     settings_gate_->SetFocused(window()->HasFocus());
+    gamer_card_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
+    gamer_card_gate_->SetFocused(window()->HasFocus());
+    motogp::gamer_card::Initialize(runtime(),gamer_card_gate_);
     settings_model_=std::make_shared<motogp::settings::Model>(settings_path_,runtime()->graphics_system()?runtime()->graphics_system()->presenter():nullptr);
     settings_dialog_=motogp::settings::CreateMenu(imgui_drawer(),settings_model_,settings_gate_,
-        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish,window(),[]{return !motogp::quit::Pending();});
-    motogp::settings::SetGuestGate(settings_gate_.get());
+        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish,window(),[]{return !motogp::quit::Pending()&&!motogp::gamer_card::Active();});
+    gamer_card_dialog_=motogp::gamer_card::CreateMenu(imgui_drawer(),window(),immediate_drawer(),
+        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish);
+    motogp::settings::SetGuestGate(settings_gate_.get(),gamer_card_gate_.get());
     motogp::SetFrameObserver(motogp::settings::PollGuestInput);
     motogp::quit::SetOtherMenuCheck(motogp::settings::GuestInputBlocked);
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
@@ -204,7 +210,7 @@ class Motogp0910App : public rex::ReXApp {
        (event.virtual_key()==rex::ui::VirtualKey::kSpace||event.virtual_key()==rex::ui::VirtualKey::kReturn))motogp::quit::RequestIntroSkip();
     rex::ui::ProcessKeyEvent(event);
   }
-  void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);}
+  void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);gamer_card_gate_->SetFocused(focused);}
   bool OnWindowCloseRequested() override {
     // The pinned SDK hard-exits in OnClosing before OnShutdown can run.
     // Release controller firmware effects while SDL and the runtime are alive.
@@ -234,6 +240,7 @@ class Motogp0910App : public rex::ReXApp {
       const auto utf8_path=rex::path_to_utf8(path);
       achievement_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),17.f,nullptr,ranges);
       achievement_heading_font_ = atlas->AddFontFromFileTTF(utf8_path.c_str(),30.f,nullptr,ranges);
+      motogp::gamer_card::ConfigureFonts(atlas,utf8_path.c_str());
       if(achievement_font_)ImGui::GetIO().FontDefault=achievement_font_;
     }
     else REXLOG_WARN("Achievement font is missing; extract the complete build including resources/ui");
@@ -256,6 +263,8 @@ class Motogp0910App : public rex::ReXApp {
         achievement_font_, achievement_preferences_);
   }
   void OnShutdown() override {
+    motogp::gamer_card::Shutdown();
+    gamer_card_dialog_.reset();
     motogp::splitscreen::Stop();
     motogp::dlc::Stop();
     motogp::debug::UnregisterToggle();
@@ -332,8 +341,10 @@ class Motogp0910App : public rex::ReXApp {
   std::unique_ptr<rex::ui::ImGuiDialog> debug_dialog_;
   std::filesystem::path settings_path_;
   std::shared_ptr<motogp::settings::InputGate> settings_gate_=std::make_shared<motogp::settings::InputGate>();
+  std::shared_ptr<motogp::settings::InputGate> gamer_card_gate_=std::make_shared<motogp::settings::InputGate>();
   std::shared_ptr<motogp::settings::Model> settings_model_;
   std::unique_ptr<rex::ui::ImGuiDialog> settings_dialog_;
+  std::unique_ptr<rex::ui::ImGuiDialog> gamer_card_dialog_;
   ImFont* achievement_font_ = nullptr;
   ImFont* achievement_heading_font_ = nullptr;
   std::shared_ptr<motogp::achievements::Preferences> achievement_preferences_ = std::make_shared<motogp::achievements::Preferences>();
