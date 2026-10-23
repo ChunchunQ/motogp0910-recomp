@@ -32,10 +32,10 @@
 namespace motogp::settings {
 std::mutex& InputValueMutex(){return motogp::InputStateMutex();}
 namespace {
-std::atomic<InputGate*> guest_gate{nullptr}, player_card_gate{nullptr};
+std::atomic<InputGate*> guest_gate{nullptr}, player_card_gate{nullptr}, nobk_panel_gate{nullptr};
 std::mutex menu_open_mutex;
 bool OtherMenuBlocked(InputGate* opening){
-  for(auto* gate:{guest_gate.load(std::memory_order_acquire),player_card_gate.load(std::memory_order_acquire)})
+  for(auto* gate:{guest_gate.load(std::memory_order_acquire),player_card_gate.load(std::memory_order_acquire),nobk_panel_gate.load(std::memory_order_acquire)})
     if(gate&&gate!=opening&&gate->Blocking())return true;
   return false;
 }
@@ -396,7 +396,7 @@ bool DrawMenu(Model& model,View& view,bool tr,ImFont* font,ImFont* heading){
     ImGui::SameLine();if(ImGui::Button(Tr(tr,"Revert unsaved","Kaydedilmeyenleri geri al"))){if(model.Revert()){view.edits.clear();view.saved=false;}}
     if(ImGui::GetContentRegionAvail().x>110)ImGui::SameLine();
     close=ImGui::Button(Tr(tr,"Return","Oyuna dön"));
-    auto bind=rex::cvar::Query<std::string>("bind_settings");if(bind.empty())bind="F1";
+    auto bind=rex::cvar::Query<std::string>("bind_settings");if(bind.empty())bind="F2";
     ImGui::TextDisabled(Tr(tr,"%s / Esc to return  ·  Live settings only","Oyuna dönmek için %s / Esc  ·  Yalnızca canlı ayarlar"),bind.c_str());
     const bool popup=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopupId);
     if(!was_capturing&&!popup&&ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)&&ImGui::IsKeyPressed(ImGuiKey_Escape,false))close=true;
@@ -411,9 +411,10 @@ class Menu final:public rex::ui::ImGuiDialog,public rex::ui::WindowInputListener
       :ImGuiDialog(drawer),model_(std::move(model)),gate_(std::move(gate)),font_(font),heading_(heading),tr_(tr),window_(window),can_open_(can_open){
     // Migrate the SDK's old F4 default, including an explicitly saved F4;
     // preserve a different user-defined shortcut. The SDK callback shares this
-    // cvar, so F4 no longer opens its other settings dialog either.
+    // cvar, so F4 no longer opens its other settings dialog either. F1 belongs
+    // to the NOBK Online panel (as in FIFA 09), so live settings moved to F2.
     const auto binding=rex::cvar::Query<std::string>("bind_settings");
-    if(binding.empty()||binding=="F4")rex::cvar::SetFlagByName("bind_settings","F1");
+    if(binding.empty()||binding=="F4"||binding=="F1")rex::cvar::SetFlagByName("bind_settings","F2");
     if(window_)window_->AddInputListener(this,63);
   }
   ~Menu()override{if(window_)window_->RemoveInputListener(this);gate_->Close();if(nav_owned_){auto& io=GetIO();ClearPad(io);io.ConfigFlags=old_flags_;io.BackendFlags=old_backend_;}}
@@ -451,18 +452,21 @@ class Menu final:public rex::ui::ImGuiDialog,public rex::ui::WindowInputListener
   ImGuiConfigFlags old_flags_=0;ImGuiBackendFlags old_backend_=0;uint64_t epoch_=0;uint16_t previous_=0;
 };
 }
-void SetGuestGate(InputGate* gate,InputGate* card){
+void SetGuestGate(InputGate* gate,InputGate* card,InputGate* panel){
   guest_gate.store(gate,std::memory_order_release);
   player_card_gate.store(card,std::memory_order_release);
+  nobk_panel_gate.store(panel,std::memory_order_release);
 }
 void PollGuestInput(){
   if(auto* gate=guest_gate.load(std::memory_order_acquire))gate->PollGuest();
   if(auto* gate=player_card_gate.load(std::memory_order_acquire))gate->PollGuest();
+  if(auto* gate=nobk_panel_gate.load(std::memory_order_acquire))gate->PollGuest();
 }
 bool GuestInputBlocked(){
   auto* gate=guest_gate.load(std::memory_order_acquire);
   auto* card=player_card_gate.load(std::memory_order_acquire);
-  return (gate&&gate->Blocking())||(card&&card->Blocking());
+  auto* panel=nobk_panel_gate.load(std::memory_order_acquire);
+  return (gate&&gate->Blocking())||(card&&card->Blocking())||(panel&&panel->Blocking());
 }
 std::unique_ptr<rex::ui::ImGuiDialog> CreateMenu(rex::ui::ImGuiDrawer* drawer,std::shared_ptr<Model> model,std::shared_ptr<InputGate> gate,ImFont* font,ImFont* heading,bool turkish,rex::ui::Window* window,bool (*can_open)()){return std::make_unique<Menu>(drawer,std::move(model),std::move(gate),font,heading,turkish,window,can_open);}
 }

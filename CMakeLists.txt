@@ -86,7 +86,7 @@ rexglue_apply_target_settings(motogp_local_splitscreen)
 set(MOTOGP0910_SOURCES
     src/main.cpp
     src/debug_overlay.cpp src/diagnostic_options.cpp
-    src/gamer_card.cpp
+    src/gamer_card.cpp src/nobk_panel.cpp
     src/lan/runtime.cpp
     src/button_prompts.cpp src/control_diagram.cpp
     src/ps3_prompt_textures.cpp
@@ -350,7 +350,7 @@ if(TARGET motogp0910_recomp)
     rexglue_apply_target_settings(button_prompt_window_probe)
     add_executable(button_prompt_gpu_probe EXCLUDE_FROM_ALL tools/button_prompt_gpu_probe.cpp src/ultrawide.cpp src/control_diagram.cpp src/ps3_prompt_textures.cpp src/physics_assets.cpp src/livery_readback.cpp src/frame_pacing.cpp src/display_settings.cpp src/lan/runtime.cpp src/quit_menu.cpp src/diagnostic_options.cpp src/debug_overlay.cpp)
     target_include_directories(button_prompt_gpu_probe PRIVATE ${REXGLUE_ENTRYPOINT_INCLUDE_DIR})
-    target_sources(button_prompt_gpu_probe PRIVATE src/in_game_settings_input.cpp src/gamer_card.cpp)
+    target_sources(button_prompt_gpu_probe PRIVATE src/in_game_settings_input.cpp src/gamer_card.cpp src/nobk_panel.cpp)
     target_link_libraries(button_prompt_gpu_probe PRIVATE motogp0910_recomp rex::runtime motogp_lan_guest motogp_achievements motogp_settings motogp_local_splitscreen)
     rexglue_apply_target_settings(button_prompt_gpu_probe)
     rexglue_configure_target(button_prompt_gpu_probe GPU_PLUGINS xenos)

@@ -42,6 +42,7 @@
 #include "frame_pacing.h"
 #include "debug_overlay.h"
 #include "gamer_card.h"
+#include "nobk_panel.h"
 #include "portable_paths.h"
 #include "config_file.h"
 #include "user_data_paths.h"
@@ -191,13 +192,18 @@ class Motogp0910App : public rex::ReXApp {
     gamer_card_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
     gamer_card_gate_->SetFocused(window()->HasFocus());
     motogp::gamer_card::Initialize(runtime(),gamer_card_gate_);
+    nobk_gate_->Initialize(static_cast<rex::input::InputSystem*>(runtime()->input_system()));
+    nobk_gate_->SetFocused(window()->HasFocus());
+    motogp::nobk::Initialize(runtime(),nobk_gate_);
     settings_model_=std::make_shared<motogp::settings::Model>(settings_path_,runtime()->graphics_system()?runtime()->graphics_system()->presenter():nullptr);
     settings_dialog_=motogp::settings::CreateMenu(imgui_drawer(),settings_model_,settings_gate_,
-        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish,window(),[]{return !motogp::quit::Pending()&&!motogp::gamer_card::Active();});
+        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish,window(),[]{return !motogp::quit::Pending()&&!motogp::gamer_card::Active()&&!motogp::nobk::Active();});
     gamer_card_dialog_=motogp::gamer_card::CreateMenu(imgui_drawer(),window(),immediate_drawer(),
         achievement_font_,achievement_heading_font_,achievement_preferences_->turkish);
-    motogp::settings::SetGuestGate(settings_gate_.get(),gamer_card_gate_.get());
-    motogp::SetFrameObserver(motogp::settings::PollGuestInput);
+    nobk_dialog_=motogp::nobk::CreateMenu(imgui_drawer(),window(),&achievements(),
+        achievement_font_,achievement_heading_font_,achievement_preferences_->turkish);
+    motogp::settings::SetGuestGate(settings_gate_.get(),gamer_card_gate_.get(),nobk_gate_.get());
+    motogp::SetFrameObserver(&Motogp0910App::FrameTick);
     motogp::quit::SetOtherMenuCheck(motogp::settings::GuestInputBlocked);
     motogp::prompts::LoadPS3Artwork(runtime()->memory(),
         motogp::portable::Root(rex::filesystem::GetExecutableFolder())/"resources/controller/ps3-prompts.bin");
@@ -210,7 +216,7 @@ class Motogp0910App : public rex::ReXApp {
        (event.virtual_key()==rex::ui::VirtualKey::kSpace||event.virtual_key()==rex::ui::VirtualKey::kReturn))motogp::quit::RequestIntroSkip();
     rex::ui::ProcessKeyEvent(event);
   }
-  void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);gamer_card_gate_->SetFocused(focused);}
+  void OnWindowFocusChanged(bool focused) override {motogp::adaptive::SetFocused(focused);motogp::quit::SetFocused(focused);settings_gate_->SetFocused(focused);gamer_card_gate_->SetFocused(focused);nobk_gate_->SetFocused(focused);}
   bool OnWindowCloseRequested() override {
     // The pinned SDK hard-exits in OnClosing before OnShutdown can run.
     // Release controller firmware effects while SDL and the runtime are alive.
@@ -265,6 +271,8 @@ class Motogp0910App : public rex::ReXApp {
   void OnShutdown() override {
     motogp::gamer_card::Shutdown();
     gamer_card_dialog_.reset();
+    motogp::nobk::Shutdown();
+    nobk_dialog_.reset();
     motogp::splitscreen::Stop();
     motogp::dlc::Stop();
     motogp::debug::UnregisterToggle();
@@ -337,6 +345,8 @@ class Motogp0910App : public rex::ReXApp {
       rex::cvar::SetFlagByName("hid_mappings_file","bin/gamecontrollerdb.txt");
   }
  private:
+  // Per game frame: guest input of open menus, then the NOBK panel's pad combo.
+  static void FrameTick(){motogp::settings::PollGuestInput();motogp::nobk::PollPad();}
   motogp::config::SdkBridge sdk_config_;
   std::unique_ptr<rex::ui::ImGuiDialog> debug_dialog_;
   std::filesystem::path settings_path_;
@@ -345,6 +355,8 @@ class Motogp0910App : public rex::ReXApp {
   std::shared_ptr<motogp::settings::Model> settings_model_;
   std::unique_ptr<rex::ui::ImGuiDialog> settings_dialog_;
   std::unique_ptr<rex::ui::ImGuiDialog> gamer_card_dialog_;
+  std::shared_ptr<motogp::settings::InputGate> nobk_gate_=std::make_shared<motogp::settings::InputGate>();
+  std::unique_ptr<rex::ui::ImGuiDialog> nobk_dialog_;
   ImFont* achievement_font_ = nullptr;
   ImFont* achievement_heading_font_ = nullptr;
   std::shared_ptr<motogp::achievements::Preferences> achievement_preferences_ = std::make_shared<motogp::achievements::Preferences>();
