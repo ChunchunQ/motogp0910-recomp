@@ -18,9 +18,9 @@ struct Configuration {
   std::wstring manifest_url;
 };
 
-// Approved launcher release version. Checks remain inactive until the NOBK
-// service operator supplies a documented MotoGP-specific manifest endpoint.
-inline const Configuration kConfiguration{"1.1.11", L""};
+// Approved launcher release version. MotoGP-specific manifest on the NOBK site
+// (static file next to the package in /downloads/motogp/, FIFA 09's fields).
+inline const Configuration kConfiguration{"1.1.11", L"https://nobkonline.com/downloads/motogp/version.json"};
 
 struct Release {
   std::string version, url, sha256;

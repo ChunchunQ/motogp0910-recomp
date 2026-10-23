@@ -232,7 +232,7 @@ client implementation; it requires no new friends/social service or SDK patch.
   current 17-base-track catalogue.
 - **Rider Rank:** a separate compact header value reproduces the website's
   ordering. Join `/api/motogp/ranking` players with first-place owners from
-  `/api/motogp/views`, then sort by distinct tracks held descending, `firsts`
+  `/api/motogp/views`, then sort by `firsts` (records held) descending, distinct tracks held
   descending, `points` descending and original API `pos` ascending. Renumber
   the result and select by MotoGP player ID. Using raw API `pos` alone can give
   the wrong displayed rank. The current API exposes at most 100 riders; an

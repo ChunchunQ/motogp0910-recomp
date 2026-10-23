@@ -510,9 +510,11 @@ std::shared_ptr<const Ranking> ParseRanking(const nlohmann::json& json,const nlo
         [&](const auto& item){return item.id==uint32_t(id);});
     if(player!=ranking->players.end())player->tracks.insert(track);
   }
+  // Same order as /motogp/ranking/ (motogp.js withTracks, 23 Oct 2026): records held
+  // first, then tracks with a record, then points, then the API position.
   std::stable_sort(ranking->players.begin(),ranking->players.end(),[](const auto& a,const auto& b) {
-    if(a.tracks.size()!=b.tracks.size())return a.tracks.size()>b.tracks.size();
     if(a.firsts!=b.firsts)return a.firsts>b.firsts;
+    if(a.tracks.size()!=b.tracks.size())return a.tracks.size()>b.tracks.size();
     if(a.points!=b.points)return a.points>b.points;
     return a.position<b.position;
   });
