@@ -499,9 +499,9 @@ std::shared_ptr<const Ranking> ParseRanking(const nlohmann::json& json,const nlo
     if(view<1||view>378||!seen.insert(view).second)
       throw std::runtime_error("Rider ranking board index is invalid");
     const int track=int((view-1)%21);
-    // Match the site's current 17-entry TRACKS catalogue and complete ranking
-    // scope, separately from the card's DLC /20 and temporary 2009 summaries.
-    if(track>=17||!board.contains("best")||board["best"].is_null())continue;
+    // Match the site's TRACKS catalogue (motogp.js, 23 Oct 2026): 17 base circuits plus
+    // DLC indices 18-20; slot 17 is reserved and never counted.
+    if(track==17||!board.contains("best")||board["best"].is_null())continue;
     const auto& best=board["best"];
     if(!best.is_object())throw std::runtime_error("Rider ranking leader is invalid");
     const auto id=Number(best,"id");
