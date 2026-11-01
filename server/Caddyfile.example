@@ -16,7 +16,7 @@
 	}
 }
 play.example.com {
-	@api path /health /v2/connect /v2/disconnect /v2/stats/read /v2/stats/write /v2/link /v2/social
+	@api path /health /v2/connect /v2/disconnect /v2/stats/read /v2/stats/write /v2/link /v2/social /v2/stats/scoped/capabilities /v2/stats/scoped/read /v2/stats/scoped/write
 	handle @api {
 		request_body {
 			max_size 2KB

@@ -47,6 +47,7 @@ class Api:
     def __init__(self, database, live, views):
         self.database, self.live, self.views_path = Path(database), Path(live), Path(views) if views else None
         self._views, self._views_mtime = {}, None
+        self._seasons = None
         self.lock = threading.Lock()
 
     # -- helpers ---------------------------------------------------------
@@ -96,20 +97,70 @@ class Api:
             pass
         return out
 
-    def row(self, view, rank, pid, name, value, cols, updated, total=None):
+    def row(self, view, rank, pid, name, value, cols, updated, total=None, season=None):
         r = {'view': view, 'rank': rank, 'id': pid, 'name': name, 'value': value,
              'display': self.display(view, value), 'columns': self.columns(cols), 'updated': updated}
         if total is not None:
             r['total'] = total
+        if season is not None:
+            r.update(self.scope(view, season))
         return r
+
+    # Season/class identity (launcher 1.2.0). Native class slot = ((view-1) % 63) // 21:
+    # 2 MotoGP, 1 = 250cc in 2009 / Moto2 in 2010, 0 = 125cc. Season 0 = 2009, 1 = 2010.
+    CATEGORIES = {1: 'MotoGP', 2: 'Moto2', 3: '250cc', 4: '125cc'}
+
+    @classmethod
+    def scope(cls, view, season):
+        slot = ((view - 1) % 63) // 21
+        category = 1 if slot == 2 else 4 if slot == 0 else (2 if season else 3)
+        return {'season': 2009 + season, 'category': category, 'class': cls.CATEGORIES[category]}
+
+    @staticmethod
+    def season_mode(q):
+        """'combined' (no parameter: one best row per rider and view, the old
+        view-only identity for older consumers), 'all' (each season its own board)
+        or 0 / 1 for season=2009 / season=2010."""
+        if 'season' not in q:
+            return 'combined'
+        value = q['season'][0]
+        if value == 'all':
+            return 'all'
+        if value in ('2009', '2010'):
+            return int(value) - 2009
+        raise ValueError('invalid season')
+
+    def source(self, con, mode):
+        """SQL rows (view, player, value, columns, updated, season) for a season mode."""
+        if self._seasons is None or not self._seasons:
+            self._seasons = bool(con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='season_scores'").fetchone())
+        if not self._seasons:   # game server not upgraded yet: legacy store
+            return 'SELECT view, player, value, columns, updated, NULL AS season FROM scores', 'view'
+        base = 'SELECT view, player, value, columns, updated, season FROM season_scores'
+        if mode == 'all':
+            return base, 'view, season'
+        if mode == 'combined':
+            return ('SELECT view, player, value, columns, updated, season FROM (SELECT *, ROW_NUMBER() OVER '
+                    '(PARTITION BY player, view ORDER BY value DESC, updated ASC) AS pick FROM season_scores) WHERE pick = 1'), 'view'
+        return f'{base} WHERE season = {int(mode)}', 'view'
 
     # One finished race is written to several native groups (0, 2, 3, 5) of the same
     # track/class; the site lists only group 0 (view = 1 + group*63 + class*21 + track).
     MAIN = '(s.view - 1) / 63 = 0'
-    RANKED = '''SELECT s.view, s.player, p.name, s.value, s.columns, s.updated,
-        ROW_NUMBER() OVER (PARTITION BY s.view ORDER BY s.value DESC, s.updated ASC, s.player ASC) AS rank,
-        COUNT(*) OVER (PARTITION BY s.view) AS total
-        FROM scores s JOIN players p ON p.id = s.player WHERE (s.view - 1) / 63 = 0'''
+
+    def ranked(self, con, mode):
+        src, part = self.source(con, mode)
+        part = ', '.join('s.' + x.strip() for x in part.split(','))
+        return f'''SELECT s.view, s.player, p.name, s.value, s.columns, s.updated,
+        ROW_NUMBER() OVER (PARTITION BY {part} ORDER BY s.value DESC, s.updated ASC, s.player ASC) AS rank,
+        COUNT(*) OVER (PARTITION BY {part}) AS total, s.season
+        FROM ({src}) s JOIN players p ON p.id = s.player WHERE (s.view - 1) / 63 = 0'''
+
+    def board_meta(self, view, season):
+        m = self.meta(view)
+        if season is not None:
+            m.update(self.scope(view, season))
+        return m
 
     def snapshot(self):
         try:
@@ -124,11 +175,13 @@ class Api:
     # -- endpoints -------------------------------------------------------
     def status(self, q):
         live = self.snapshot()
+        mode = self.season_mode(q)
         with self.db() as con:
+            src, part = self.source(con, 'all' if mode == 'combined' else mode)
             players = con.execute('SELECT COUNT(*) FROM players').fetchone()[0]
-            records, last = con.execute(f'SELECT COUNT(*), MAX(updated) FROM scores s WHERE {self.MAIN}').fetchone()
-            racers = con.execute('SELECT COUNT(DISTINCT player) FROM scores').fetchone()[0]
-            views = con.execute(f'SELECT COUNT(DISTINCT view) FROM scores s WHERE {self.MAIN}').fetchone()[0]
+            records, last = con.execute(f'SELECT COUNT(*), MAX(updated) FROM ({src}) s WHERE {self.MAIN}').fetchone()
+            racers = con.execute(f'SELECT COUNT(DISTINCT player) FROM ({src})').fetchone()[0]
+            views = con.execute(f'SELECT COUNT(*) FROM (SELECT DISTINCT {part} FROM ({src}) s WHERE {self.MAIN})').fetchone()[0]
         return {'online': len(live['online']), 'rooms': len(live['rooms']),
                 'in_race': sum(1 for r in live['rooms'] if r.get('in_race')),
                 'players': players, 'racers': racers, 'records': records, 'boards': views,
@@ -138,43 +191,51 @@ class Api:
         return self.snapshot()
 
     def views(self, q):
+        mode = self.season_mode(q)
         with self.db() as con:
-            rows = con.execute(f'SELECT * FROM ({self.RANKED}) WHERE rank = 1 ORDER BY view').fetchall()
-        return {'views': [{**self.meta(v), 'records': total,
-                           'best': self.row(v, rank, pid, name, value, cols, upd)}
-                          for v, pid, name, value, cols, upd, rank, total in rows]}
+            rows = con.execute(f'SELECT * FROM ({self.ranked(con, mode)}) WHERE rank = 1 ORDER BY view, season').fetchall()
+        keep = mode != 'combined'
+        return {'views': [{**self.board_meta(v, season if keep else None), 'records': total,
+                           'best': self.row(v, rank, pid, name, value, cols, upd, season=season)}
+                          for v, pid, name, value, cols, upd, rank, total, season in rows]}
 
     def leaderboard(self, q):
         view = self.int(q, 'view', 1, 1, 0xFFFFFFFF)
         limit = self.int(q, 'limit', 50, 1, 100)
         offset = self.int(q, 'offset', 0, 0, 1_000_000)
+        mode = self.season_mode(q)
+        if mode == 'all':
+            raise ValueError('choose season=2009 or season=2010 for one board')
         with self.db() as con:
-            total = con.execute('SELECT COUNT(*) FROM scores WHERE view=?', (view,)).fetchone()[0]
-            rows = con.execute('''SELECT s.player, p.name, s.value, s.columns, s.updated FROM scores s
+            src, _ = self.source(con, mode)
+            total = con.execute(f'SELECT COUNT(*) FROM ({src}) WHERE view=?', (view,)).fetchone()[0]
+            rows = con.execute(f'''SELECT s.player, p.name, s.value, s.columns, s.updated, s.season FROM ({src}) s
                 JOIN players p ON p.id = s.player WHERE s.view=?
                 ORDER BY s.value DESC, s.updated ASC, s.player ASC LIMIT ? OFFSET ?''', (view, limit, offset)).fetchall()
         best = rows[0][2] if rows and offset == 0 else None
         out = []
-        for i, (pid, name, value, cols, upd) in enumerate(rows):
-            r = self.row(view, offset + i + 1, pid, name, value, cols, upd)
+        for i, (pid, name, value, cols, upd, season) in enumerate(rows):
+            r = self.row(view, offset + i + 1, pid, name, value, cols, upd, season=season)
             if best is not None and r['display']['kind'] == 'time' and i:
                 r['gap_ms'] = race_ms(value - best)
             out.append(r)
-        return {**self.meta(view), 'total': total, 'offset': offset, 'rows': out}
+        return {**self.board_meta(view, mode if isinstance(mode, int) else None), 'total': total, 'offset': offset, 'rows': out}
 
     def player(self, q):
+        mode = self.season_mode(q)
         with self.db() as con:
             if 'id' in q:
                 found = con.execute('SELECT id, name FROM players WHERE id=?', (self.int(q, 'id', 0, 1, 0xFFFFFF),)).fetchone()
             else:
                 name = self.text(q, 'name')
-                found = con.execute('''SELECT p.id, p.name FROM players p LEFT JOIN scores s ON s.player=p.id
+                src, _ = self.source(con, 'combined')
+                found = con.execute(f'''SELECT p.id, p.name FROM players p LEFT JOIN ({src}) s ON s.player=p.id
                     WHERE p.name=? GROUP BY p.id ORDER BY COUNT(s.view) DESC, MAX(s.updated) DESC LIMIT 1''', (name,)).fetchone()
             if not found:
                 raise LookupError('player not found')
             pid, name = found
-            rows = con.execute(f'SELECT * FROM ({self.RANKED}) WHERE player=? ORDER BY rank, updated DESC', (pid,)).fetchall()
-        records = [{**self.meta(v), **self.row(v, rank, p, n, value, cols, upd, total)} for v, p, n, value, cols, upd, rank, total in rows]
+            rows = con.execute(f'SELECT * FROM ({self.ranked(con, mode)}) WHERE player=? ORDER BY rank, updated DESC', (pid,)).fetchall()
+        records = [{**self.meta(v), **self.row(v, rank, p, n, value, cols, upd, total, season)} for v, p, n, value, cols, upd, rank, total, season in rows]
         online = any(o['id'] == pid for o in self.snapshot()['online'])
         return {'id': pid, 'name': name, 'online': online, 'records': records,
                 'firsts': sum(r['rank'] == 1 for r in records), 'podiums': sum(r['rank'] <= 3 for r in records),
@@ -184,20 +245,23 @@ class Api:
         term = self.text(q, 'q', required=False)
         like = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
         with self.db() as con:
-            rows = con.execute('''SELECT p.id, p.name, COUNT(s.view) FROM players p LEFT JOIN scores s ON s.player=p.id
+            src, _ = self.source(con, 'combined')
+            rows = con.execute(f'''SELECT p.id, p.name, COUNT(s.view) FROM players p LEFT JOIN ({src}) s ON s.player=p.id
                 WHERE p.name LIKE ? ESCAPE '\\' GROUP BY p.id ORDER BY COUNT(s.view) DESC, p.name LIMIT 20''', (like,)).fetchall()
         return {'players': [{'id': i, 'name': n, 'records': c} for i, n, c in rows]}
 
     def recent(self, q):
         limit = self.int(q, 'limit', 20, 1, 50)
+        mode = self.season_mode(q)
         with self.db() as con:
-            rows = con.execute(f'SELECT * FROM ({self.RANKED}) ORDER BY updated DESC, player LIMIT ?', (limit,)).fetchall()
-        return {'records': [{**self.meta(v), **self.row(v, rank, p, n, value, cols, upd, total)} for v, p, n, value, cols, upd, rank, total in rows]}
+            rows = con.execute(f'SELECT * FROM ({self.ranked(con, mode)}) ORDER BY updated DESC, player LIMIT ?', (limit,)).fetchall()
+        return {'records': [{**self.meta(v), **self.row(v, rank, p, n, value, cols, upd, total, season)} for v, p, n, value, cols, upd, rank, total, season in rows]}
 
     def ranking(self, q):
+        mode = self.season_mode(q)
         with self.db() as con:
             rows = con.execute(f'''SELECT player, name, COUNT(*), SUM(rank=1), SUM(rank<=3), MAX(updated),
-                SUM(total - rank + 1) FROM ({self.RANKED}) GROUP BY player
+                SUM(total - rank + 1) FROM ({self.ranked(con, mode)}) GROUP BY player
                 ORDER BY SUM(rank=1) DESC, SUM(rank<=3) DESC, SUM(total - rank + 1) DESC, COUNT(*) DESC, MIN(updated) LIMIT 100''').fetchall()
         online = {o['id'] for o in self.snapshot()['online']}
         return {'players': [{'pos': i + 1, 'id': pid, 'name': n, 'records': c, 'firsts': f, 'podiums': pd,
@@ -252,7 +316,7 @@ def handler_for(api):
             if not route:
                 return self.send(404, {'error': 'not found'})
             try:
-                q = parse_qs(parts.query, keep_blank_values=True, max_num_fields=8)
+                q = parse_qs(parts.query, keep_blank_values=True, max_num_fields=10)
                 self.send(200, route(api, q))
             except LookupError as e:
                 self.send(404, {'error': str(e)})

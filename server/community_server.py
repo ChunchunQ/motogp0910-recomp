@@ -35,6 +35,15 @@ DISCOVER, ADVERT, JOIN, JOINED, LEAVE, LEFT, HEARTBEAT, REJECT, DATA, ROSTER = r
 MAX_BODY = 65536
 ONLINE_MAGIC = b'MGO2'
 NATIVE_COLUMNS = {1:1, 2:1, 3:2, 4:1, 5:1, 6:1, 7:1, 13:1, 0x8011:1}
+SEASON_COLUMN = 13
+# Season/class scope of the scoped stats routes: prefix [protocol 1, category,
+# raw season, 0]. Category -> native class slot (view = 1 + group*63 + slot*21 + track).
+CATEGORY_SLOT = {1: 2, 2: 1, 3: 1, 4: 0}          # MotoGP, Moto2, 250cc, 125cc
+VALID_SCOPES = {(1, 0), (3, 0), (4, 0), (1, 1), (2, 1), (4, 1)}
+def view_slot(view): return ((view-1)%63)//21
+def category_for(view, season):
+    slot = view_slot(view)
+    return 1 if slot == 2 else 4 if slot == 0 else (2 if season else 3)
 # Also support the isolated python.org Windows embeddable runtime.
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from security import Invalid, Limited, Bucket, Limits, parse_headers, credential_header, client_ip, read_proxy_secret, network_key
@@ -181,8 +190,44 @@ class Store:
           CREATE UNIQUE INDEX IF NOT EXISTS players_account ON players(account) WHERE account IS NOT NULL;
           CREATE TABLE IF NOT EXISTS credential_alias (credential TEXT PRIMARY KEY, player INTEGER NOT NULL REFERENCES players(id));
         ''')
+        # Season-separated records (launcher 1.2.0 scoped routes). A native view id
+        # does not identify the season: 2009 250cc and 2010 Moto2 share views, so
+        # the key is (player, view, season). `scores` stays as the legacy store of
+        # older clients and is never deleted; rows with a valid season column are
+        # copied here once (migration below) and legacy writes are mirrored.
+        self.db.executescript('''
+          CREATE TABLE IF NOT EXISTS season_scores (player INTEGER NOT NULL REFERENCES players(id), view INTEGER NOT NULL, season INTEGER NOT NULL CHECK(season IN (0,1)), value INTEGER NOT NULL, columns TEXT NOT NULL, updated INTEGER NOT NULL, source TEXT NOT NULL DEFAULT 'scoped', PRIMARY KEY(player,view,season));
+          CREATE INDEX IF NOT EXISTS season_scores_rating ON season_scores(view,season,value DESC,updated,player);
+          CREATE TABLE IF NOT EXISTS season_writes (player INTEGER NOT NULL, nonce TEXT NOT NULL, scope INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(player,nonce,scope));
+          CREATE TABLE IF NOT EXISTS season_migrations (name TEXT PRIMARY KEY, at INTEGER NOT NULL, copied INTEGER NOT NULL, legacy_only INTEGER NOT NULL);
+        ''')
+        self.migrate_seasons()
         self.player_count = self.db.execute('SELECT COUNT(*) FROM players').fetchone()[0]
         self.schemas = schemas
+    @staticmethod
+    def season_of(columns):
+        """Raw season (0 = 2009, 1 = 2010) from native property 13, or None."""
+        cell = columns.get(str(SEASON_COLUMN))
+        if not cell or cell[0] != 1 or len(cell[1]) != 16: return None
+        try: value = int.from_bytes(bytes.fromhex(cell[1]), 'big', signed=True)
+        except ValueError: return None
+        return value if value in (0, 1) else None
+    def migrate_seasons(self):
+        """Copy legacy rows whose season is known into season_scores, once.
+        Rows without a valid property 13 stay only in `scores` (legacy collection)."""
+        if self.db.execute("SELECT 1 FROM season_migrations WHERE name='legacy-v1'").fetchone(): return
+        copied = legacy = 0
+        with self.db:
+            for player, view, value, columns, updated in self.db.execute('SELECT player,view,value,columns,updated FROM scores').fetchall():
+                try: season = self.season_of(json.loads(columns))
+                except (ValueError, TypeError, AttributeError): season = None
+                if season is None or not 1 <= view <= 378 or (category_for(view, season), season) not in VALID_SCOPES:
+                    legacy += 1; continue
+                self.db.execute("INSERT OR IGNORE INTO season_scores(player,view,season,value,columns,updated,source) VALUES(?,?,?,?,?,?,'legacy-v1')",
+                                (player, view, season, value, columns, updated))
+                copied += 1
+            self.db.execute("INSERT INTO season_migrations VALUES('legacy-v1',?,?,?)", (int(time.time()), copied, legacy))
+        if copied or legacy: LOG.info('Season records: %d legacy rows copied, %d kept only in the legacy store', copied, legacy)
     def player_for(self, digest):
         """(player id, linked account or None) for a profile credential digest."""
         row = self.db.execute('SELECT p.id, p.account FROM credential_alias a JOIN players p ON p.id=a.player WHERE a.credential=?', (digest,)).fetchone()
@@ -246,6 +291,51 @@ class Store:
             self.db.execute('UPDATE players SET name=? WHERE id=?', (username, number))
         return number
     def write(self, player, nonce, views):
+        validated=self.validate(nonce, views)
+        with self.db:
+            if self.db.execute('SELECT 1 FROM writes WHERE player=? AND nonce=?', (player, nonce)).fetchone(): return
+            for view, columns, schema, value in validated:
+                self.upsert('scores', player, view, None, columns, schema, value)
+                # Older clients (1.1.x) send property 13 too: their new results also
+                # count on the season boards. Rows without it stay legacy-only.
+                season = self.season_of(columns)
+                if season is not None and (category_for(view, season), season) in VALID_SCOPES:
+                    self.upsert('season_scores', player, view, season, {k: list(v) for k, v in columns.items()}, schema, value, 'legacy')
+            self.db.execute('INSERT INTO writes VALUES(?,?,?)', (player, nonce, int(time.time())))
+            # Bound replay history even when every submission is a no-op.
+            self.db.execute('DELETE FROM writes WHERE player=? AND nonce IN (SELECT nonce FROM writes WHERE player=? ORDER BY rowid DESC LIMIT -1 OFFSET 256)', (player,player))
+    def write_scoped(self, player, nonce, category, season, views):
+        """Season/class write: every view must belong to the category's native slot
+        and carry property 13 equal to the scope's season."""
+        if (category, season) not in VALID_SCOPES: raise Invalid('invalid season/class scope')
+        validated=self.validate(nonce, views)
+        for view, columns, _, _ in validated:
+            if not 1 <= view <= 378 or view_slot(view) != CATEGORY_SLOT[category]: raise Invalid('view does not belong to this class')
+            if self.season_of(columns) != season: raise Invalid('season property does not match the scope')
+        scope = category*2+season
+        with self.db:
+            # One submission nonce may carry several scope groups: dedup per scope.
+            if self.db.execute('SELECT 1 FROM season_writes WHERE player=? AND nonce=? AND scope=?', (player, nonce, scope)).fetchone(): return
+            for view, columns, schema, value in validated:
+                self.upsert('season_scores', player, view, season, columns, schema, value)
+            self.db.execute('INSERT INTO season_writes VALUES(?,?,?,?)', (player, nonce, scope, int(time.time())))
+            self.db.execute('DELETE FROM season_writes WHERE player=? AND rowid IN (SELECT rowid FROM season_writes WHERE player=? ORDER BY rowid DESC LIMIT -1 OFFSET 512)', (player,player))
+    def upsert(self, table, player, view, season, columns, schema, value, source='scoped'):
+        key = 'player=? AND view=?' + ('' if season is None else ' AND season=?')
+        args = (player, view) if season is None else (player, view, season)
+        old = self.db.execute(f'SELECT value FROM {table} WHERE {key}', args).fetchone()
+        mode = schema.get('aggregation', 'best')
+        if old and mode == 'best' and ((value >= old[0]) if schema['order'] == 'asc' else (value <= old[0])): return
+        if old and mode == 'sum':
+            value += old[0]
+            if not schema.get('minimum',0)<=value<=schema.get('maximum',2**53): raise Invalid('aggregate score out of range')
+            columns[str(schema['primary_column'])]=[columns[str(schema['primary_column'])][0],int(value).to_bytes(8,'big',signed=True).hex()]
+        packed = json.dumps(columns, separators=(',', ':'))
+        if season is None:
+            self.db.execute('INSERT INTO scores VALUES(?,?,?,?,?) ON CONFLICT(player,view) DO UPDATE SET value=excluded.value, columns=excluded.columns, updated=excluded.updated', (player, view, value, packed, int(time.time())))
+        else:
+            self.db.execute('INSERT INTO season_scores(player,view,season,value,columns,updated,source) VALUES(?,?,?,?,?,?,?) ON CONFLICT(player,view,season) DO UPDATE SET value=excluded.value, columns=excluded.columns, updated=excluded.updated, source=excluded.source', (player, view, season, value, packed, int(time.time()), source))
+    def validate(self, nonce, views):
         # Only native views with an explicitly researched ordering/aggregation are
         # eligible. Never guess that higher race times or repeated totals win.
         validated=[]
@@ -270,21 +360,8 @@ class Store:
             value = int.from_bytes(bytes.fromhex(bits), 'big', signed=True)
             if not schema.get('minimum', 0) <= value <= schema.get('maximum', 2**53): raise Invalid('score out of range')
             validated.append((view, columns, schema, value))
-        with self.db:
-            if self.db.execute('SELECT 1 FROM writes WHERE player=? AND nonce=?', (player, nonce)).fetchone(): return
-            for view, columns, schema, value in validated:
-                old = self.db.execute('SELECT value FROM scores WHERE player=? AND view=?', (player, view)).fetchone()
-                mode = schema.get('aggregation', 'best')
-                if old and mode == 'best' and ((value >= old[0]) if schema['order'] == 'asc' else (value <= old[0])): continue
-                if old and mode == 'sum':
-                    value += old[0]
-                    if not schema.get('minimum',0)<=value<=schema.get('maximum',2**53): raise Invalid('aggregate score out of range')
-                    columns[str(schema['primary_column'])]=[columns[str(schema['primary_column'])][0],int(value).to_bytes(8,'big',signed=True).hex()]
-                self.db.execute('INSERT INTO scores VALUES(?,?,?,?,?) ON CONFLICT(player,view) DO UPDATE SET value=excluded.value, columns=excluded.columns, updated=excluded.updated', (player, view, value, json.dumps(columns, separators=(',', ':')), int(time.time())))
-            self.db.execute('INSERT INTO writes VALUES(?,?,?)', (player, nonce, int(time.time())))
-            # Bound replay history even when every submission is a no-op.
-            self.db.execute('DELETE FROM writes WHERE player=? AND nonce IN (SELECT nonce FROM writes WHERE player=? ORDER BY rowid DESC LIMIT -1 OFFSET 256)', (player,player))
-    def read(self, view, start, count, users=(), around=0):
+        return validated
+    def read(self, view, start, count, users=(), around=0, season=None):
         schema = self.schemas.get(str(view))
         if not schema: raise Invalid('leaderboard view has not been configured')
         if not 1<=count<=100 or len(users)>100 or not 0<=start<=0xFFFFFFFF: raise Invalid('invalid query range')
@@ -292,21 +369,23 @@ class Store:
             raise Invalid('invalid online identity')
         direction = 'ASC' if schema['order'] == 'asc' else 'DESC'
         before = '<' if direction=='ASC' else '>'
-        total=self.db.execute('SELECT COUNT(*) FROM scores WHERE view=?',(view,)).fetchone()[0]
+        # season None = legacy board of older clients; 0/1 = scoped season board.
+        table,where,key=('scores','view=?',(view,)) if season is None else ('season_scores','view=? AND season=?',(view,season))
+        total=self.db.execute(f'SELECT COUNT(*) FROM {table} WHERE {where}',key).fetchone()[0]
         def rank(player,value,updated):
-            return 1+self.db.execute(f'SELECT COUNT(*) FROM scores WHERE view=? AND (value {before} ? OR (value=? AND (updated<? OR (updated=? AND player<?))))', (view,value,value,updated,updated,player)).fetchone()[0]
-        base='SELECT s.player,p.name,s.columns,s.value,s.updated FROM scores s JOIN players p ON p.id=s.player WHERE s.view=?'
+            return 1+self.db.execute(f'SELECT COUNT(*) FROM {table} WHERE {where} AND (value {before} ? OR (value=? AND (updated<? OR (updated=? AND player<?))))', (*key,value,value,updated,updated,player)).fetchone()[0]
+        base=f'SELECT s.player,p.name,s.columns,s.value,s.updated FROM {table} s JOIN players p ON p.id=s.player WHERE s.'+where.replace(' AND ',' AND s.')
         if users:
             query=base+' AND s.player IN ('+','.join('?' for _ in users)+')'
-            found=self.db.execute(query,(view,*(x&0xFFFFFF for x in users))).fetchall()
+            found=self.db.execute(query,(*key,*(x&0xFFFFFF for x in users))).fetchall()
             rows=sorted([(p,name,cols,rank(p,value,updated)) for p,name,cols,value,updated in found],key=lambda row:row[3])[:count]
         else:
             if around:
-                row=self.db.execute('SELECT value,updated FROM scores WHERE view=? AND player=?',(view,around&0xFFFFFF)).fetchone()
+                row=self.db.execute(f'SELECT value,updated FROM {table} WHERE {where} AND player=?',(*key,around&0xFFFFFF)).fetchone()
                 if not row:return total,[]
                 start=max(1,rank(around&0xFFFFFF,*row)-count//2)
             start=max(1,start)
-            found=self.db.execute(base+f' ORDER BY s.value {direction},s.updated ASC,s.player ASC LIMIT ? OFFSET ?',(view,count,start-1))
+            found=self.db.execute(base+f' ORDER BY s.value {direction},s.updated ASC,s.player ASC LIMIT ? OFFSET ?',(*key,count,start-1))
             rows=[(p,name,cols,start+i) for i,(p,name,cols,_,_) in enumerate(found)]
         # Old v1 databases remain usable, but never pass arbitrary historic
         # columns through to the guest. New writes are strictly validated.
@@ -651,6 +730,15 @@ class Service(asyncio.DatagramProtocol):
             if len(body)!=16:raise Invalid('invalid ticket identifier')
             if current and hmac.compare_digest(current.ticket,body):self.remove(current.peer)
             return b''
+        if path == '/v2/stats/scoped/capabilities':
+            if body:raise Invalid('capabilities take no body')
+            return json.dumps({'supported':True,'protocol':1}).encode()
+        scope=None
+        if path in ('/v2/stats/scoped/write','/v2/stats/scoped/read'):
+            if len(body)<4:raise Invalid('missing season/class scope')
+            protocol,category,season,reserved=body[:4]
+            if protocol!=1 or reserved or (category,season) not in VALID_SCOPES:raise Invalid('invalid season/class scope')
+            scope=(category,season);body=body[4:];path=path.replace('/scoped','')
         if path == '/v2/stats/write':
             r=Reader(body);nonce=r.text(32)
             if len(nonce)!=32 or any(c not in '0123456789abcdef' for c in nonce):raise Invalid('invalid write id')
@@ -666,12 +754,16 @@ class Service(asyncio.DatagramProtocol):
                     if str(column) in columns or kind not in (1,2,3,5):raise Invalid('invalid column')
                     columns[str(column)]=[kind,bits.hex()]
                 views.append((view,columns))
-            r.end();self.store.write(owner,nonce,views);return b''
+            r.end()
+            if scope:self.store.write_scoped(owner,nonce,scope[0],scope[1],views)
+            else:self.store.write(owner,nonce,views)
+            return b''
         if path == '/v2/stats/read':
             r=Reader(body);view,start,count,around=r.u32(),r.u32(),r.u32(),r.u64();amount=r.u32()
             if not 1<=count<=100 or amount>100:raise Invalid('invalid query range')
             users=[r.u64() for _ in range(amount)];r.end()
-            total,rows=self.store.read(view,start,count,users,around);out=struct.pack('>II',total,len(rows))
+            if scope and (not 1<=view<=378 or view_slot(view)!=CATEGORY_SLOT[scope[0]]):raise Invalid('view does not belong to this class')
+            total,rows=self.store.read(view,start,count,users,around,scope[1] if scope else None);out=struct.pack('>II',total,len(rows))
             for peer,name,cols,rank in rows:
                 out+=struct.pack('>QI',peer,rank)+text(name)+struct.pack('>I',len(cols))
                 for column,(kind,bits) in cols.items():out+=struct.pack('>HB',int(column),kind)+bytes.fromhex(bits)

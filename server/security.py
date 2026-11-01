@@ -69,12 +69,15 @@ def parse_headers(data):
         return method, path, headers, 0
     if method != 'POST': raise Invalid('POST required')
     if path.startswith('/v1/'): raise Invalid('Update the game and server together: Online protocol v2 required')
-    if path not in ('/v2/connect','/v2/disconnect','/v2/stats/read','/v2/stats/write','/v2/link','/v2/social'): raise Invalid('unknown endpoint')
+    if path not in ('/v2/connect','/v2/disconnect','/v2/stats/read','/v2/stats/write','/v2/link','/v2/social',
+                    '/v2/stats/scoped/capabilities','/v2/stats/scoped/read','/v2/stats/scoped/write'): raise Invalid('unknown endpoint')
     length = headers.get('content-length', '')
     if not _DIGITS.fullmatch(length) or len(length)>5: raise Invalid('Content-Length required')
     size = int(length)
     # Native stats: at most sixteen views, nine columns per view.
-    maximum = {'/v2/connect':25, '/v2/disconnect':16, '/v2/stats/read':824, '/v2/stats/write':1750, '/v2/link':128, '/v2/social':1024}[path]
+    # Scoped stats: the legacy maxima plus the four-byte [1, category, season, 0] prefix.
+    maximum = {'/v2/connect':25, '/v2/disconnect':16, '/v2/stats/read':824, '/v2/stats/write':1750, '/v2/link':128, '/v2/social':1024,
+               '/v2/stats/scoped/capabilities':0, '/v2/stats/scoped/read':828, '/v2/stats/scoped/write':1754}[path]
     if size > maximum: raise Invalid('request too large')
     if headers.get('content-type','application/octet-stream').lower() != 'application/octet-stream':
         raise Invalid('binary content required')
